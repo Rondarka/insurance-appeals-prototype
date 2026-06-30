@@ -1,0 +1,64 @@
+name: insurance-appeals
+
+services:
+  postgres:
+    image: postgres:17.10-alpine
+    environment:
+      POSTGRES_DB: insurance_appeals
+      POSTGRES_USER: appeals
+      POSTGRES_PASSWORD: appeals_dev
+    ports:
+      - "55432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appeals -d insurance_appeals"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  rabbitmq:
+    image: rabbitmq:4.3.1-management-alpine
+    hostname: insurance-rabbit
+    environment:
+      RABBITMQ_DEFAULT_USER: appeals
+      RABBITMQ_DEFAULT_PASS: appeals_dev
+      RABBITMQ_DEFAULT_VHOST: appeals
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  app:
+    build:
+      context: .
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/insurance_appeals
+      SPRING_DATASOURCE_USERNAME: appeals
+      SPRING_DATASOURCE_PASSWORD: appeals_dev
+      SPRING_RABBITMQ_HOST: rabbitmq
+      SPRING_RABBITMQ_PORT: 5672
+      SPRING_RABBITMQ_USERNAME: appeals
+      SPRING_RABBITMQ_PASSWORD: appeals_dev
+      SPRING_RABBITMQ_VIRTUAL_HOST: appeals
+      ATTACHMENT_STORAGE_PATH: /data/attachments
+    ports:
+      - "18080:8080"
+    volumes:
+      - attachment-data:/data/attachments
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+
+volumes:
+  postgres-data:
+  rabbitmq-data:
+  attachment-data:

@@ -1,0 +1,50 @@
+spring:
+  application:
+    name: insurance-appeals
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/insurance_appeals}
+    username: ${SPRING_DATASOURCE_USERNAME:appeals}
+    password: ${SPRING_DATASOURCE_PASSWORD:appeals_dev}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${SPRING_RABBITMQ_HOST:localhost}
+    port: ${SPRING_RABBITMQ_PORT:5672}
+    username: ${SPRING_RABBITMQ_USERNAME:appeals}
+    password: ${SPRING_RABBITMQ_PASSWORD:appeals_dev}
+    virtual-host: ${SPRING_RABBITMQ_VIRTUAL_HOST:appeals}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        retry:
+          enabled: true
+          initial-interval: 500ms
+          max-attempts: 3
+          multiplier: 2
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: 8080
+
+appeals:
+  attachments:
+    path: ${ATTACHMENT_STORAGE_PATH:/data/attachments}
+    max-count: 5
+
+logging:
+  level:
+    ru.mtuci.appeals: INFO

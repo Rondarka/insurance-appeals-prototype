@@ -203,6 +203,22 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
+function formatDeadline(value, status) {
+    if (!value) return "Не назначено";
+    const date = formatDate(value);
+    if (status === "RESOLVED" || status === "CLOSED") {
+        return `<span class="sla done">${date}</span>`;
+    }
+    const left = new Date(value).getTime() - Date.now();
+    const hours = Math.floor(Math.abs(left) / 3600000);
+    const minutes = Math.floor((Math.abs(left) % 3600000) / 60000);
+    if (left < 0) {
+        return `<span class="sla overdue">Просрочено на ${hours} ч ${minutes} мин</span><small>${date}</small>`;
+    }
+    const urgency = left < 4 * 3600000 ? "soon" : "ok";
+    return `<span class="sla ${urgency}">Осталось ${hours} ч ${minutes} мин</span><small>${date}</small>`;
+}
+
 function formatDate(value) {
     if (!value) return "Не назначено";
     return new Intl.DateTimeFormat("ru-RU", {
@@ -358,7 +374,7 @@ function renderClientAppeals() {
     const target = document.querySelector("#client-appeals");
     if (!state.clientAppeals.length) {
         target.className = "appeal-list empty-state";
-        target.innerHTML = "<div><p>Пока обращений нет</p><small>Созданные заявки появятся здесь</small></div>";
+        target.innerHTML = "<div><p>Пока обращений нет</p><small>Созданные обращения появятся здесь</small></div>";
         return;
     }
 
@@ -407,7 +423,7 @@ function renderEmployeeAppeals() {
                     <td>${appeal.department ? escapeHtml(appeal.department.name) : "Маршрутизация..."}</td>
                     <td><span class="priority ${appeal.priority}">${labels.priorities[appeal.priority]}</span></td>
                     <td><span class="status ${appeal.status}">${labels.statuses[appeal.status]}</span></td>
-                    <td>${formatDate(appeal.deadlineAt)}</td>
+                    <td class="deadline-cell">${formatDeadline(appeal.deadlineAt, appeal.status)}</td>
                 </tr>
             `).join("")}
             </tbody>
@@ -517,7 +533,7 @@ function detailTemplate(appeal) {
             <div><small>Отдел</small><strong>${appeal.department ? escapeHtml(appeal.department.name) : "Ожидает маршрутизации"}</strong></div>
             <div><small>Исполнитель</small><strong>${escapeHtml(appeal.assignedEmployee || "Не назначен")}</strong></div>
             <div><small>Создано</small><strong>${formatDate(appeal.createdAt)}</strong></div>
-            <div><small>Срок ответа</small><strong>${formatDate(appeal.deadlineAt)}</strong></div>
+            <div class="deadline-cell"><small>Срок ответа</small>${formatDeadline(appeal.deadlineAt, appeal.status)}</div>
         </div>
 
         <section class="detail-section contract-detail">

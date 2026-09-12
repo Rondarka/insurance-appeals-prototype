@@ -22,7 +22,7 @@ body {
     min-width: 1080px;
     color: var(--ink);
     background: var(--background);
-    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    font-family: "Segoe UI", Roboto, Arial, sans-serif;
 }
 
 button,
@@ -121,19 +121,14 @@ main {
     display: block;
 }
 
-.hero,
+.view-heading,
 .workspace-heading {
-    padding: 54px 7vw 48px;
+    padding: 36px 5vw 24px;
 }
 
-.hero {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 360px;
-    gap: 60px;
-    color: #fff;
-    background:
-        radial-gradient(circle at 75% 20%, rgba(79, 133, 232, 0.45), transparent 30%),
-        linear-gradient(130deg, #163b72, #1c4c8f);
+.view-heading p {
+    margin: 0;
+    color: var(--muted);
 }
 
 .eyebrow {
@@ -145,10 +140,6 @@ main {
     text-transform: uppercase;
 }
 
-.hero .eyebrow {
-    color: #9dc0ff;
-}
-
 h1,
 h2,
 p {
@@ -157,7 +148,7 @@ p {
 
 h1 {
     margin-bottom: 14px;
-    font-size: 36px;
+    font-size: 28px;
     line-height: 1.15;
 }
 
@@ -166,63 +157,11 @@ h2 {
     font-size: 21px;
 }
 
-.hero-copy {
-    max-width: 690px;
-    color: #d5e1f5;
-    font-size: 17px;
-    line-height: 1.6;
-}
-
-.hero-note {
-    align-self: center;
-    padding: 24px;
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    border-radius: 18px;
-    background: rgba(255, 255, 255, 0.08);
-    backdrop-filter: blur(10px);
-}
-
-.hero-note p {
-    margin: 8px 0 0;
-    color: #d5e1f5;
-    line-height: 1.5;
-}
-
-.flow-strip {
-    display: flex;
-    align-items: center;
-    gap: 16px;
-    margin-top: 30px;
-}
-
-.flow-strip span {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: #dce7f9;
-    font-size: 13px;
-}
-
-.flow-strip b {
-    width: 25px;
-    height: 25px;
-    display: grid;
-    place-items: center;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.16);
-}
-
-.flow-strip i {
-    width: 50px;
-    height: 1px;
-    background: rgba(255, 255, 255, 0.28);
-}
-
 .client-grid {
     display: grid;
     grid-template-columns: minmax(600px, 1.3fr) minmax(400px, 0.7fr);
     gap: 24px;
-    margin: -18px 5vw 0;
+    margin: 0 5vw;
     position: relative;
 }
 
@@ -1119,4 +1058,33 @@ code {
     .topbar {
         padding-inline: 3vw;
     }
+}
+
+.sla {
+    display: block;
+    font-weight: 600;
+}
+
+.sla.ok {
+    color: var(--green);
+}
+
+.sla.soon {
+    color: var(--orange);
+}
+
+.sla.overdue {
+    color: var(--red);
+}
+
+.sla.done {
+    color: var(--muted);
+    font-weight: 400;
+}
+
+.deadline-cell small {
+    display: block;
+    margin-top: 2px;
+    color: var(--muted);
+    font-size: 12px;
 }

@@ -25,34 +25,16 @@
 
 <main>
     <section id="client-view" class="view active">
-        <div class="hero">
-            <div>
-                <p class="eyebrow">Личный кабинет</p>
-                <h1>Расскажите, что произошло</h1>
-                <p class="hero-copy">
-                    Создайте обращение в одном окне. Система автоматически определит
-                    ответственный отдел, приоритет и срок ответа.
-                </p>
-                <div class="flow-strip">
-                    <span><b>1</b> Обращение</span>
-                    <i></i>
-                    <span><b>2</b> Маршрутизация</span>
-                    <i></i>
-                    <span><b>3</b> Ответ отдела</span>
-                </div>
-            </div>
-            <aside class="hero-note">
-                <strong>Что произойдёт после отправки?</strong>
-                <p>Заявка попадёт в PostgreSQL, а событие пройдёт через topic exchange RabbitMQ.</p>
-            </aside>
+        <div class="view-heading">
+            <h1>Личный кабинет</h1>
+            <p>Обращения по вашим договорам страхования</p>
         </div>
 
         <div class="client-grid">
             <form id="appeal-form" class="panel form-panel">
                 <div class="panel-heading">
                     <div>
-                        <p class="eyebrow">Новое обращение</p>
-                        <h2>Договор и вопрос</h2>
+                        <h2>Новое обращение</h2>
                     </div>
                     <span class="required-note">Все поля обязательны</span>
                 </div>
@@ -128,7 +110,7 @@
                 </div>
                 <div id="client-appeals" class="appeal-list empty-state">
                     <p>Пока обращений нет</p>
-                    <small>Созданные заявки появятся здесь</small>
+                    <small>Созданные обращения появятся здесь</small>
                 </div>
             </section>
         </div>

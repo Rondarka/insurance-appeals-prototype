@@ -817,12 +817,18 @@ code {
 
 .event-row {
     display: grid;
-    grid-template-columns: 170px 220px 1fr 190px;
+    grid-template-columns: 200px 250px 1fr 170px;
     gap: 16px;
     padding: 13px 4px;
     border-bottom: 1px solid var(--line);
     align-items: center;
     font-size: 13px;
+}
+
+/* без этого длинные ключи маршрутизации выходят за колонку и налезают на соседнюю */
+.event-row > * {
+    min-width: 0;
+    overflow-wrap: anywhere;
 }
 
 .event-type {

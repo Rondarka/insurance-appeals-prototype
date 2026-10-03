@@ -1,0 +1,168 @@
+openapi: 3.0.3
+info:
+  title: Учётная система договоров — интерфейс для подсистемы обработки обращений
+  version: 1.0.0
+  description: |
+    Что подсистема обработки обращений запрашивает у учётной системы договоров
+    страховой организации. Спецификацию реализует страховая — напрямую или тонким
+    адаптером над своей учётной системой. В стенде её реализует заглушка WireMock.
+
+    Смысл полей и правила обработки ошибок — в docs/integration-contract.md.
+servers:
+  - url: http://contracts-stub:8080
+    description: заглушка учётной системы в стенде (docker compose)
+security:
+  - serviceAccount: []
+paths:
+  /clients/{counterpartyId}/contracts:
+    get:
+      operationId: listClientContracts
+      summary: Договоры клиента
+      description: |
+        Все договоры контрагента, включая истёкшие и прекращённые. Вызывается, когда
+        клиент открывает раздел обращений, — в интерактивном пути, поэтому подсистема
+        ждёт ответа не дольше 3 секунд.
+      parameters:
+        - $ref: '#/components/parameters/CounterpartyId'
+      responses:
+        '200':
+          description: Договоры клиента; пустой список, если договоров нет
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contract'
+              example:
+                - contractId: 22222222-2222-2222-2222-222222222222
+                  counterpartyId: 11111111-1111-1111-1111-111111111111
+                  policyNumber: КАСКО-2026-004821
+                  product: { code: CASCO, name: КАСКО }
+                  insuredObject: 'Автомобиль: Geely Monjaro, госномер А123АА77'
+                  validFrom: '2026-03-15'
+                  validTo: '2027-03-14'
+                  terminatedOn: null
+                  status: ACTIVE
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '5XX':
+          $ref: '#/components/responses/Unavailable'
+  /contracts/{contractId}:
+    get:
+      operationId: getContract
+      summary: Договор по идентификатору
+      description: |
+        Используется при регистрации обращения и фоновой до-привязке договора. Ответ
+        содержит counterpartyId: подсистема сверяет его с идентификатором клиента из
+        токена и не принимает обращение по чужому договору.
+      parameters:
+        - name: contractId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Договор
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Contract'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '5XX':
+          $ref: '#/components/responses/Unavailable'
+components:
+  securitySchemes:
+    serviceAccount:
+      type: oauth2
+      description: Сервисная учётная запись подсистемы. В стенде не проверяется.
+      flows:
+        clientCredentials:
+          tokenUrl: https://idp.insurer.example/token
+          scopes:
+            contracts.read: чтение договоров
+  parameters:
+    CounterpartyId:
+      name: counterpartyId
+      in: path
+      required: true
+      description: Идентификатор контрагента — тот же, что в поле counterparty_id токена клиента
+      schema: { type: string, format: uuid }
+  responses:
+    NotFound:
+      description: |
+        Договор или контрагент не найден. Это не сбой: повторять запрос бессмысленно.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+    Unavailable:
+      description: |
+        Сбой учётной системы. Подсистема повторяет запрос по своей политике и при
+        неудаче переходит в деградированный режим.
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+  schemas:
+    Contract:
+      type: object
+      required: [contractId, counterpartyId, policyNumber, product, insuredObject, validFrom, validTo, status]
+      properties:
+        contractId:
+          type: string
+          format: uuid
+        counterpartyId:
+          type: string
+          format: uuid
+          description: Владелец договора
+        policyNumber:
+          type: string
+          maxLength: 80
+          description: Номер полиса в том виде, в каком его видит клиент
+        product:
+          $ref: '#/components/schemas/Product'
+        insuredObject:
+          type: string
+          maxLength: 500
+          description: Описание объекта страхования
+        validFrom:
+          type: string
+          format: date
+          description: Первый день периода страхования, включительно
+        validTo:
+          type: string
+          format: date
+          description: Последний день периода страхования, включительно
+        terminatedOn:
+          type: string
+          format: date
+          nullable: true
+          description: |
+            Дата досрочного прекращения: с этого дня договор не действует.
+            Отсутствует, если договор досрочно не прекращался.
+        status:
+          $ref: '#/components/schemas/ContractStatus'
+    Product:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          enum: [CASCO, OSAGO, MORTGAGE, PROPERTY, LIFE]
+          description: Код продукта — разрез аналитики по продуктам
+        name:
+          type: string
+          description: Название для показа клиенту
+    ContractStatus:
+      type: string
+      enum: [NOT_STARTED, ACTIVE, EXPIRED, TERMINATED]
+      description: |
+        Состояние договора на сегодняшний день — для показа. Покрытие на дату события
+        определяется по датам, а не по статусу.
+    Error:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string

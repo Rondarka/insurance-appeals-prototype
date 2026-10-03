@@ -5,7 +5,8 @@
 страховой организации».
 
 Как устроен код — [docs/architecture.md](docs/architecture.md), почему так —
-[docs/decisions.md](docs/decisions.md).
+[docs/decisions.md](docs/decisions.md), с кем и на каких условиях подсистема
+взаимодействует — [docs/integration-contract.md](docs/integration-contract.md).
 
 ## Что реализовано
 

@@ -1,0 +1,27 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "GET",
+    "urlPath": "/contracts/23333333-3333-3333-3333-333333333333"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": {
+      "contractId": "23333333-3333-3333-3333-333333333333",
+      "counterpartyId": "11111111-1111-1111-1111-111111111111",
+      "policyNumber": "ОСАГО-2025-118204",
+      "product": {
+        "code": "OSAGO",
+        "name": "ОСАГО"
+      },
+      "insuredObject": "Автомобиль: Geely Monjaro, госномер А123АА77",
+      "validFrom": "2025-03-15",
+      "validTo": "2026-03-14",
+      "terminatedOn": null,
+      "status": "EXPIRED"
+    }
+  }
+}

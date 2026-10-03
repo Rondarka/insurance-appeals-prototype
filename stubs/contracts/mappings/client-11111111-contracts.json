@@ -1,0 +1,71 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "GET",
+    "urlPath": "/clients/11111111-1111-1111-1111-111111111111/contracts"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": [
+      {
+        "contractId": "21111111-1111-1111-1111-111111111111",
+        "counterpartyId": "11111111-1111-1111-1111-111111111111",
+        "policyNumber": "ИП-2026-001245",
+        "product": {
+          "code": "MORTGAGE",
+          "name": "Ипотечное страхование"
+        },
+        "insuredObject": "Квартира: г. Москва, ул. Примерная, д. 10, кв. 25",
+        "validFrom": "2026-02-01",
+        "validTo": "2027-01-31",
+        "terminatedOn": null,
+        "status": "ACTIVE"
+      },
+      {
+        "contractId": "22222222-2222-2222-2222-222222222222",
+        "counterpartyId": "11111111-1111-1111-1111-111111111111",
+        "policyNumber": "КАСКО-2026-004821",
+        "product": {
+          "code": "CASCO",
+          "name": "КАСКО"
+        },
+        "insuredObject": "Автомобиль: Geely Monjaro, госномер А123АА77",
+        "validFrom": "2026-03-15",
+        "validTo": "2027-03-14",
+        "terminatedOn": null,
+        "status": "ACTIVE"
+      },
+      {
+        "contractId": "23333333-3333-3333-3333-333333333333",
+        "counterpartyId": "11111111-1111-1111-1111-111111111111",
+        "policyNumber": "ОСАГО-2025-118204",
+        "product": {
+          "code": "OSAGO",
+          "name": "ОСАГО"
+        },
+        "insuredObject": "Автомобиль: Geely Monjaro, госномер А123АА77",
+        "validFrom": "2025-03-15",
+        "validTo": "2026-03-14",
+        "terminatedOn": null,
+        "status": "EXPIRED"
+      },
+      {
+        "contractId": "24444444-4444-4444-4444-444444444444",
+        "counterpartyId": "11111111-1111-1111-1111-111111111111",
+        "policyNumber": "ИМ-2026-030517",
+        "product": {
+          "code": "PROPERTY",
+          "name": "Страхование имущества"
+        },
+        "insuredObject": "Загородный дом: Московская обл., д. Берёзки, ул. Садовая, д. 7",
+        "validFrom": "2026-01-10",
+        "validTo": "2027-01-09",
+        "terminatedOn": "2026-08-01",
+        "status": "TERMINATED"
+      }
+    ]
+  }
+}

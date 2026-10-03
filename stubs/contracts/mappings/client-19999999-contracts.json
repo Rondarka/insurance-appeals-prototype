@@ -1,0 +1,29 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "GET",
+    "urlPath": "/clients/19999999-9999-9999-9999-999999999999/contracts"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": [
+      {
+        "contractId": "29999999-9999-9999-9999-999999999999",
+        "counterpartyId": "19999999-9999-9999-9999-999999999999",
+        "policyNumber": "КАСКО-2026-999999",
+        "product": {
+          "code": "CASCO",
+          "name": "КАСКО"
+        },
+        "insuredObject": "Автомобиль: Lada Vesta, госномер В777ВВ77",
+        "validFrom": "2026-01-01",
+        "validTo": "2026-12-31",
+        "terminatedOn": null,
+        "status": "ACTIVE"
+      }
+    ]
+  }
+}

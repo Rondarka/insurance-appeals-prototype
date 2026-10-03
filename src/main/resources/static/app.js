@@ -203,6 +203,17 @@ function escapeHtml(value) {
         .replaceAll("'", "&#039;");
 }
 
+const CONTRACT_STATUS_LABELS = {
+    NOT_STARTED: "Не вступил в силу",
+    ACTIVE: "Действует",
+    EXPIRED: "Истёк",
+    TERMINATED: "Прекращён досрочно"
+};
+
+function contractStatusLabel(status) {
+    return CONTRACT_STATUS_LABELS[status] || status;
+}
+
 function formatDeadline(value, status) {
     if (!value) return "Не назначено";
     const date = formatDate(value);
@@ -317,7 +328,7 @@ function renderContractSummary() {
         <div><small>Вид страхования</small><strong>${escapeHtml(contract.insuranceType)}</strong></div>
         <div class="wide"><small>Объект</small><strong>${escapeHtml(contract.insuredObject)}</strong></div>
         <div><small>Срок действия</small><strong>${formatShortDate(contract.validFrom)} – ${formatShortDate(contract.validTo)}</strong></div>
-        <div><small>Статус</small><strong class="contract-active">Действует</strong></div>
+        <div><small>Статус</small><strong class="${contract.status === "ACTIVE" ? "contract-active" : ""}">${escapeHtml(contractStatusLabel(contract.status))}</strong></div>
     `;
 }
 

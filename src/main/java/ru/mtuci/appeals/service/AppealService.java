@@ -9,7 +9,9 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import ru.mtuci.appeals.api.ApiModels.AddMessageRequest;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
@@ -25,9 +27,10 @@ import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.Client;
+import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.EventAudit;
-import ru.mtuci.appeals.domain.InsuranceContract;
+import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.messaging.AppealDomainEvent;
 import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealMessageRepository;
@@ -36,7 +39,6 @@ import ru.mtuci.appeals.repository.AppealAttachmentRepository;
 import ru.mtuci.appeals.repository.ClientRepository;
 import ru.mtuci.appeals.repository.DepartmentRepository;
 import ru.mtuci.appeals.repository.EventAuditRepository;
-import ru.mtuci.appeals.repository.InsuranceContractRepository;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -56,7 +58,8 @@ public class AppealService {
     private final AppealRepository appealRepository;
     private final AppealAttachmentRepository attachmentRepository;
     private final ClientRepository clientRepository;
-    private final InsuranceContractRepository contractRepository;
+    private final ContractsClient contractsClient;
+    private final TransactionTemplate transactionTemplate;
     private final DepartmentRepository departmentRepository;
     private final AppealHistoryRepository historyRepository;
     private final AppealMessageRepository messageRepository;
@@ -71,7 +74,8 @@ public class AppealService {
     public AppealService(AppealRepository appealRepository,
                          AppealAttachmentRepository attachmentRepository,
                          ClientRepository clientRepository,
-                         InsuranceContractRepository contractRepository,
+                         ContractsClient contractsClient,
+                         PlatformTransactionManager transactionManager,
                          DepartmentRepository departmentRepository,
                          AppealHistoryRepository historyRepository,
                          AppealMessageRepository messageRepository,
@@ -85,7 +89,8 @@ public class AppealService {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
         this.clientRepository = clientRepository;
-        this.contractRepository = contractRepository;
+        this.contractsClient = contractsClient;
+        this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.departmentRepository = departmentRepository;
         this.historyRepository = historyRepository;
         this.messageRepository = messageRepository;
@@ -98,20 +103,31 @@ public class AppealService {
         this.objectMapper = objectMapper;
     }
 
-    @Transactional
+    /**
+     * Регистрация обращения. Договор запрашивается у учётной системы до начала транзакции:
+     * сетевой вызов не должен держать соединение с базой. Транзакция охватывает только запись.
+     */
     public AppealDetailResponse create(CreateAppealRequest request) {
-        Client client = clientRepository.findById(request.clientId())
+        // «не найден» и «чужой» неразличимы для клиента: не раскрываем, существует ли договор
+        ContractSnapshot contract = contractsClient.contract(request.contractId())
+                .filter(found -> found.belongsTo(request.clientId()))
                 .orElseThrow(() -> new IllegalArgumentException(
-                        "Клиент не найден: " + request.clientId()));
-        InsuranceContract contract = contractRepository
-                .findByIdAndClientId(request.contractId(), request.clientId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Договор не найден или не принадлежит выбранному клиенту"));
+                        "Договор не найден или не принадлежит выбранному клиенту"))
+                .toSnapshot();
         Map<String, String> details = new HashMap<>(request.details());
         details.put("policyNumber", contract.getPolicyNumber());
         details.put("insuredObject", contract.getInsuredObject());
         details.putIfAbsent("objectAddress", contract.getInsuredObject());
         formPolicy.validate(request, details);
+
+        return transactionTemplate.execute(transaction -> register(request, contract, details));
+    }
+
+    private AppealDetailResponse register(CreateAppealRequest request, ContractSnapshot contract,
+                                          Map<String, String> details) {
+        Client client = clientRepository.findById(request.clientId())
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Клиент не найден: " + request.clientId()));
         Instant now = Instant.now();
         UUID id = UUID.randomUUID();
         String publicNumber = "APP-" + NUMBER_DATE.format(now) + "-"

@@ -7,9 +7,12 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.containers.RabbitMQContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
+import org.testcontainers.utility.MountableFile;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
@@ -28,7 +31,8 @@ import static org.awaitility.Awaitility.await;
 
 /**
  * Основа интеграционных тестов: приложение целиком против настоящих PostgreSQL и RabbitMQ
- * в контейнерах тех же версий, что в compose.yaml. Контейнеры поднимаются один раз на весь
+ * и заглушки учётной системы договоров — в контейнерах тех же версий, что в compose.yaml.
+ * Заглушка отвечает по тем же файлам stubs/contracts, что и в стенде. Контейнеры поднимаются один раз на весь
  * прогон и общие для всех тестовых классов; схему и справочные данные создаёт Flyway.
  *
  * Тесты не очищают базу: каждый работает со своими обращениями и проверяет их по id.
@@ -51,11 +55,18 @@ public abstract class IntegrationTest {
     private static final RabbitMQContainer RABBIT = new RabbitMQContainer(
             DockerImageName.parse("rabbitmq:4.3.1-management-alpine").asCompatibleSubstituteFor("rabbitmq"));
 
+    private static final GenericContainer<?> CONTRACTS_STUB = new GenericContainer<>(
+            DockerImageName.parse("wiremock/wiremock:3.13.2-alpine"))
+            .withCopyFileToContainer(MountableFile.forHostPath("stubs/contracts"), "/home/wiremock")
+            .withExposedPorts(8080)
+            .waitingFor(Wait.forHttp("/__admin/mappings").forStatusCode(200));
+
     private static final String ATTACHMENTS_DIR = createTempDir();
 
     static {
         POSTGRES.start();
         RABBIT.start();
+        CONTRACTS_STUB.start();
     }
 
     @DynamicPropertySource
@@ -70,6 +81,8 @@ public abstract class IntegrationTest {
         // в compose приложение ходит в отдельный vhost, в тестовом контейнере есть только корневой
         registry.add("spring.rabbitmq.virtual-host", () -> "/");
         registry.add("appeals.attachments.path", () -> ATTACHMENTS_DIR);
+        registry.add("appeals.contracts.base-url",
+                () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
     }
 
     @Autowired

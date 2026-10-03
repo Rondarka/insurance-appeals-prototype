@@ -1,6 +1,7 @@
 package ru.mtuci.appeals.domain;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -34,9 +35,8 @@ public class Appeal {
     @JoinColumn(name = "client_id", nullable = false)
     private Client client;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "contract_id", nullable = false)
-    private InsuranceContract contract;
+    @Embedded
+    private ContractSnapshot contract;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
@@ -85,7 +85,7 @@ public class Appeal {
     protected Appeal() {
     }
 
-    public Appeal(UUID id, String publicNumber, Client client, InsuranceContract contract,
+    public Appeal(UUID id, String publicNumber, Client client, ContractSnapshot contract,
                   AppealCategory category, String subcategory, String detailsJson,
                   String subject, String description, Instant now) {
         this.id = id;
@@ -150,7 +150,7 @@ public class Appeal {
         return client;
     }
 
-    public InsuranceContract getContract() {
+    public ContractSnapshot getContract() {
         return contract;
     }
 

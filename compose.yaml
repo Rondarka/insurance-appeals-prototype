@@ -35,6 +35,14 @@ services:
       timeout: 5s
       retries: 30
 
+  # Эмулятор учётной системы договоров страховой: отвечает по docs/contracts-api.yaml
+  contracts-stub:
+    image: wiremock/wiremock:3.13.2-alpine
+    volumes:
+      - ./stubs/contracts:/home/wiremock:ro
+    ports:
+      - "18081:8080"
+
   app:
     build:
       context: .
@@ -48,6 +56,7 @@ services:
       SPRING_RABBITMQ_PASSWORD: appeals_dev
       SPRING_RABBITMQ_VIRTUAL_HOST: appeals
       ATTACHMENT_STORAGE_PATH: /data/attachments
+      CONTRACTS_BASE_URL: http://contracts-stub:8080
     ports:
       - "18080:8080"
     volumes:
@@ -57,6 +66,8 @@ services:
         condition: service_healthy
       rabbitmq:
         condition: service_healthy
+      contracts-stub:
+        condition: service_started
 
 volumes:
   postgres-data:

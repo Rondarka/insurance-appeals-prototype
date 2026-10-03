@@ -44,6 +44,10 @@ appeals:
   attachments:
     path: ${ATTACHMENT_STORAGE_PATH:/data/attachments}
     max-count: 5
+  contracts:
+    # учётная система договоров страховой; в стенде — заглушка WireMock
+    base-url: ${CONTRACTS_BASE_URL:http://localhost:18081}
+    timeout: 3s
 
 logging:
   level:

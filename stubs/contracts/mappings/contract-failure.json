@@ -1,0 +1,16 @@
+{
+  "priority": 5,
+  "request": {
+    "method": "GET",
+    "urlPath": "/contracts/25000000-0000-0000-0000-000000000500"
+  },
+  "response": {
+    "status": 500,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": {
+      "message": "Учётная система временно недоступна"
+    }
+  }
+}

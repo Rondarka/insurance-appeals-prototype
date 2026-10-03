@@ -7,12 +7,13 @@ import ru.mtuci.appeals.api.ApiModels.ClientResponse;
 import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EmployeeResponse;
+import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.Employee;
-import ru.mtuci.appeals.domain.InsuranceContract;
+import ru.mtuci.appeals.integration.ContractsClient;
+import ru.mtuci.appeals.integration.ExternalContract;
 import ru.mtuci.appeals.repository.ClientRepository;
 import ru.mtuci.appeals.repository.EmployeeRepository;
-import ru.mtuci.appeals.repository.InsuranceContractRepository;
 
 import java.util.List;
 
@@ -20,18 +21,18 @@ import java.util.List;
 public class DirectoryService {
 
     private final ClientRepository clientRepository;
-    private final InsuranceContractRepository contractRepository;
+    private final ContractsClient contractsClient;
     private final EmployeeRepository employeeRepository;
 
     public DirectoryService(ClientRepository clientRepository,
-                            InsuranceContractRepository contractRepository,
+                            ContractsClient contractsClient,
                             EmployeeRepository employeeRepository) {
         this.clientRepository = clientRepository;
-        this.contractRepository = contractRepository;
+        this.contractsClient = contractsClient;
         this.employeeRepository = employeeRepository;
     }
 
-    @Transactional(readOnly = true)
+    /** Без общей транзакции: договоры приходят по сети из учётной системы. */
     public List<ClientResponse> clients() {
         return clientRepository.findAll(Sort.by("fullName")).stream()
                 .map(client -> new ClientResponse(
@@ -39,7 +40,8 @@ public class DirectoryService {
                         client.getFullName(),
                         client.getEmail(),
                         client.getPhone(),
-                        contractRepository.findByClientIdOrderByValidToDesc(client.getId()).stream()
+                        contractsClient.clientContracts(client.getId()).stream()
+                                .map(ExternalContract::toSnapshot)
                                 .map(this::toContract)
                                 .toList()
                 ))
@@ -53,14 +55,16 @@ public class DirectoryService {
                 .toList();
     }
 
-    public ContractResponse toContract(InsuranceContract contract) {
+    public ContractResponse toContract(ContractSnapshot contract) {
         return new ContractResponse(
-                contract.getId(),
+                contract.getContractId(),
                 contract.getPolicyNumber(),
-                contract.getInsuranceType(),
+                contract.getProductCode(),
+                contract.getProductName(),
                 contract.getInsuredObject(),
                 contract.getValidFrom(),
                 contract.getValidTo(),
+                contract.getTerminatedOn(),
                 contract.getStatus()
         );
     }

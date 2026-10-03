@@ -62,13 +62,16 @@ public final class ApiModels {
     public record DepartmentResponse(Long id, String code, String name, String description) {
     }
 
+    /** insuranceType — название продукта для показа, productCode — его код из учётной системы. */
     public record ContractResponse(
             UUID id,
             String policyNumber,
+            String productCode,
             String insuranceType,
             String insuredObject,
             LocalDate validFrom,
             LocalDate validTo,
+            LocalDate terminatedOn,
             String status
     ) {
     }

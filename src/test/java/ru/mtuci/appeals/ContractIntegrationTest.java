@@ -8,7 +8,6 @@ import ru.mtuci.appeals.api.ApiModels.ClientResponse;
 import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
-import ru.mtuci.appeals.domain.AppealCategory;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -97,7 +96,7 @@ class ContractIntegrationTest extends IntegrationTest {
 
     private static CreateAppealRequest claimOn(UUID contractId) {
         return new CreateAppealRequest(
-                CLIENT, contractId, AppealCategory.CLAIM, "AUTO",
+                CLIENT, contractId, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва"),
                 "ДТП", "Обращение по договору " + contractId);
     }

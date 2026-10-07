@@ -7,90 +7,25 @@ const state = {
     transferRequests: [],
     activeClientId: null,
     activeEmployeeId: null,
-    activeAppealId: null
+    activeAppealId: null,
+    schema: {categories: []},
+    formSchema: {categories: []}
 };
 
-const formConfig = {
-    MORTGAGE: {
-        subcategories: {
-            DOCUMENTS: {label: "Получение или загрузка документов", fields: ["policyNumber", "objectAddress"]},
-            RENEWAL: {label: "Продление договора", fields: ["policyNumber", "objectAddress"]},
-            PAYMENT: {label: "Оплата ипотечного полиса", fields: ["policyNumber", "paymentDate", "paymentAmount"]},
-            CLAIM_EVENT: {label: "Страховой случай по объекту", fields: ["policyNumber", "incidentDate", "objectAddress"]},
-            DATA_CHANGE: {label: "Изменение данных", fields: ["policyNumber", "objectAddress"]}
-        }
-    },
-    CLAIM: {
-        subcategories: {
-            AUTO: {label: "Автомобиль", fields: ["policyNumber", "incidentDate", "incidentPlace"]},
-            PROPERTY: {label: "Имущество", fields: ["policyNumber", "incidentDate", "incidentPlace"]},
-            HEALTH: {label: "Жизнь и здоровье", fields: ["policyNumber", "incidentDate", "incidentPlace"]}
-        }
-    },
-    POLICY: {
-        subcategories: {
-            COPY: {label: "Получить копию полиса", fields: ["policyNumber"]},
-            DATA_CHANGE: {label: "Изменить данные в полисе", fields: ["policyNumber"]},
-            TERMINATION: {label: "Расторгнуть договор", fields: ["policyNumber"]}
-        }
-    },
-    PAYMENT: {
-        subcategories: {
-            PAYMENT_STATUS: {label: "Проверить статус платежа", fields: ["policyNumber", "paymentDate", "paymentAmount"]},
-            REFUND: {label: "Возврат денежных средств", fields: ["policyNumber", "paymentDate", "paymentAmount"]},
-            INCORRECT_AMOUNT: {label: "Неверная сумма", fields: ["policyNumber", "paymentDate", "paymentAmount"]}
-        }
-    },
-    COMPLAINT: {
-        subcategories: {
-            SERVICE_QUALITY: {label: "Качество обслуживания", fields: ["desiredOutcome"]},
-            DEADLINE: {label: "Нарушение срока ответа", fields: ["relatedAppealNumber", "desiredOutcome"]},
-            EMPLOYEE: {label: "Действия сотрудника", fields: ["desiredOutcome"]}
-        }
-    },
-    TECHNICAL: {
-        subcategories: {
-            LOGIN: {label: "Не удаётся войти", fields: ["systemSection", "device", "errorText"]},
-            PERSONAL_ACCOUNT: {label: "Ошибка личного кабинета", fields: ["systemSection", "device", "errorText"]},
-            DOCUMENT_UPLOAD: {label: "Не загружается документ", fields: ["systemSection", "device", "errorText"]}
-        }
-    },
-    OTHER: {
-        subcategories: {
-            GENERAL: {label: "Другой вопрос", fields: []}
-        }
-    }
+// Что спрашивать у клиента, задаёт схема формы с сервера (GET /api/form-schema, решение 24).
+// Здесь только то, как это показать: элемент ввода, ширина поля и демонстрационные значения.
+const INPUT_TYPES = {TEXT: "text", DATE: "date", NUMBER: "number"};
+const WIDE_FIELDS = ["incidentPlace", "desiredOutcome", "errorText"];
+const DEMO_VALUES = {
+    paymentDate: "2026-06-10",
+    paymentAmount: "15000",
+    incidentDate: "2026-06-11",
+    incidentPlace: "г. Москва",
+    systemSection: "Личный кабинет",
+    device: "Windows 10, Chrome"
 };
-
-const fieldDefinitions = {
-    policyNumber: {label: "Номер полиса", type: "text", placeholder: "Например, ИП-2026-001245", value: "ИП-2026-001245"},
-    objectAddress: {label: "Адрес объекта страхования", type: "text", placeholder: "Город, улица, дом", value: "г. Москва, ул. Примерная, д. 10", wide: true},
-    paymentDate: {label: "Дата платежа", type: "date", value: "2026-06-10"},
-    paymentAmount: {label: "Сумма платежа, ₽", type: "number", placeholder: "15000", value: "15000"},
-    incidentDate: {label: "Дата происшествия", type: "date", value: "2026-06-11"},
-    incidentPlace: {label: "Место происшествия", type: "text", placeholder: "Адрес или описание места", value: "г. Москва", wide: true},
-    relatedAppealNumber: {label: "Номер связанного обращения", type: "text", placeholder: "APP-20260612-ABC123"},
-    desiredOutcome: {label: "Какой результат вы ожидаете", type: "text", placeholder: "Опишите желаемый результат", wide: true},
-    systemSection: {label: "Раздел системы", type: "text", placeholder: "Личный кабинет / оплата / документы", value: "Личный кабинет"},
-    device: {label: "Устройство и браузер", type: "text", placeholder: "Windows 11, Chrome", value: "Windows 10, Chrome"},
-    errorText: {label: "Текст ошибки", type: "text", placeholder: "Скопируйте сообщение об ошибке", wide: true}
-};
-
-const detailLabels = Object.fromEntries(
-    Object.entries(fieldDefinitions).map(([key, definition]) => [key, definition.label])
-);
-detailLabels.insuredObject = "Объект страхования по договору";
 
 const labels = {
-    categories: {
-        MORTGAGE: "Ипотечное страхование",
-        CLAIM: "Страховой случай",
-        POLICY: "Вопрос по полису",
-        PAYMENT: "Оплата или возврат",
-        COMPLAINT: "Жалоба",
-        TECHNICAL: "Техническая проблема",
-        OTHER: "Другое"
-    },
     statuses: {
         PENDING_ROUTING: "Ожидает маршрутизации",
         ROUTED: "Назначено отделу",
@@ -123,12 +58,35 @@ async function api(path, options = {}) {
     return response.json();
 }
 
+function schemaCategory(schema, category) {
+    return schema.categories.find(item => item.code === category);
+}
+
+function schemaType(schema, category, type) {
+    return schemaCategory(schema, category)?.types.find(item => item.code === type);
+}
+
+/** Типы обращений зависят от продукта договора: клиент с КАСКО не видит ипотечных. */
+async function loadFormSchema() {
+    const contract = selectedContract();
+    state.formSchema = contract
+        ? await api(`/api/form-schema?productCode=${encodeURIComponent(contract.productCode)}`)
+        : {categories: []};
+    renderCategories();
+}
+
+function renderCategories() {
+    document.querySelector("#appeal-category").innerHTML = state.formSchema.categories
+        .map(item => `<option value="${escapeHtml(item.code)}">${escapeHtml(item.label)}</option>`)
+        .join("");
+    renderSubcategories();
+}
+
 function renderSubcategories() {
     const category = document.querySelector("#appeal-category").value;
-    const subcategorySelect = document.querySelector("#appeal-subcategory");
-    const subcategories = formConfig[category].subcategories;
-    subcategorySelect.innerHTML = Object.entries(subcategories)
-        .map(([value, item]) => `<option value="${value}">${escapeHtml(item.label)}</option>`)
+    const types = schemaCategory(state.formSchema, category)?.types || [];
+    document.querySelector("#appeal-subcategory").innerHTML = types
+        .map(item => `<option value="${escapeHtml(item.code)}">${escapeHtml(item.label)}</option>`)
         .join("");
     renderDynamicFields();
 }
@@ -136,7 +94,7 @@ function renderSubcategories() {
 function ensureFormCategoryConsistency() {
     const category = document.querySelector("#appeal-category").value;
     const subcategory = document.querySelector("#appeal-subcategory").value;
-    if (!formConfig[category]?.subcategories?.[subcategory]) {
+    if (!schemaType(state.formSchema, category, subcategory)) {
         renderSubcategories();
         return false;
     }
@@ -146,23 +104,35 @@ function ensureFormCategoryConsistency() {
 function renderDynamicFields() {
     const category = document.querySelector("#appeal-category").value;
     const subcategory = document.querySelector("#appeal-subcategory").value;
-    const fields = (formConfig[category].subcategories[subcategory]?.fields || [])
-        .filter(key => !["policyNumber", "objectAddress"].includes(key));
-    document.querySelector("#dynamic-fields").innerHTML = fields.map(key => {
-        const field = fieldDefinitions[key];
-        return `
-            <label class="${field.wide ? "wide-field" : ""}">
+    // поля договора, например номер полиса, сервер подставляет сам — клиент их не вводит
+    const fields = (schemaType(state.formSchema, category, subcategory)?.fields || [])
+        .filter(field => !field.contractAttribute);
+    document.querySelector("#dynamic-fields").innerHTML = fields.map(field => `
+            <label class="${WIDE_FIELDS.includes(field.code) ? "wide-field" : ""}">
                 ${escapeHtml(field.label)}
-                <input name="detail.${key}" type="${field.type}"
-                       placeholder="${escapeHtml(field.placeholder || "")}"
-                       value="${escapeHtml(field.value || "")}" required>
+                <input name="detail.${escapeHtml(field.code)}" type="${INPUT_TYPES[field.inputType] || "text"}"
+                       placeholder="${escapeHtml(field.hint || "")}"
+                       value="${escapeHtml(DEMO_VALUES[field.code] || "")}" ${field.required ? "required" : ""}>
             </label>
-        `;
-    }).join("");
+        `).join("");
+}
+
+function categoryLabel(category) {
+    return schemaCategory(state.schema, category)?.label || category;
 }
 
 function subcategoryLabel(category, subcategory) {
-    return formConfig[category]?.subcategories?.[subcategory]?.label || "Общий запрос";
+    return schemaType(state.schema, category, subcategory)?.label || "Общий запрос";
+}
+
+function fieldLabel(key) {
+    // insuredObject — атрибут обращений, созданных до схемы формы
+    if (key === "insuredObject") return "Объект страхования по договору";
+    const field = state.schema.categories
+        .flatMap(category => category.types)
+        .flatMap(type => type.fields)
+        .find(item => item.code === key);
+    return field?.label || key;
 }
 
 function formatFileSize(bytes) {
@@ -282,10 +252,11 @@ function selectedContract() {
 }
 
 async function loadDirectories() {
-    [state.departments, state.clients, state.employees] = await Promise.all([
+    [state.departments, state.clients, state.employees, state.schema] = await Promise.all([
         api("/api/departments"),
         api("/api/clients"),
-        api("/api/employees")
+        api("/api/employees"),
+        api("/api/form-schema")
     ]);
 
     state.activeClientId = state.clients[0]?.id || null;
@@ -296,6 +267,7 @@ async function loadDirectories() {
 
     renderClientIdentity();
     renderEmployeeSelector();
+    await loadFormSchema();
 }
 
 function renderClientIdentity() {
@@ -539,7 +511,7 @@ function detailTemplate(appeal) {
         <div class="detail-grid">
             <div><small>Клиент</small><strong>${escapeHtml(appeal.customerName)}</strong></div>
             <div><small>Полис</small><strong>${escapeHtml(appeal.contract.policyNumber)}</strong></div>
-            <div><small>Категория</small><strong>${labels.categories[appeal.category]}</strong></div>
+            <div><small>Категория</small><strong>${escapeHtml(categoryLabel(appeal.category))}</strong></div>
             <div><small>Тип обращения</small><strong>${escapeHtml(subcategoryLabel(appeal.category, appeal.subcategory))}</strong></div>
             <div><small>Отдел</small><strong>${appeal.department ? escapeHtml(appeal.department.name) : "Ожидает маршрутизации"}</strong></div>
             <div><small>Исполнитель</small><strong>${escapeHtml(appeal.assignedEmployee || "Не назначен")}</strong></div>
@@ -563,7 +535,7 @@ function detailTemplate(appeal) {
                 <div class="detail-attributes">
                     ${attributes.map(([key, value]) => `
                         <div class="detail-attribute">
-                            <small>${escapeHtml(detailLabels[key] || key)}</small>
+                            <small>${escapeHtml(fieldLabel(key))}</small>
                             <strong>${escapeHtml(value)}</strong>
                         </div>
                     `).join("")}
@@ -819,12 +791,14 @@ document.querySelector("#employee-selector").addEventListener("change", event =>
     renderEmployeeIdentity();
     loadEmployeeWorkspace().catch(error => showToast(error.message, true));
 });
-document.querySelector("#contract-select").addEventListener("change", renderContractSummary);
+document.querySelector("#contract-select").addEventListener("change", () => {
+    renderContractSummary();
+    loadFormSchema().catch(error => showToast(error.message, true));
+});
 document.querySelector("#appeal-category").addEventListener("change", renderSubcategories);
 document.querySelector("#appeal-subcategory").addEventListener("change", renderDynamicFields);
 document.querySelector("#appeal-files").addEventListener("change", renderSelectedFiles);
 
-renderSubcategories();
 window.addEventListener("pageshow", ensureFormCategoryConsistency);
 
 loadDirectories()

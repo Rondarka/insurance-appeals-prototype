@@ -20,9 +20,8 @@ public class RoutingRule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private AppealCategory category;
+    private String category;
 
     @Column(nullable = false, length = 60)
     private String subcategory;
@@ -41,7 +40,7 @@ public class RoutingRule {
     protected RoutingRule() {
     }
 
-    public AppealCategory getCategory() {
+    public String getCategory() {
         return category;
     }
 

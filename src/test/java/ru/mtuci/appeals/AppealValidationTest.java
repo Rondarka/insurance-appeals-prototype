@@ -5,7 +5,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
-import ru.mtuci.appeals.domain.AppealCategory;
 
 import java.util.Map;
 
@@ -21,7 +20,7 @@ class AppealValidationTest extends IntegrationTest {
     void rejectsSubcategoryThatDoesNotBelongToCategory() {
         int before = appealsOfClient(CLIENT);
         CreateAppealRequest claimWithMortgageSubcategory = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, AppealCategory.CLAIM, "RENEWAL",
+                CLIENT, CASCO_CONTRACT, "CLAIM", "RENEWAL",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва"),
                 "Продление", "Хочу продлить договор");
 
@@ -36,14 +35,14 @@ class AppealValidationTest extends IntegrationTest {
     void rejectsMissingRequiredDetails() {
         int before = appealsOfClient(CLIENT);
         CreateAppealRequest claimWithoutPlace = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, AppealCategory.CLAIM, "AUTO",
+                CLIENT, CASCO_CONTRACT, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10"),
                 "ДТП", "Без места происшествия");
 
         ResponseEntity<ErrorResponse> response = post(claimWithoutPlace);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getBody().message()).contains("incidentPlace");
+        assertThat(response.getBody().message()).contains("Место происшествия");
         assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
     }
 

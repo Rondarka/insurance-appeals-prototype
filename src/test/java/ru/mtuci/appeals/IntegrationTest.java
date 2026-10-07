@@ -16,7 +16,6 @@ import org.testcontainers.utility.MountableFile;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
-import ru.mtuci.appeals.domain.AppealCategory;
 import ru.mtuci.appeals.domain.AppealStatus;
 
 import java.io.IOException;
@@ -117,7 +116,7 @@ public abstract class IntegrationTest {
     /** Страховой случай по КАСКО: маршрутизируется в урегулирование убытков. */
     protected static CreateAppealRequest cascoClaim() {
         return new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, AppealCategory.CLAIM, "AUTO",
+                CLIENT, CASCO_CONTRACT, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "г. Москва, Ленинградское шоссе, д. 39"),
                 "ДТП на Ленинградском шоссе, повреждено крыло",
                 "Произошло ДТП с участием второго автомобиля, оформлен европротокол.");
@@ -126,7 +125,7 @@ public abstract class IntegrationTest {
     /** Техническая проблема входа: маршрутизируется в техническую поддержку. */
     protected static CreateAppealRequest loginProblem() {
         return new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, AppealCategory.TECHNICAL, "LOGIN",
+                CLIENT, CASCO_CONTRACT, "TECHNICAL", "LOGIN",
                 Map.of("systemSection", "Личный кабинет", "device", "Android, Chrome", "errorText", "Неверный код"),
                 "Не могу войти в личный кабинет",
                 "При входе приходит код, но система сообщает, что он неверный.");

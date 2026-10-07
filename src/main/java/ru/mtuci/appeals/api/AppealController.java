@@ -27,9 +27,11 @@ import ru.mtuci.appeals.api.ApiModels.ClientResponse;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EmployeeResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
+import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
+import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.AttachmentService;
 import ru.mtuci.appeals.service.DirectoryService;
@@ -47,15 +49,18 @@ public class AppealController {
     private final AttachmentService attachmentService;
     private final DirectoryService directoryService;
     private final TransferService transferService;
+    private final AppealFormPolicy formPolicy;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
                             DirectoryService directoryService,
-                            TransferService transferService) {
+                            TransferService transferService,
+                            AppealFormPolicy formPolicy) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
         this.transferService = transferService;
+        this.formPolicy = formPolicy;
     }
 
     @PostMapping("/appeals")
@@ -150,6 +155,12 @@ public class AppealController {
     @GetMapping("/clients")
     List<ClientResponse> clients() {
         return directoryService.clients();
+    }
+
+    /** Без productCode — полная схема, с ним — только типы, допустимые для продукта договора. */
+    @GetMapping("/form-schema")
+    FormSchemaResponse formSchema(@RequestParam(required = false) String productCode) {
+        return formPolicy.schema(productCode);
     }
 
     @GetMapping("/employees")

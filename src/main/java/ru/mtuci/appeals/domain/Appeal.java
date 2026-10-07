@@ -38,9 +38,8 @@ public class Appeal {
     @Embedded
     private ContractSnapshot contract;
 
-    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 50)
-    private AppealCategory category;
+    private String category;
 
     @Column(nullable = false, length = 60)
     private String subcategory;
@@ -86,7 +85,7 @@ public class Appeal {
     }
 
     public Appeal(UUID id, String publicNumber, Client client, ContractSnapshot contract,
-                  AppealCategory category, String subcategory, String detailsJson,
+                  String category, String subcategory, String detailsJson,
                   String subject, String description, Instant now) {
         this.id = id;
         this.publicNumber = publicNumber;
@@ -154,7 +153,7 @@ public class Appeal {
         return contract;
     }
 
-    public AppealCategory getCategory() {
+    public String getCategory() {
         return category;
     }
 

@@ -44,7 +44,6 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
@@ -114,11 +113,8 @@ public class AppealService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Договор не найден или не принадлежит выбранному клиенту"))
                 .toSnapshot();
-        Map<String, String> details = new HashMap<>(request.details());
-        details.put("policyNumber", contract.getPolicyNumber());
-        details.put("insuredObject", contract.getInsuredObject());
-        details.putIfAbsent("objectAddress", contract.getInsuredObject());
-        formPolicy.validate(request, details);
+        Map<String, String> details = formPolicy.details(
+                request.category(), request.subcategory(), contract, request.details());
 
         return transactionTemplate.execute(transaction -> register(request, contract, details));
     }
@@ -158,11 +154,11 @@ public class AppealService {
                 "APPEAL_CREATED",
                 appeal.getId(),
                 "appeal.created."
-                        + request.category().name().toLowerCase(Locale.ROOT)
+                        + request.category().toLowerCase(Locale.ROOT)
                         + "."
                         + request.subcategory().toLowerCase(Locale.ROOT),
                 Map.of(
-                        "category", request.category().name(),
+                        "category", request.category(),
                         "subcategory", request.subcategory(),
                         "publicNumber", publicNumber
                 )

@@ -3,7 +3,6 @@ package ru.mtuci.appeals.api;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import ru.mtuci.appeals.domain.AppealCategory;
 import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
@@ -24,7 +23,7 @@ public final class ApiModels {
     public record CreateAppealRequest(
             @NotNull UUID clientId,
             @NotNull UUID contractId,
-            @NotNull AppealCategory category,
+            @NotBlank @Size(max = 50) String category,
             @NotBlank @Size(max = 60) String subcategory,
             @NotNull Map<String, String> details,
             @NotBlank @Size(max = 200) String subject,
@@ -115,7 +114,7 @@ public final class ApiModels {
             UUID id,
             String publicNumber,
             String customerName,
-            AppealCategory category,
+            String category,
             String subcategory,
             String subject,
             AppealStatus status,
@@ -162,7 +161,7 @@ public final class ApiModels {
             String customerName,
             String customerEmail,
             ContractResponse contract,
-            AppealCategory category,
+            String category,
             String subcategory,
             Map<String, String> details,
             String subject,
@@ -188,6 +187,30 @@ public final class ApiModels {
             String eventType,
             String routingKey,
             Instant receivedAt
+    ) {
+    }
+
+    /** Схема формы: что спросить у клиента. Как это показать, решает интерфейс (решение 24). */
+    public record FormSchemaResponse(List<FormCategory> categories) {
+    }
+
+    public record FormCategory(String code, String label, List<FormAppealType> types) {
+    }
+
+    public record FormAppealType(String code, String label, List<FormField> fields) {
+    }
+
+    /**
+     * inputType — TEXT, DATE или NUMBER. contractAttribute заполнен, если значение
+     * подставляет сервер из договора: такое поле клиенту не показывают.
+     */
+    public record FormField(
+            String code,
+            String label,
+            String inputType,
+            String hint,
+            boolean required,
+            String contractAttribute
     ) {
     }
 

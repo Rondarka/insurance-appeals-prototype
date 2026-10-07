@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Администрирование — обработка обращений</title>
+    <link rel="stylesheet" href="/styles.css?v=20261008-1">
+</head>
+<body class="app-page">
+<header class="topbar admin-topbar">
+    <div class="brand">
+        <span class="brand-mark">ОО</span>
+        <span><strong>Обработка обращений</strong><small>Администрирование</small></span>
+    </div>
+    <nav class="tabs">
+        <button class="tab active" type="button" data-tab="overview">Обзор</button>
+        <button class="tab" type="button" data-tab="appeals">Обращения</button>
+        <button class="tab" type="button" data-tab="events">Журнал событий</button>
+    </nav>
+    <div id="user-box" class="user-box"></div>
+</header>
+
+<main>
+    <section id="overview-view" class="view active page">
+        <div class="view-head">
+            <div>
+                <h1>Обзор</h1>
+                <p class="muted">Все обращения по отделам. Нажмите на отдел, чтобы открыть его обращения.</p>
+            </div>
+            <button id="refresh-overview" class="btn" type="button">Обновить</button>
+        </div>
+        <div id="metrics" class="metrics"></div>
+        <div class="panel"><table id="by-department" class="table"></table></div>
+    </section>
+
+    <section id="appeals-view" class="view master-detail">
+        <aside class="master">
+            <div class="filters">
+                <select id="filter-department"></select>
+                <select id="filter-status"></select>
+                <input id="filter-text" type="search" placeholder="Номер, тема или клиент">
+            </div>
+            <div id="admin-list" class="queue-list"></div>
+        </aside>
+        <article id="admin-card" class="detail"><p class="empty">Выберите обращение в списке слева</p></article>
+    </section>
+
+    <section id="events-view" class="view page">
+        <div class="view-head">
+            <div>
+                <h1>Журнал событий</h1>
+                <p class="muted">Что подсистема опубликовала в обменник <code>appeal.events</code>: получено очередью аудита по привязке <code>appeal.#</code>.</p>
+            </div>
+            <button id="refresh-events" class="btn" type="button">Обновить</button>
+        </div>
+        <div id="events" class="panel"></div>
+    </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="/auth.js?v=20261008-1"></script>
+<script src="/common.js?v=20261008-1"></script>
+<script src="/admin.js?v=20261008-1"></script>
+</body>
+</html>

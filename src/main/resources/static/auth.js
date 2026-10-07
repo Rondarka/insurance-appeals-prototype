@@ -9,7 +9,8 @@ const auth = (() => {
     const base64Url = buffer => btoa(String.fromCharCode(...new Uint8Array(buffer)))
         .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
     const randomString = () => base64Url(crypto.getRandomValues(new Uint8Array(32)));
-    const redirectUri = () => `${window.location.origin}/`;
+    // возвращаемся на ту же страницу: у клиента, сотрудника и администратора они разные
+    const redirectUri = () => `${window.location.origin}${window.location.pathname}`;
     const endpoint = name => `${config.issuer}/protocol/openid-connect/${name}`;
 
     async function login() {
@@ -61,13 +62,13 @@ const auth = (() => {
         config = await (await fetch("/auth-config")).json();
         const query = new URLSearchParams(window.location.search);
         if (query.has("error")) {
-            window.history.replaceState(null, "", "/");
+            window.history.replaceState(null, "", window.location.pathname);
             throw new Error(query.get("error_description") || "Вход отклонён");
         }
         const saved = JSON.parse(sessionStorage.getItem("pkce") || "null");
         if (query.has("code") && saved && query.get("state") === saved.state) {
             sessionStorage.removeItem("pkce");
-            window.history.replaceState(null, "", "/");
+            window.history.replaceState(null, "", window.location.pathname);
             await requestTokens({
                 grant_type: "authorization_code",
                 code: query.get("code"),

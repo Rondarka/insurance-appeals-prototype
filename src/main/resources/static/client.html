@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Личный кабинет — страховая компания</title>
+    <link rel="stylesheet" href="/styles.css?v=20261008-1">
+</head>
+<body>
+<header class="topbar client-topbar">
+    <div class="brand">
+        <span class="brand-mark">СК</span>
+        <span><strong>Страховая компания</strong><small>Личный кабинет</small></span>
+    </div>
+    <div id="user-box" class="user-box"></div>
+</header>
+
+<main class="client-layout">
+    <aside class="sidebar">
+        <button id="new-appeal-button" class="btn primary wide" type="button">Новое обращение</button>
+        <h3 class="side-title">Мои обращения</h3>
+        <div id="my-appeals" class="side-list"><p class="muted">Загрузка…</p></div>
+        <p class="demo-note">Кабинет — продукт страховой компании, здесь он изображён для демонстрации.
+            Подсистема обработки обращений отдаёт ему данные через API.</p>
+    </aside>
+
+    <section class="content">
+        <form id="new-appeal" class="panel" novalidate>
+            <h2>Новое обращение</h2>
+
+            <section class="step">
+                <h3><span class="step-no">1</span> По какому договору</h3>
+                <div id="contracts" class="choice-grid"></div>
+            </section>
+
+            <section class="step">
+                <h3><span class="step-no">2</span> Что случилось</h3>
+                <div id="categories" class="chip-row"></div>
+                <div id="types" class="choice-grid compact"></div>
+            </section>
+
+            <section class="step">
+                <h3><span class="step-no">3</span> Подробности</h3>
+                <div id="fields" class="fields"></div>
+                <label>Тема
+                    <input name="subject" maxlength="200" required placeholder="Коротко: что произошло">
+                </label>
+                <label>Описание
+                    <textarea name="description" rows="5" maxlength="5000" required
+                              placeholder="Что случилось, когда и что вы уже сделали"></textarea>
+                </label>
+                <label>Документы и фото
+                    <input id="files" type="file" multiple
+                           accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                    <small class="muted">До 5 файлов, каждый до 10 МБ: PDF, JPG или PNG</small>
+                </label>
+            </section>
+
+            <div class="form-actions">
+                <button class="btn primary" type="submit">Отправить обращение</button>
+            </div>
+        </form>
+
+        <article id="appeal-view" class="panel" hidden></article>
+    </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="/auth.js?v=20261008-1"></script>
+<script src="/common.js?v=20261008-1"></script>
+<script src="/client.js?v=20261008-1"></script>
+</body>
+</html>

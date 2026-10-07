@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Рабочее место — обработка обращений</title>
+    <link rel="stylesheet" href="/styles.css?v=20261008-1">
+</head>
+<body class="app-page">
+<header class="topbar">
+    <div class="brand">
+        <span class="brand-mark">ОО</span>
+        <span><strong>Обработка обращений</strong><small>Рабочее место сотрудника</small></span>
+    </div>
+    <nav class="tabs">
+        <button class="tab active" type="button" data-tab="queue">Очередь</button>
+        <button class="tab" type="button" data-tab="transfers" hidden>Передачи <span id="transfer-count" class="count"></span></button>
+        <button class="tab" type="button" data-tab="events">Журнал событий</button>
+    </nav>
+    <div id="user-box" class="user-box"></div>
+</header>
+
+<main>
+    <section id="queue-view" class="view active master-detail">
+        <aside class="master">
+            <div id="status-tabs" class="status-tabs"></div>
+            <div id="queue" class="queue-list"><p class="muted">Загрузка…</p></div>
+        </aside>
+        <article id="card" class="detail"><p class="empty">Выберите обращение в списке слева</p></article>
+    </section>
+
+    <section id="transfers-view" class="view page">
+        <div class="view-head">
+            <div>
+                <h1>Входящие передачи</h1>
+                <p class="muted">Другие отделы просят принять обращения. Пока вы не решили, обращение остаётся у них.</p>
+            </div>
+        </div>
+        <div id="transfers"></div>
+    </section>
+
+    <section id="events-view" class="view page">
+        <div class="view-head">
+            <div>
+                <h1>Журнал событий</h1>
+                <p class="muted">Что подсистема опубликовала в обменник <code>appeal.events</code>: получено очередью аудита по привязке <code>appeal.#</code>.</p>
+            </div>
+            <button id="refresh-events" class="btn" type="button">Обновить</button>
+        </div>
+        <div id="events" class="panel"></div>
+    </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="/auth.js?v=20261008-1"></script>
+<script src="/common.js?v=20261008-1"></script>
+<script src="/workspace.js?v=20261008-1"></script>
+</body>
+</html>

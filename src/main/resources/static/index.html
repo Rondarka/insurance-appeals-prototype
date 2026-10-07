@@ -3,202 +3,24 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Страховой диалог</title>
-    <link rel="stylesheet" href="/styles.css">
+    <title>Обработка обращений</title>
+    <link rel="stylesheet" href="/styles.css?v=20261008-1">
 </head>
-<body>
-<header class="topbar">
-    <a class="brand" href="#" data-view="client">
-        <span class="brand-mark">СД</span>
-        <span>
-            <strong>Страховой диалог</strong>
-            <small>Единое окно обращений</small>
-        </span>
-    </a>
-    <nav class="nav">
-        <button class="nav-button active" data-view="client" hidden>Мои обращения</button>
-        <button class="nav-button" data-view="employee" hidden>Очередь</button>
-        <button class="nav-button" data-view="events" hidden>События RabbitMQ</button>
-    </nav>
-    <div class="user-box">
-        <span id="user-name">Вход...</span>
-        <button id="logout-button" class="secondary-button" type="button">Выйти</button>
-    </div>
-</header>
-
-<main>
-    <section id="client-view" class="view active">
-        <div class="view-heading">
-            <h1>Личный кабинет</h1>
-            <p>Обращения по вашим договорам страхования</p>
-        </div>
-
-        <div class="client-grid">
-            <form id="appeal-form" class="panel form-panel">
-                <div class="panel-heading">
-                    <div>
-                        <h2>Новое обращение</h2>
-                    </div>
-                    <span class="required-note">Все поля обязательны</span>
-                </div>
-
-                <div id="client-profile" class="identity-card">
-                    <span class="identity-avatar">АС</span>
-                    <div>
-                        <strong>Загрузка профиля...</strong>
-                        <small>Демонстрационный личный кабинет</small>
-                    </div>
-                </div>
-
-                <label>
-                    Договор страхования
-                    <select id="contract-select" name="contractId" required></select>
-                    <small class="field-hint">Данные договора подставляются из учётной системы и не редактируются.</small>
-                </label>
-                <div id="contract-summary" class="contract-summary"></div>
-
-                <label>
-                    Категория обращения
-                    <select id="appeal-category" name="category" required></select>
-                    <small class="field-hint">Список зависит от вида страхования по выбранному договору.</small>
-                </label>
-
-                <label>
-                    Тип обращения
-                    <select id="appeal-subcategory" name="subcategory" required></select>
-                    <small class="field-hint">По категории и типу система выберет целевой отдел.</small>
-                </label>
-
-                <div id="dynamic-fields" class="dynamic-fields"></div>
-
-                <label>
-                    Тема
-                    <input name="subject" value="Не отображается новый полис" maxlength="200" required>
-                </label>
-
-                <label>
-                    Подробное описание
-                    <textarea name="description" rows="6" maxlength="5000" required>Оплатила продление ипотечного полиса, но документ пока не появился в личном кабинете. Прошу проверить статус.</textarea>
-                </label>
-
-                <label class="file-picker">
-                    Документы и изображения
-                    <input id="appeal-files" name="files" type="file"
-                           accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                           multiple>
-                    <span>До 5 файлов, каждый не больше 10 МБ. PDF, JPG или PNG.</span>
-                </label>
-                <div id="selected-files" class="selected-files"></div>
-
-                <button class="primary-button" type="submit">
-                    <span>Отправить обращение</span>
-                    <b>→</b>
-                </button>
-            </form>
-
-            <section class="panel recent-panel">
-                <div class="panel-heading">
-                    <div>
-                        <p class="eyebrow">История клиента</p>
-                        <h2>Последние обращения</h2>
-                    </div>
-                    <button class="icon-button" id="refresh-client" title="Обновить">↻</button>
-                </div>
-                <div id="client-appeals" class="appeal-list empty-state">
-                    <p>Пока обращений нет</p>
-                    <small>Созданные обращения появятся здесь</small>
-                </div>
-            </section>
-        </div>
-    </section>
-
-    <section id="employee-view" class="view">
-        <div class="workspace-heading">
-            <div>
-                <p class="eyebrow">Рабочее место сотрудника</p>
-                <h1>Очередь обращений</h1>
-                <p>Сотрудник работает с очередью своего отдела. Руководитель также согласует входящие передачи.</p>
-            </div>
-            <div class="employee-switcher">
-                <div id="employee-chip" class="employee-chip"></div>
-            </div>
-        </div>
-
-        <div class="metrics">
-            <article><span>Всего в очереди</span><strong id="metric-total">0</strong></article>
-            <article><span>Высокий приоритет</span><strong id="metric-high">0</strong></article>
-            <article><span>В работе</span><strong id="metric-progress">0</strong></article>
-            <article><span>Ожидают клиента</span><strong id="metric-waiting">0</strong></article>
-        </div>
-
-        <section class="panel queue-panel">
-            <div class="queue-toolbar">
-                <div class="department-context">
-                    <small>Текущий отдел</small>
-                    <strong id="employee-department">Техническая поддержка</strong>
-                </div>
-                <div>
-                    <label for="status-filter">Статус</label>
-                    <select id="status-filter">
-                        <option value="">Все статусы</option>
-                        <option value="ROUTED">Назначено отделу</option>
-                        <option value="IN_PROGRESS">В работе</option>
-                        <option value="WAITING_CUSTOMER">Ожидает клиента</option>
-                        <option value="RESOLVED">Решено</option>
-                        <option value="CLOSED">Закрыто</option>
-                    </select>
-                </div>
-                <button id="refresh-employee" class="secondary-button">Обновить очередь</button>
-            </div>
-            <div id="employee-appeals" class="table-wrap"></div>
-        </section>
-
-        <section id="approval-panel" class="panel approval-panel" hidden>
-            <div class="panel-heading">
-                <div>
-                    <p class="eyebrow">Контроль передачи</p>
-                    <h2>Входящие запросы в отдел</h2>
-                </div>
-                <span id="approval-count" class="counter">0</span>
-            </div>
-            <div id="transfer-approvals" class="approval-list"></div>
-        </section>
-    </section>
-
-    <section id="events-view" class="view">
-        <div class="workspace-heading">
-            <div>
-                <p class="eyebrow">Технический контур</p>
-                <h1>Журнал событий RabbitMQ</h1>
-                <p>События, доставленные в audit queue через привязку <code>appeal.#</code>.</p>
-            </div>
-            <button id="refresh-events" class="secondary-button">Обновить события</button>
-        </div>
-        <section class="panel event-panel">
-            <div class="event-topology">
-                <span>Spring Boot</span><b>→</b>
-                <span>appeal.events</span><b>→</b>
-                <span>topic bindings</span><b>→</b>
-                <span>routing + audit</span>
-            </div>
-            <div id="event-list" class="event-list empty-state">
-                <p>Событий пока нет</p>
-            </div>
-        </section>
-    </section>
+<body class="entry">
+<main class="entry-box">
+    <span class="brand-mark">ОО</span>
+    <p>Вход…</p>
 </main>
-
 <div id="toast" class="toast"></div>
-
-<div id="appeal-modal" class="modal" aria-hidden="true">
-    <div class="modal-backdrop" data-close-modal></div>
-    <article class="modal-card">
-        <button class="modal-close" data-close-modal>×</button>
-        <div id="modal-content"></div>
-    </article>
-</div>
-
-<script src="/auth.js?v=20261007-1"></script>
-<script src="/app.js?v=20261007-1"></script>
+<script src="/auth.js?v=20261008-1"></script>
+<script src="/common.js?v=20261008-1"></script>
+<script>
+    // Вход и распределение по ролям: клиент — в кабинет, сотрудник — на рабочее место,
+    // администратор — в администрирование
+    auth.init()
+        .then(() => api("/api/me"))
+        .then(me => window.location.replace(homeFor(me)))
+        .catch(error => showToast(`Не удалось войти: ${error.message}`, true));
+</script>
 </body>
 </html>

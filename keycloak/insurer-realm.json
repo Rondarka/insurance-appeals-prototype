@@ -361,6 +361,25 @@
       "realmRoles": [
         "SUPERVISOR"
       ]
+    },
+    {
+      "username": "admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Администратор",
+      "lastName": "подсистемы",
+      "email": "admin@insurer.example",
+      "attributes": {},
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "ADMIN"
+      ]
     }
   ]
 }

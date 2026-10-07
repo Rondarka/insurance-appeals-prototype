@@ -174,7 +174,8 @@ public final class ApiModels {
             List<HistoryResponse> history,
             List<MessageResponse> messages,
             List<AttachmentResponse> attachments,
-            List<TransferRequestResponse> transfers
+            List<TransferRequestResponse> transfers,
+            List<AppealStatus> nextStatuses
     ) {
     }
 
@@ -182,6 +183,7 @@ public final class ApiModels {
             Long id,
             UUID eventId,
             UUID appealId,
+            String appealNumber,
             String eventType,
             String routingKey,
             Instant receivedAt

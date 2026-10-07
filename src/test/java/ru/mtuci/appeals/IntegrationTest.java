@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -66,6 +67,8 @@ public abstract class IntegrationTest {
             UUID.fromString("33333333-3333-3333-3333-333333333333"), "Марина Орлова", "SUPERVISOR", "CLAIMS");
     protected static final TestUser CLAIMS_SPECIALIST = TestUser.employee(
             UUID.fromString("34444444-4444-4444-4444-444444444444"), "Сергей Лебедев", "SPECIALIST", "CLAIMS");
+    protected static final TestUser ADMIN = new TestUser(
+            "a0000000-0000-0000-0000-00000000000a", "Администратор подсистемы", null, List.of("ADMIN"), null, null);
 
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:17.10-alpine").asCompatibleSubstituteFor("postgres"));

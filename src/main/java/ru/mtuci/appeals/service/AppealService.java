@@ -43,6 +43,7 @@ import ru.mtuci.appeals.security.CurrentUser;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -172,16 +173,20 @@ public class AppealService {
     }
 
     @Transactional(readOnly = true)
-    /** Клиенту — его обращения, сотруднику — очередь его подразделения. */
-    public List<AppealSummaryResponse> list(CurrentUser user, AppealStatus status) {
+    /** Клиенту — его обращения, сотруднику — очередь его подразделения, администратору — все. */
+    public List<AppealSummaryResponse> list(CurrentUser user, AppealStatus status, String departmentCode) {
         Specification<Appeal> spec;
-        if (user.isClient()) {
+        if (user.isAdmin()) {
+            spec = departmentCode == null || departmentCode.isBlank()
+                    ? Specification.where(null)
+                    : (root, query, cb) -> cb.equal(root.join("department", JoinType.LEFT).get("code"), departmentCode);
+        } else if (user.isClient()) {
             UUID counterpartyId = user.requireCounterparty();
             spec = (root, query, cb) -> cb.equal(root.get("counterpartyId"), counterpartyId);
         } else {
-            String departmentCode = user.requireDepartment();
+            String ownDepartment = user.requireDepartment();
             spec = (root, query, cb) ->
-                    cb.equal(root.join("department", JoinType.LEFT).get("code"), departmentCode);
+                    cb.equal(root.join("department", JoinType.LEFT).get("code"), ownDepartment);
         }
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
@@ -204,7 +209,6 @@ public class AppealService {
     public AppealDetailResponse changeStatus(CurrentUser user, UUID id, ChangeStatusRequest request) {
         Appeal appeal = findAppeal(id);
         access.checkWork(user, appeal);
-        validateStatusChange(appeal.getStatus(), request.status());
         String employeeName = Objects.requireNonNullElse(user.name(), user.subject());
 
         Instant now = Instant.now();
@@ -214,7 +218,7 @@ public class AppealService {
         historyRepository.save(new AppealHistory(
                 appeal,
                 "STATUS_CHANGED",
-                "Статус изменён: " + previous + " -> " + request.status(),
+                "Статус изменён: «" + previous.label() + "» → «" + request.status().label() + "»",
                 employeeName,
                 now
         ));
@@ -244,6 +248,9 @@ public class AppealService {
             access.checkWork(user, appeal);
             authorType = AuthorType.EMPLOYEE;
         }
+        if (appeal.getStatus() == AppealStatus.CLOSED) {
+            throw new IllegalStateException("Обращение закрыто — создайте новое");
+        }
         String authorName = Objects.requireNonNullElse(user.name(), user.subject());
         Instant now = Instant.now();
 
@@ -270,6 +277,25 @@ public class AppealService {
                 Map.of("authorType", authorType.name())
         ));
 
+        // клиент ответил на запрос — обращение снова в работе, без участия сотрудника
+        if (authorType == AuthorType.CLIENT && appeal.getStatus() == AppealStatus.WAITING_CUSTOMER) {
+            appeal.changeStatus(AppealStatus.IN_PROGRESS, null, now);
+            historyRepository.save(new AppealHistory(
+                    appeal,
+                    "STATUS_CHANGED",
+                    "Клиент ответил — обращение снова в работе",
+                    "Подсистема",
+                    now
+            ));
+            eventPublisher.publishEvent(new AppealDomainEvent(
+                    "APPEAL_STATUS_CHANGED",
+                    appeal.getId(),
+                    "appeal.status.in_progress",
+                    Map.of("fromStatus", AppealStatus.WAITING_CUSTOMER.name(),
+                            "toStatus", AppealStatus.IN_PROGRESS.name())
+            ));
+        }
+
         return toDetail(appeal);
     }
 
@@ -283,27 +309,19 @@ public class AppealService {
 
     @Transactional(readOnly = true)
     public List<EventAuditResponse> recentEvents() {
-        return eventAuditRepository.findAllByOrderByReceivedAtDesc(PageRequest.of(0, 50))
-                .stream()
-                .map(this::toEvent)
+        List<EventAudit> events = eventAuditRepository.findAllByOrderByReceivedAtDesc(PageRequest.of(0, 50));
+        // в журнале — номер обращения, а не его технический идентификатор
+        Map<UUID, String> numbers = new HashMap<>();
+        appealRepository.findAllById(events.stream().map(EventAudit::getAppealId).filter(Objects::nonNull).toList())
+                .forEach(appeal -> numbers.put(appeal.getId(), appeal.getPublicNumber()));
+        return events.stream()
+                .map(event -> toEvent(event, numbers.get(event.getAppealId())))
                 .toList();
     }
 
     private Appeal findAppeal(UUID id) {
         return appealRepository.findById(id)
                 .orElseThrow(() -> new AppealNotFoundException(id));
-    }
-
-    private void validateStatusChange(AppealStatus current, AppealStatus target) {
-        if (current == AppealStatus.PENDING_ROUTING) {
-            throw new IllegalStateException("Нельзя менять статус до завершения маршрутизации");
-        }
-        if (current == AppealStatus.CLOSED) {
-            throw new IllegalStateException("Закрытое обращение нельзя изменить");
-        }
-        if (target == AppealStatus.PENDING_ROUTING) {
-            throw new IllegalArgumentException("Возврат к техническому статусу маршрутизации запрещён");
-        }
     }
 
     private AppealSummaryResponse toSummary(Appeal appeal) {
@@ -374,7 +392,8 @@ public class AppealService {
                 history,
                 messages,
                 attachments,
-                transferService.forAppeal(appeal.getId())
+                transferService.forAppeal(appeal.getId()),
+                appeal.getStatus().next()
         );
     }
 
@@ -390,11 +409,12 @@ public class AppealService {
         );
     }
 
-    private EventAuditResponse toEvent(EventAudit event) {
+    private EventAuditResponse toEvent(EventAudit event, String appealNumber) {
         return new EventAuditResponse(
                 event.getId(),
                 event.getEventId(),
                 event.getAppealId(),
+                appealNumber,
                 event.getEventType(),
                 event.getRoutingKey(),
                 event.getReceivedAt()

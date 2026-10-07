@@ -22,9 +22,13 @@ public class AppealAccess {
 
     /**
      * Клиент видит свои обращения, сотрудник — обращения своего подразделения,
-     * руководитель — ещё и те, что ждут его решения о передаче в его подразделение.
+     * руководитель — ещё и те, что ждут его решения о передаче в его подразделение,
+     * администратор — все.
      */
     public boolean canView(CurrentUser user, Appeal appeal) {
+        if (user.isAdmin()) {
+            return true;
+        }
         if (user.isClient() && appeal.getCounterpartyId().equals(user.counterpartyId())) {
             return true;
         }

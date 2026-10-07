@@ -48,6 +48,11 @@ public record CurrentUser(
         return roles.contains("SUPERVISOR");
     }
 
+    /** Администратор видит всё, но с обращениями не работает. */
+    public boolean isAdmin() {
+        return roles.contains("ADMIN");
+    }
+
     /** Клиент без counterparty_id — ошибка настройки IdP, а не повод взять идентификатор из запроса. */
     public UUID requireCounterparty() {
         if (!isClient() || counterpartyId == null) {

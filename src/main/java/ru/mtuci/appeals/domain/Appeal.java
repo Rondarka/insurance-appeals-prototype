@@ -121,7 +121,12 @@ public class Appeal {
         this.updatedAt = now;
     }
 
+    /** Сотрудник меняет статус только по разрешённым переходам — см. {@link AppealStatus#next()}. */
     public void changeStatus(AppealStatus status, String employee, Instant now) {
+        if (!this.status.canMoveTo(status)) {
+            throw new IllegalStateException("Нельзя перевести обращение из статуса «"
+                    + this.status.label() + "» в «" + status.label() + "»");
+        }
         this.status = status;
         if (status == AppealStatus.IN_PROGRESS && employee != null && !employee.isBlank()) {
             this.assignedEmployee = employee;

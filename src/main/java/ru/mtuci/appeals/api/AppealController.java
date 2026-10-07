@@ -78,9 +78,12 @@ public class AppealController {
         return appealService.create(user, request);
     }
 
+    /** departmentCode учитывается только у администратора: остальным очередь задаёт токен. */
     @GetMapping("/appeals")
-    List<AppealSummaryResponse> list(CurrentUser user, @RequestParam(required = false) AppealStatus status) {
-        return appealService.list(user, status);
+    List<AppealSummaryResponse> list(CurrentUser user,
+                                     @RequestParam(required = false) AppealStatus status,
+                                     @RequestParam(required = false) String departmentCode) {
+        return appealService.list(user, status, departmentCode);
     }
 
     @GetMapping("/appeals/{id}")

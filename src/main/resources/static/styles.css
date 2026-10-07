@@ -1094,3 +1094,22 @@ code {
     color: var(--muted);
     font-size: 12px;
 }
+
+.user-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 14px;
+}
+
+.user-box .secondary-button {
+    padding: 6px 12px;
+}
+
+button.attachment-link {
+    width: 100%;
+    border: 0;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}

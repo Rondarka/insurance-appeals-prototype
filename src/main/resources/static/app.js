@@ -1,12 +1,9 @@
 const state = {
+    me: null,
     clientAppeals: [],
     employeeAppeals: [],
     departments: [],
-    clients: [],
-    employees: [],
     transferRequests: [],
-    activeClientId: null,
-    activeEmployeeId: null,
     activeAppealId: null,
     schema: {categories: []},
     formSchema: {categories: []}
@@ -45,12 +42,16 @@ const labels = {
 async function api(path, options = {}) {
     const isFormData = options.body instanceof FormData;
     const response = await fetch(path, {
+        ...options,
         headers: {
             ...(isFormData ? {} : {"Content-Type": "application/json"}),
+            Authorization: `Bearer ${auth.token()}`,
             ...(options.headers || {})
-        },
-        ...options
+        }
     });
+    if (response.status === 401) {
+        return auth.login();
+    }
     if (!response.ok) {
         const error = await response.json().catch(() => ({message: "Ошибка запроса"}));
         throw new Error(error.message || "Ошибка запроса");
@@ -228,6 +229,8 @@ function showToast(message, error = false) {
 }
 
 function setView(view) {
+    // клиенту — только кабинет, сотруднику — всё, кроме кабинета
+    if (state.me && isClient() !== (view === "client")) return;
     document.querySelectorAll(".view").forEach(item => item.classList.remove("active"));
     document.querySelector(`#${view}-view`).classList.add("active");
     document.querySelectorAll(".nav-button").forEach(button =>
@@ -237,49 +240,52 @@ function setView(view) {
     if (view === "events") loadEvents();
 }
 
-function activeClient() {
-    return state.clients.find(item => item.id === state.activeClientId);
-}
-
-function activeEmployee() {
-    return state.employees.find(item => item.id === state.activeEmployeeId);
-}
+// Кто вошёл, решает токен: роли, контрагент клиента и подразделение сотрудника (решение 22)
+const hasRole = role => state.me?.roles.includes(role);
+const isClient = () => hasRole("CLIENT");
+const isEmployee = () => hasRole("SPECIALIST") || hasRole("SUPERVISOR");
+const isSupervisor = () => hasRole("SUPERVISOR");
 
 function selectedContract() {
-    const client = activeClient();
     const contractId = document.querySelector("#contract-select")?.value;
-    return client?.contracts.find(item => item.id === contractId);
+    return state.me?.contracts.find(item => item.id === contractId);
 }
 
-async function loadDirectories() {
-    [state.departments, state.clients, state.employees, state.schema] = await Promise.all([
-        api("/api/departments"),
-        api("/api/clients"),
-        api("/api/employees"),
-        api("/api/form-schema")
+async function loadProfile() {
+    state.me = await api("/api/me");
+    [state.schema, state.departments] = await Promise.all([
+        api("/api/form-schema"),
+        isEmployee() ? api("/api/departments") : []
     ]);
+    renderUser();
+    if (isClient()) {
+        renderClientIdentity();
+        await loadFormSchema();
+        setView("client");
+    } else {
+        renderEmployeeIdentity();
+        setView("employee");
+    }
+}
 
-    state.activeClientId = state.clients[0]?.id || null;
-    state.activeEmployeeId =
-        state.employees.find(item => item.fullName === "Елена Соколова")?.id
-        || state.employees[0]?.id
-        || null;
-
-    renderClientIdentity();
-    renderEmployeeSelector();
-    await loadFormSchema();
+/** Клиенту — только его кабинет, сотруднику — очередь и журнал событий. */
+function renderUser() {
+    document.querySelectorAll(".nav-button").forEach(button => {
+        const forClient = button.dataset.view === "client";
+        button.hidden = isClient() ? !forClient : forClient;
+    });
+    document.querySelector("#user-name").textContent = state.me.name || "Пользователь";
 }
 
 function renderClientIdentity() {
-    const client = activeClient();
-    if (!client) return;
+    const client = state.me;
     document.querySelector("#client-profile").innerHTML = `
-        <span class="identity-avatar">${escapeHtml(initials(client.fullName))}</span>
+        <span class="identity-avatar">${escapeHtml(initials(client.name || "?"))}</span>
         <div>
-            <strong>${escapeHtml(client.fullName)}</strong>
-            <small>${escapeHtml(client.email)} · ${escapeHtml(client.phone)}</small>
+            <strong>${escapeHtml(client.name)}</strong>
+            <small>${escapeHtml(client.email || "")}</small>
         </div>
-        <span class="verified-badge">Профиль подтверждён</span>
+        <span class="verified-badge">Вход через страховую</span>
     `;
     const select = document.querySelector("#contract-select");
     select.innerHTML = client.contracts.map(contract => `
@@ -304,46 +310,32 @@ function renderContractSummary() {
     `;
 }
 
-function renderEmployeeSelector() {
-    const select = document.querySelector("#employee-selector");
-    select.innerHTML = state.employees.map(employee => `
-        <option value="${employee.id}" ${employee.id === state.activeEmployeeId ? "selected" : ""}>
-            ${escapeHtml(employee.fullName)} · ${employee.role === "SUPERVISOR" ? "руководитель" : "специалист"} · ${escapeHtml(employee.department.name)}
-        </option>
-    `).join("");
-    renderEmployeeIdentity();
-}
-
 function renderEmployeeIdentity() {
-    const employee = activeEmployee();
-    if (!employee) return;
+    const employee = state.me;
+    const department = employee.department?.name || "Подразделение не указано";
     document.querySelector("#employee-chip").innerHTML = `
-        <span>${escapeHtml(initials(employee.fullName))}</span>
+        <span>${escapeHtml(initials(employee.name || "?"))}</span>
         <div>
-            <strong>${escapeHtml(employee.fullName)}</strong>
-            <small>${employee.role === "SUPERVISOR" ? "Руководитель" : "Специалист"} · ${escapeHtml(employee.department.name)}</small>
+            <strong>${escapeHtml(employee.name)}</strong>
+            <small>${isSupervisor() ? "Руководитель" : "Специалист"} · ${escapeHtml(department)}</small>
         </div>
     `;
-    document.querySelector("#employee-department").textContent = employee.department.name;
-    document.querySelector("#approval-panel").hidden = employee.role !== "SUPERVISOR";
+    document.querySelector("#employee-department").textContent = department;
+    document.querySelector("#approval-panel").hidden = !isSupervisor();
 }
 
 async function loadClientAppeals() {
-    if (!state.activeClientId) return;
-    state.clientAppeals = await api(`/api/appeals?clientId=${state.activeClientId}`);
+    if (!isClient()) return;
+    state.clientAppeals = await api("/api/appeals");
     renderClientAppeals();
 }
 
+/** Очередь своего подразделения: какого — сервер знает из токена. */
 async function loadEmployeeWorkspace() {
-    const employee = activeEmployee();
-    if (!employee) return;
-    const query = new URLSearchParams({departmentCode: employee.department.code});
+    if (!isEmployee()) return;
     const status = document.querySelector("#status-filter")?.value || "";
-    if (status) query.set("status", status);
-    state.employeeAppeals = await api(`/api/appeals?${query}`);
-    state.transferRequests = employee.role === "SUPERVISOR"
-        ? await api(`/api/transfer-requests?targetDepartmentCode=${employee.department.code}`)
-        : [];
+    state.employeeAppeals = await api(`/api/appeals${status ? `?status=${status}` : ""}`);
+    state.transferRequests = isSupervisor() ? await api("/api/transfer-requests") : [];
     renderEmployeeAppeals();
     renderMetrics();
     renderTransferApprovals();
@@ -351,6 +343,18 @@ async function loadEmployeeWorkspace() {
 
 async function loadAllAppeals() {
     await Promise.all([loadClientAppeals(), loadEmployeeWorkspace()]);
+}
+
+/** Ссылка на файл не передаст токен, поэтому файл забирается запросом с токеном. */
+async function downloadAttachment(id, name) {
+    const response = await fetch(`/api/attachments/${id}`, {
+        headers: {Authorization: `Bearer ${auth.token()}`}
+    });
+    if (!response.ok) throw new Error("Не удалось скачать вложение");
+    const url = URL.createObjectURL(await response.blob());
+    const link = Object.assign(document.createElement("a"), {href: url, download: name});
+    link.click();
+    URL.revokeObjectURL(url);
 }
 
 function renderClientAppeals() {
@@ -425,9 +429,8 @@ function renderMetrics() {
 }
 
 function renderTransferApprovals() {
-    const employee = activeEmployee();
     const panel = document.querySelector("#approval-panel");
-    if (!employee || employee.role !== "SUPERVISOR") {
+    if (!isSupervisor()) {
         panel.hidden = true;
         return;
     }
@@ -485,11 +488,8 @@ async function openAppeal(id) {
 }
 
 function detailTemplate(appeal) {
-    const employee = activeEmployee();
-    const employeeMode = document.querySelector("#employee-view").classList.contains("active");
-    const canWork = employeeMode
-        && employee
-        && appeal.department?.code === employee.department.code;
+    // подсказка интерфейсу; решает всё равно сервер по токену
+    const canWork = isEmployee() && appeal.department?.code === state.me.department?.code;
     const pendingTransfer = appeal.transfers.find(item => item.status === "PENDING");
     const departments = state.departments
         .filter(item => item.code !== appeal.department?.code)
@@ -546,10 +546,11 @@ function detailTemplate(appeal) {
         <section class="detail-section">
             <h3>Вложения</h3>
             ${appeal.attachments.length ? appeal.attachments.map(attachment => `
-                <a class="attachment-link" href="${attachment.downloadUrl}" target="_blank">
+                <button type="button" class="attachment-link" data-download-attachment="${attachment.id}"
+                        data-file-name="${escapeHtml(attachment.originalName)}">
                     <span>${escapeHtml(attachment.originalName)}</span>
                     <small>${formatFileSize(attachment.sizeBytes)} · скачать</small>
-                </a>
+                </button>
             `).join("") : "<p>К обращению файлы не приложены.</p>"}
         </section>
 
@@ -654,6 +655,16 @@ document.addEventListener("click", async event => {
         }
     }
 
+    const download = event.target.closest("[data-download-attachment]");
+    if (download) {
+        downloadAttachment(download.dataset.downloadAttachment, download.dataset.fileName)
+            .catch(error => showToast(error.message, true));
+    }
+
+    if (event.target.closest("#logout-button")) {
+        auth.logout();
+    }
+
     if (event.target.closest("[data-close-modal]")) {
         document.querySelector("#appeal-modal").classList.remove("open");
         state.activeAppealId = null;
@@ -673,7 +684,6 @@ document.querySelector("#appeal-form").addEventListener("submit", async event =>
         details[input.name.substring("detail.".length)] = input.value;
     });
     const payload = {
-        clientId: state.activeClientId,
         contractId: form.get("contractId"),
         category: form.get("category"),
         subcategory: form.get("subcategory"),
@@ -716,16 +726,12 @@ document.querySelector("#appeal-form").addEventListener("submit", async event =>
 document.querySelector("#modal-content").addEventListener("submit", async event => {
     event.preventDefault();
     const form = new FormData(event.target);
-    const employee = activeEmployee();
-    if (!employee) return;
+    // кто действует, сервер знает из токена — имени и идентификатора в запросах нет
     try {
         if (event.target.matches("[data-status-form]")) {
             await api(`/api/appeals/${state.activeAppealId}/status`, {
                 method: "POST",
-                body: JSON.stringify({
-                    status: form.get("status"),
-                    employeeName: employee.fullName
-                })
+                body: JSON.stringify({status: form.get("status")})
             });
             showToast("Статус обновлён");
         }
@@ -734,8 +740,7 @@ document.querySelector("#modal-content").addEventListener("submit", async event 
                 method: "POST",
                 body: JSON.stringify({
                     departmentCode: form.get("departmentCode"),
-                    reason: form.get("reason"),
-                    employeeId: employee.id
+                    reason: form.get("reason")
                 })
             });
             showToast("Запрос передачи отправлен руководителю целевого отдела");
@@ -743,11 +748,7 @@ document.querySelector("#modal-content").addEventListener("submit", async event 
         if (event.target.matches("[data-message-form]")) {
             await api(`/api/appeals/${state.activeAppealId}/messages`, {
                 method: "POST",
-                body: JSON.stringify({
-                    authorType: "EMPLOYEE",
-                    authorName: employee.fullName,
-                    body: form.get("body")
-                })
+                body: JSON.stringify({body: form.get("body")})
             });
             showToast("Ответ добавлен");
         }
@@ -761,18 +762,13 @@ document.querySelector("#transfer-approvals").addEventListener("submit", async e
     const formElement = event.target.closest("[data-review-transfer]");
     if (!formElement) return;
     event.preventDefault();
-    const employee = activeEmployee();
     const submitter = event.submitter;
     const form = new FormData(formElement);
     try {
         const approved = submitter?.value === "true";
         await api(`/api/transfer-requests/${formElement.dataset.reviewTransfer}/review`, {
             method: "POST",
-            body: JSON.stringify({
-                employeeId: employee.id,
-                approved,
-                comment: form.get("comment")
-            })
+            body: JSON.stringify({approved, comment: form.get("comment")})
         });
         showToast(approved ? "Передача согласована: обращение принято отделом" : "Передача отклонена");
         await loadAllAppeals();
@@ -786,11 +782,6 @@ document.querySelector("#refresh-client").addEventListener("click", loadClientAp
 document.querySelector("#refresh-employee").addEventListener("click", loadEmployeeWorkspace);
 document.querySelector("#refresh-events").addEventListener("click", loadEvents);
 document.querySelector("#status-filter").addEventListener("change", loadEmployeeWorkspace);
-document.querySelector("#employee-selector").addEventListener("change", event => {
-    state.activeEmployeeId = event.target.value;
-    renderEmployeeIdentity();
-    loadEmployeeWorkspace().catch(error => showToast(error.message, true));
-});
 document.querySelector("#contract-select").addEventListener("change", () => {
     renderContractSummary();
     loadFormSchema().catch(error => showToast(error.message, true));
@@ -801,12 +792,13 @@ document.querySelector("#appeal-files").addEventListener("change", renderSelecte
 
 window.addEventListener("pageshow", ensureFormCategoryConsistency);
 
-loadDirectories()
+auth.init()
+    .then(loadProfile)
     .then(loadAllAppeals)
-    .catch(error => showToast(`Backend недоступен: ${error.message}`, true));
+    .catch(error => showToast(`Не удалось загрузить данные: ${error.message}`, true));
 
 window.setInterval(() => {
-    if (!document.querySelector("#appeal-modal").classList.contains("open")) {
+    if (state.me && !document.querySelector("#appeal-modal").classList.contains("open")) {
         loadAllAppeals().catch(() => {});
     }
 }, 5000);

@@ -18,9 +18,9 @@ class AppealValidationTest extends IntegrationTest {
 
     @Test
     void rejectsSubcategoryThatDoesNotBelongToCategory() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
         CreateAppealRequest claimWithMortgageSubcategory = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, "CLAIM", "RENEWAL",
+                CASCO_CONTRACT, "CLAIM", "RENEWAL",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва"),
                 "Продление", "Хочу продлить договор");
 
@@ -28,14 +28,14 @@ class AppealValidationTest extends IntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("Недопустимый тип обращения");
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     @Test
     void rejectsMissingRequiredDetails() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
         CreateAppealRequest claimWithoutPlace = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10"),
                 "ДТП", "Без места происшествия");
 
@@ -43,10 +43,10 @@ class AppealValidationTest extends IntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("Место происшествия");
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     private ResponseEntity<ErrorResponse> post(CreateAppealRequest request) {
-        return rest.postForEntity("/api/appeals", request, ErrorResponse.class);
+        return as(ANNA).postForEntity("/api/appeals", request, ErrorResponse.class);
     }
 }

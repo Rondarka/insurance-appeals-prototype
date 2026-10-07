@@ -16,11 +16,14 @@
         </span>
     </a>
     <nav class="nav">
-        <button class="nav-button active" data-view="client">Клиент</button>
-        <button class="nav-button" data-view="employee">Сотрудник</button>
-        <button class="nav-button" data-view="events">События RabbitMQ</button>
+        <button class="nav-button active" data-view="client" hidden>Мои обращения</button>
+        <button class="nav-button" data-view="employee" hidden>Очередь</button>
+        <button class="nav-button" data-view="events" hidden>События RabbitMQ</button>
     </nav>
-    <span class="system-state"><i></i> Прототип работает</span>
+    <div class="user-box">
+        <span id="user-name">Вход...</span>
+        <button id="logout-button" class="secondary-button" type="button">Выйти</button>
+    </div>
 </header>
 
 <main>
@@ -117,12 +120,7 @@
                 <p>Сотрудник работает с очередью своего отдела. Руководитель также согласует входящие передачи.</p>
             </div>
             <div class="employee-switcher">
-                <label for="employee-selector">Демонстрационная роль</label>
-                <select id="employee-selector"></select>
-                <div id="employee-chip" class="employee-chip">
-                    <span>ЕС</span>
-                    <div><strong>Елена Соколова</strong><small>Техническая поддержка</small></div>
-                </div>
+                <div id="employee-chip" class="employee-chip"></div>
             </div>
         </div>
 
@@ -200,6 +198,7 @@
     </article>
 </div>
 
-<script src="/app.js?v=20260613-1"></script>
+<script src="/auth.js?v=20261007-1"></script>
+<script src="/app.js?v=20261007-1"></script>
 </body>
 </html>

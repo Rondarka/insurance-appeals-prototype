@@ -4,13 +4,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
-import ru.mtuci.appeals.api.ApiModels.ClientResponse;
 import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
+import ru.mtuci.appeals.api.ApiModels.MeResponse;
 
 import java.time.LocalDate;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.UUID;
 
@@ -44,13 +43,11 @@ class ContractIntegrationTest extends IntegrationTest {
 
     @Test
     void clientContractsComeFromAccountingSystem() {
-        ClientResponse[] clients = rest.getForObject("/api/clients", ClientResponse[].class);
-        ClientResponse client = Arrays.stream(clients)
-                .filter(found -> found.id().equals(CLIENT))
-                .findFirst().orElseThrow();
+        // договоры клиента из токена — без идентификатора в запросе
+        MeResponse me = as(ANNA).getForObject("/api/me", MeResponse.class);
 
         // все договоры клиента, включая истёкший и досрочно прекращённый
-        assertThat(client.contracts())
+        assertThat(me.contracts())
                 .extracting(ContractResponse::productCode, ContractResponse::status, ContractResponse::terminatedOn)
                 .containsExactlyInAnyOrder(
                         tuple("MORTGAGE", "ACTIVE", null),
@@ -61,47 +58,47 @@ class ContractIntegrationTest extends IntegrationTest {
 
     @Test
     void rejectsContractUnknownToAccountingSystem() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
 
         ResponseEntity<ErrorResponse> response = post(claimOn(UUID.randomUUID()));
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("Договор не найден");
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     @Test
     void rejectsContractThatBelongsToAnotherClient() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
 
         ResponseEntity<ErrorResponse> response = post(claimOn(OTHER_CLIENTS_CONTRACT));
 
         // ответ тот же, что для несуществующего договора: не раскрываем, что договор есть
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("не принадлежит");
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     @Test
     void accountingSystemFailureIsServiceUnavailableNotClientError() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
 
         ResponseEntity<ErrorResponse> response = post(claimOn(FAILING_CONTRACT));
 
         // Пока без деградированного режима: регистрация не проходит, но это сбой
         // источника (503), а не ошибка клиента (400). Решение 9 изменит это поведение.
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     private static CreateAppealRequest claimOn(UUID contractId) {
         return new CreateAppealRequest(
-                CLIENT, contractId, "CLAIM", "AUTO",
+                contractId, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва"),
                 "ДТП", "Обращение по договору " + contractId);
     }
 
     private ResponseEntity<ErrorResponse> post(CreateAppealRequest request) {
-        return rest.postForEntity("/api/appeals", request, ErrorResponse.class);
+        return as(ANNA).postForEntity("/api/appeals", request, ErrorResponse.class);
     }
 }

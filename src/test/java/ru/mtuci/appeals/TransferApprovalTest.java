@@ -3,6 +3,7 @@ package ru.mtuci.appeals;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import ru.mtuci.appeals.TestIdentityProvider.TestUser;
 import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
@@ -58,8 +59,9 @@ class TransferApprovalTest extends IntegrationTest {
         ResponseEntity<ErrorResponse> byOtherSupervisor = review(transfer.id(), SUPPORT_SUPERVISOR, true,
                 ErrorResponse.class);
 
-        assertThat(bySpecialist.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(byOtherSupervisor.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        // роль и подразделение берутся из токена: обоим отказано в доступе
+        assertThat(bySpecialist.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(byOtherSupervisor.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(departmentOf(appeal)).isEqualTo("SUPPORT");
     }
 
@@ -70,17 +72,17 @@ class TransferApprovalTest extends IntegrationTest {
     }
 
     private TransferRequestResponse requestTransferToClaims(UUID appeal) {
-        ResponseEntity<TransferRequestResponse> response = rest.postForEntity(
+        ResponseEntity<TransferRequestResponse> response = as(SUPPORT_SPECIALIST).postForEntity(
                 "/api/appeals/{id}/transfer-requests",
-                new CreateTransferRequest("CLAIMS", "Клиент сообщил о страховом случае", SUPPORT_SPECIALIST),
+                new CreateTransferRequest("CLAIMS", "Клиент сообщил о страховом случае"),
                 TransferRequestResponse.class, appeal);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         return response.getBody();
     }
 
-    private <T> ResponseEntity<T> review(UUID transfer, UUID reviewer, boolean approved, Class<T> type) {
-        return rest.postForEntity("/api/transfer-requests/{id}/review",
-                new ReviewTransferRequest(reviewer, approved, approved ? "Принимаем" : "Не наш профиль"),
+    private <T> ResponseEntity<T> review(UUID transfer, TestUser reviewer, boolean approved, Class<T> type) {
+        return as(reviewer).postForEntity("/api/transfer-requests/{id}/review",
+                new ReviewTransferRequest(approved, approved ? "Принимаем" : "Не наш профиль"),
                 type, transfer);
     }
 

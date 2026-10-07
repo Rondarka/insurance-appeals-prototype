@@ -23,14 +23,14 @@ import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
 import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
-import ru.mtuci.appeals.api.ApiModels.ClientResponse;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
-import ru.mtuci.appeals.api.ApiModels.EmployeeResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
+import ru.mtuci.appeals.api.ApiModels.MeResponse;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
+import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.AttachmentService;
@@ -41,6 +41,10 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
+/**
+ * Кто делает запрос, контроллер узнаёт из токена (параметр CurrentUser), а не из тела
+ * запроса: идентификаторов клиента и сотрудника в запросах нет.
+ */
 @RestController
 @RequestMapping("/api")
 public class AppealController {
@@ -63,58 +67,64 @@ public class AppealController {
         this.formPolicy = formPolicy;
     }
 
+    @GetMapping("/me")
+    MeResponse me(CurrentUser user) {
+        return directoryService.me(user);
+    }
+
     @PostMapping("/appeals")
     @ResponseStatus(HttpStatus.CREATED)
-    AppealDetailResponse create(@Valid @RequestBody CreateAppealRequest request) {
-        return appealService.create(request);
+    AppealDetailResponse create(CurrentUser user, @Valid @RequestBody CreateAppealRequest request) {
+        return appealService.create(user, request);
     }
 
     @GetMapping("/appeals")
-    List<AppealSummaryResponse> list(
-            @RequestParam(required = false) String departmentCode,
-            @RequestParam(required = false) AppealStatus status,
-            @RequestParam(required = false) UUID clientId) {
-        return appealService.list(departmentCode, status, clientId);
+    List<AppealSummaryResponse> list(CurrentUser user, @RequestParam(required = false) AppealStatus status) {
+        return appealService.list(user, status);
     }
 
     @GetMapping("/appeals/{id}")
-    AppealDetailResponse get(@PathVariable UUID id) {
-        return appealService.get(id);
+    AppealDetailResponse get(CurrentUser user, @PathVariable UUID id) {
+        return appealService.get(user, id);
     }
 
     @PostMapping("/appeals/{id}/transfer-requests")
     @ResponseStatus(HttpStatus.CREATED)
     TransferRequestResponse requestTransfer(
+            CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody CreateTransferRequest request) {
-        return transferService.create(id, request);
+        return transferService.create(user, id, request);
     }
 
+    /** Запросы на передачу в подразделение руководителя — подразделение из токена. */
     @GetMapping("/transfer-requests")
-    List<TransferRequestResponse> transferRequests(
-            @RequestParam String targetDepartmentCode) {
-        return transferService.pendingForDepartment(targetDepartmentCode);
+    List<TransferRequestResponse> transferRequests(CurrentUser user) {
+        return transferService.pendingForDepartment(user);
     }
 
     @PostMapping("/transfer-requests/{id}/review")
     TransferRequestResponse reviewTransfer(
+            CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody ReviewTransferRequest request) {
-        return transferService.review(id, request);
+        return transferService.review(user, id, request);
     }
 
     @PostMapping("/appeals/{id}/status")
     AppealDetailResponse changeStatus(
+            CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody ChangeStatusRequest request) {
-        return appealService.changeStatus(id, request);
+        return appealService.changeStatus(user, id, request);
     }
 
     @PostMapping("/appeals/{id}/messages")
     AppealDetailResponse addMessage(
+            CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody AddMessageRequest request) {
-        return appealService.addMessage(id, request);
+        return appealService.addMessage(user, id, request);
     }
 
     @PostMapping(
@@ -122,14 +132,15 @@ public class AppealController {
             consumes = MediaType.MULTIPART_FORM_DATA_VALUE
     )
     List<AttachmentResponse> uploadAttachments(
+            CurrentUser user,
             @PathVariable UUID id,
             @RequestParam("files") List<MultipartFile> files) {
-        return attachmentService.store(id, files);
+        return attachmentService.store(user, id, files);
     }
 
     @GetMapping("/attachments/{id}")
-    ResponseEntity<Resource> downloadAttachment(@PathVariable UUID id) {
-        AttachmentService.AttachmentDownload download = attachmentService.download(id);
+    ResponseEntity<Resource> downloadAttachment(CurrentUser user, @PathVariable UUID id) {
+        AttachmentService.AttachmentDownload download = attachmentService.download(user, id);
         MediaType mediaType;
         try {
             mediaType = MediaType.parseMediaType(download.attachment().getContentType());
@@ -152,20 +163,10 @@ public class AppealController {
         return appealService.departments();
     }
 
-    @GetMapping("/clients")
-    List<ClientResponse> clients() {
-        return directoryService.clients();
-    }
-
     /** Без productCode — полная схема, с ним — только типы, допустимые для продукта договора. */
     @GetMapping("/form-schema")
     FormSchemaResponse formSchema(@RequestParam(required = false) String productCode) {
         return formPolicy.schema(productCode);
-    }
-
-    @GetMapping("/employees")
-    List<EmployeeResponse> employees() {
-        return directoryService.employees();
     }
 
     @GetMapping("/events")

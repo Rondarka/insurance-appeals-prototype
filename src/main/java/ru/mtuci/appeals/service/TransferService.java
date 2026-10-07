@@ -1,6 +1,7 @@
 package ru.mtuci.appeals.service;
 
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
@@ -10,7 +11,6 @@ import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.Employee;
-import ru.mtuci.appeals.domain.EmployeeRole;
 import ru.mtuci.appeals.domain.TransferRequest;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 import ru.mtuci.appeals.messaging.AppealDomainEvent;
@@ -20,6 +20,7 @@ import ru.mtuci.appeals.repository.DepartmentRepository;
 import ru.mtuci.appeals.repository.EmployeeRepository;
 import ru.mtuci.appeals.repository.RoutingRuleRepository;
 import ru.mtuci.appeals.repository.TransferRequestRepository;
+import ru.mtuci.appeals.security.CurrentUser;
 
 import java.time.Instant;
 import java.util.List;
@@ -38,6 +39,7 @@ public class TransferService {
     private final AppealHistoryRepository historyRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final DirectoryService directoryService;
+    private final AppealAccess access;
 
     public TransferService(TransferRequestRepository transferRepository,
                            AppealRepository appealRepository,
@@ -46,7 +48,8 @@ public class TransferService {
                            RoutingRuleRepository routingRuleRepository,
                            AppealHistoryRepository historyRepository,
                            ApplicationEventPublisher eventPublisher,
-                           DirectoryService directoryService) {
+                           DirectoryService directoryService,
+                           AppealAccess access) {
         this.transferRepository = transferRepository;
         this.appealRepository = appealRepository;
         this.departmentRepository = departmentRepository;
@@ -55,23 +58,20 @@ public class TransferService {
         this.historyRepository = historyRepository;
         this.eventPublisher = eventPublisher;
         this.directoryService = directoryService;
+        this.access = access;
     }
 
     @Transactional
-    public TransferRequestResponse create(UUID appealId, CreateTransferRequest request) {
+    public TransferRequestResponse create(CurrentUser user, UUID appealId, CreateTransferRequest request) {
         Appeal appeal = findAppeal(appealId);
-        Employee employee = findEmployee(request.employeeId());
+        // передать можно только обращение своего подразделения — подразделение из токена
+        access.checkWork(user, appeal);
+        Employee employee = findEmployee(user.employeeId());
         Department source = appeal.getDepartment();
         Department target = departmentRepository.findByCode(request.departmentCode())
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Неизвестный отдел: " + request.departmentCode()));
 
-        if (source == null) {
-            throw new IllegalStateException("Обращение ещё не прошло автоматическую маршрутизацию");
-        }
-        if (!employee.getDepartment().getId().equals(source.getId())) {
-            throw new IllegalArgumentException("Сотрудник может передавать обращения только своего отдела");
-        }
         if (source.getId().equals(target.getId())) {
             throw new IllegalArgumentException("Целевой отдел должен отличаться от текущего");
         }
@@ -114,29 +114,29 @@ public class TransferService {
     }
 
     @Transactional(readOnly = true)
-    public List<TransferRequestResponse> pendingForDepartment(String departmentCode) {
+    public List<TransferRequestResponse> pendingForDepartment(CurrentUser user) {
         return transferRepository
                 .findByTargetDepartmentCodeAndStatusOrderByCreatedAtAsc(
-                        departmentCode, TransferRequestStatus.PENDING)
+                        user.requireDepartment(), TransferRequestStatus.PENDING)
                 .stream()
                 .map(this::toResponse)
                 .toList();
     }
 
     @Transactional
-    public TransferRequestResponse review(UUID transferId, ReviewTransferRequest request) {
+    public TransferRequestResponse review(CurrentUser user, UUID transferId, ReviewTransferRequest request) {
         TransferRequest transfer = transferRepository
                 .findByIdAndStatus(transferId, TransferRequestStatus.PENDING)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Запрос передачи не найден или уже рассмотрен"));
-        Employee reviewer = findEmployee(request.employeeId());
 
-        if (reviewer.getRole() != EmployeeRole.SUPERVISOR) {
-            throw new IllegalArgumentException("Согласовывать передачу может только руководитель отдела");
+        // роль и подразделение — из токена: согласует только руководитель принимающего подразделения
+        if (!user.isSupervisor()
+                || !transfer.getTargetDepartment().getCode().equals(user.requireDepartment())) {
+            throw new AccessDeniedException(
+                    "Рассматривать передачу может только руководитель принимающего подразделения");
         }
-        if (!reviewer.getDepartment().getId().equals(transfer.getTargetDepartment().getId())) {
-            throw new IllegalArgumentException("Руководитель может рассматривать запросы только своего отдела");
-        }
+        Employee reviewer = findEmployee(user.employeeId());
 
         Appeal appeal = transfer.getAppeal();
         if (!appeal.getDepartment().getId().equals(transfer.getSourceDepartment().getId())) {
@@ -206,12 +206,13 @@ public class TransferService {
 
     private Appeal findAppeal(UUID id) {
         return appealRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Обращение не найдено: " + id));
+                .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
     private Employee findEmployee(UUID id) {
         return employeeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден: " + id));
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Сотрудник не найден в справочнике подсистемы: " + id));
     }
 
     private TransferRequestResponse toResponse(TransferRequest transfer) {

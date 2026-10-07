@@ -12,6 +12,9 @@ public interface TransferRequestRepository extends JpaRepository<TransferRequest
 
     boolean existsByAppealIdAndStatus(UUID appealId, TransferRequestStatus status);
 
+    boolean existsByAppealIdAndTargetDepartmentCodeAndStatus(
+            UUID appealId, String departmentCode, TransferRequestStatus status);
+
     List<TransferRequest> findByAppealIdOrderByCreatedAtDesc(UUID appealId);
 
     List<TransferRequest> findByTargetDepartmentCodeAndStatusOrderByCreatedAtAsc(

@@ -1,57 +1,52 @@
 package ru.mtuci.appeals.service;
 
-import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import ru.mtuci.appeals.api.ApiModels.ClientResponse;
 import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EmployeeResponse;
+import ru.mtuci.appeals.api.ApiModels.MeResponse;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.Employee;
 import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.integration.ExternalContract;
-import ru.mtuci.appeals.repository.ClientRepository;
-import ru.mtuci.appeals.repository.EmployeeRepository;
+import ru.mtuci.appeals.repository.DepartmentRepository;
+import ru.mtuci.appeals.security.CurrentUser;
 
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class DirectoryService {
 
-    private final ClientRepository clientRepository;
     private final ContractsClient contractsClient;
-    private final EmployeeRepository employeeRepository;
+    private final DepartmentRepository departmentRepository;
 
-    public DirectoryService(ClientRepository clientRepository,
-                            ContractsClient contractsClient,
-                            EmployeeRepository employeeRepository) {
-        this.clientRepository = clientRepository;
+    public DirectoryService(ContractsClient contractsClient, DepartmentRepository departmentRepository) {
         this.contractsClient = contractsClient;
-        this.employeeRepository = employeeRepository;
+        this.departmentRepository = departmentRepository;
     }
 
-    /** Без общей транзакции: договоры приходят по сети из учётной системы. */
-    public List<ClientResponse> clients() {
-        return clientRepository.findAll(Sort.by("fullName")).stream()
-                .map(client -> new ClientResponse(
-                        client.getId(),
-                        client.getFullName(),
-                        client.getEmail(),
-                        client.getPhone(),
-                        contractsClient.clientContracts(client.getId()).stream()
-                                .map(ExternalContract::toSnapshot)
-                                .map(this::toContract)
-                                .toList()
-                ))
-                .toList();
+    /** Профиль по токену: клиенту — его договоры, сотруднику — его подразделение. */
+    public MeResponse me(CurrentUser user) {
+        return new MeResponse(
+                user.subject(),
+                user.name(),
+                user.email(),
+                user.roles().stream().sorted().toList(),
+                user.counterpartyId(),
+                user.isEmployee() && user.departmentCode() != null
+                        ? departmentRepository.findByCode(user.departmentCode()).map(this::toDepartment).orElse(null)
+                        : null,
+                user.isClient() ? contractsOf(user.requireCounterparty()) : List.of()
+        );
     }
 
-    @Transactional(readOnly = true)
-    public List<EmployeeResponse> employees() {
-        return employeeRepository.findAll(Sort.by("fullName")).stream()
-                .map(this::toEmployee)
+    /** Договоры клиента из учётной системы — по сети, поэтому без транзакции базы. */
+    public List<ContractResponse> contractsOf(UUID counterpartyId) {
+        return contractsClient.clientContracts(counterpartyId).stream()
+                .map(ExternalContract::toSnapshot)
+                .map(this::toContract)
                 .toList();
     }
 

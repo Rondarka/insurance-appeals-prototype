@@ -53,9 +53,9 @@ class FormSchemaTest extends IntegrationTest {
 
     @Test
     void rejectsTypeNotAvailableForContractProduct() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
         CreateAppealRequest mortgageTypeOnCasco = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, "MORTGAGE", "DOCUMENTS", Map.of(),
+                CASCO_CONTRACT, "MORTGAGE", "DOCUMENTS", Map.of(),
                 "Документы", "Нужны документы по договору");
 
         ResponseEntity<ErrorResponse> response = post(mortgageTypeOnCasco);
@@ -63,14 +63,14 @@ class FormSchemaTest extends IntegrationTest {
         // тип существует, но продукт договора его не допускает
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("недоступен для договора «КАСКО»");
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     @Test
     void rejectsValueOfWrongFormat() {
-        int before = appealsOfClient(CLIENT);
+        int before = appealsOf(ANNA);
         CreateAppealRequest claimWithRussianDate = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, "CLAIM", "AUTO",
                 Map.of("incidentDate", "10.09.2026", "incidentPlace", "Москва"),
                 "ДТП", "Дата не в формате ISO");
 
@@ -78,13 +78,13 @@ class FormSchemaTest extends IntegrationTest {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("Дата происшествия");
-        assertThat(appealsOfClient(CLIENT)).isEqualTo(before);
+        assertThat(appealsOf(ANNA)).isEqualTo(before);
     }
 
     @Test
     void contractFieldsComeFromContractAndUnknownFieldsAreDropped() {
         CreateAppealRequest request = new CreateAppealRequest(
-                CLIENT, CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва",
                         "policyNumber", "ПОДДЕЛЬНЫЙ-001", "bonus", "выплатить вдвое"),
                 "ДТП", "Попытка подменить номер полиса");
@@ -98,7 +98,7 @@ class FormSchemaTest extends IntegrationTest {
 
     private FormSchemaResponse schema(String productCode) {
         String url = productCode == null ? "/api/form-schema" : "/api/form-schema?productCode=" + productCode;
-        return rest.getForObject(url, FormSchemaResponse.class);
+        return as(ANNA).getForObject(url, FormSchemaResponse.class);
     }
 
     private static FormCategory category(FormSchemaResponse schema, String code) {
@@ -114,6 +114,6 @@ class FormSchemaTest extends IntegrationTest {
     }
 
     private ResponseEntity<ErrorResponse> post(CreateAppealRequest request) {
-        return rest.postForEntity("/api/appeals", request, ErrorResponse.class);
+        return as(ANNA).postForEntity("/api/appeals", request, ErrorResponse.class);
     }
 }

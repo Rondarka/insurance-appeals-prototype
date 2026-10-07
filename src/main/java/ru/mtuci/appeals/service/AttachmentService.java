@@ -16,6 +16,7 @@ import ru.mtuci.appeals.messaging.AppealDomainEvent;
 import ru.mtuci.appeals.repository.AppealAttachmentRepository;
 import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealRepository;
+import ru.mtuci.appeals.security.CurrentUser;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -47,19 +48,22 @@ public class AttachmentService {
     private final ApplicationEventPublisher eventPublisher;
     private final Path storageRoot;
     private final int maxCount;
+    private final AppealAccess access;
 
     public AttachmentService(AppealRepository appealRepository,
                              AppealAttachmentRepository attachmentRepository,
                              AppealHistoryRepository historyRepository,
                              ApplicationEventPublisher eventPublisher,
                              @Value("${appeals.attachments.path}") String storagePath,
-                             @Value("${appeals.attachments.max-count}") int maxCount) {
+                             @Value("${appeals.attachments.max-count}") int maxCount,
+                             AppealAccess access) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
         this.historyRepository = historyRepository;
         this.eventPublisher = eventPublisher;
         this.storageRoot = Path.of(storagePath).toAbsolutePath().normalize();
         this.maxCount = maxCount;
+        this.access = access;
     }
 
     @PostConstruct
@@ -68,9 +72,10 @@ public class AttachmentService {
     }
 
     @Transactional
-    public List<AttachmentResponse> store(UUID appealId, List<MultipartFile> files) {
+    public List<AttachmentResponse> store(CurrentUser user, UUID appealId, List<MultipartFile> files) {
         Appeal appeal = appealRepository.findById(appealId)
-                .orElseThrow(() -> new IllegalArgumentException("Обращение не найдено: " + appealId));
+                .orElseThrow(() -> new AppealNotFoundException(appealId));
+        access.checkView(user, appeal);
 
         List<MultipartFile> actualFiles = files == null
                 ? List.of()
@@ -136,9 +141,10 @@ public class AttachmentService {
     }
 
     @Transactional(readOnly = true)
-    public AttachmentDownload download(UUID attachmentId) {
+    public AttachmentDownload download(CurrentUser user, UUID attachmentId) {
         AppealAttachment attachment = attachmentRepository.findById(attachmentId)
                 .orElseThrow(() -> new IllegalArgumentException("Вложение не найдено: " + attachmentId));
+        access.checkView(user, attachment.getAppeal());
         try {
             Resource resource = new UrlResource(resolveStoragePath(attachment.getStorageName()).toUri());
             if (!resource.exists() || !resource.isReadable()) {

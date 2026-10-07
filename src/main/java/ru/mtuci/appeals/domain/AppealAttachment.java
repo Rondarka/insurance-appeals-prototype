@@ -59,6 +59,10 @@ public class AppealAttachment {
         return appeal.getId();
     }
 
+    public Appeal getAppeal() {
+        return appeal;
+    }
+
     public String getOriginalName() {
         return originalName;
     }

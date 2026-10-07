@@ -20,8 +20,8 @@ public final class ApiModels {
     private ApiModels() {
     }
 
+    /** Кто клиент, подсистема узнаёт из токена, поэтому идентификатора клиента в запросе нет. */
     public record CreateAppealRequest(
-            @NotNull UUID clientId,
             @NotNull UUID contractId,
             @NotBlank @Size(max = 50) String category,
             @NotBlank @Size(max = 60) String subcategory,
@@ -33,29 +33,21 @@ public final class ApiModels {
 
     public record CreateTransferRequest(
             @NotBlank String departmentCode,
-            @NotBlank @Size(max = 500) String reason,
-            @NotNull UUID employeeId
+            @NotBlank @Size(max = 500) String reason
     ) {
     }
 
     public record ReviewTransferRequest(
-            @NotNull UUID employeeId,
             @NotNull Boolean approved,
             @NotBlank @Size(max = 500) String comment
     ) {
     }
 
-    public record ChangeStatusRequest(
-            @NotNull AppealStatus status,
-            @NotBlank @Size(max = 160) String employeeName
-    ) {
+    public record ChangeStatusRequest(@NotNull AppealStatus status) {
     }
 
-    public record AddMessageRequest(
-            @NotNull AuthorType authorType,
-            @NotBlank @Size(max = 160) String authorName,
-            @NotBlank @Size(max = 5000) String body
-    ) {
+    /** Автор сообщения — тот, чей токен: клиент или сотрудник. */
+    public record AddMessageRequest(@NotBlank @Size(max = 5000) String body) {
     }
 
     public record DepartmentResponse(Long id, String code, String name, String description) {
@@ -75,11 +67,17 @@ public final class ApiModels {
     ) {
     }
 
-    public record ClientResponse(
-            UUID id,
-            String fullName,
+    /**
+     * Текущий пользователь по токену. У клиента — договоры из учётной системы,
+     * у сотрудника — подразделение.
+     */
+    public record MeResponse(
+            String subject,
+            String name,
             String email,
-            String phone,
+            List<String> roles,
+            UUID counterpartyId,
+            DepartmentResponse department,
             List<ContractResponse> contracts
     ) {
     }

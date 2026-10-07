@@ -43,6 +43,28 @@ services:
     ports:
       - "18081:8080"
 
+  # Поставщик идентификации страховой: в стенде — Keycloak, реалм из keycloak/insurer-realm.json
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.5
+    command: ["start-dev", "--import-realm"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin_dev
+      # адрес, каким Keycloak видит браузер; он же издатель (iss) в токенах
+      KC_HOSTNAME: http://localhost:18082
+      # подсистема забирает ключи по внутреннему адресу keycloak:8080
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+    volumes:
+      - ./keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "18082:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET /health/ready HTTP/1.1\r\nHost: localhost\r\nConnection: close\r\n\r\n' >&3 && grep -q UP <&3"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
   app:
     build:
       context: .
@@ -57,6 +79,8 @@ services:
       SPRING_RABBITMQ_VIRTUAL_HOST: appeals
       ATTACHMENT_STORAGE_PATH: /data/attachments
       CONTRACTS_BASE_URL: http://contracts-stub:8080
+      IDP_ISSUER_URI: http://localhost:18082/realms/insurer
+      IDP_JWK_SET_URI: http://keycloak:8080/realms/insurer/protocol/openid-connect/certs
     ports:
       - "18080:8080"
     volumes:
@@ -67,6 +91,8 @@ services:
       rabbitmq:
         condition: service_healthy
       contracts-stub:
+        condition: service_started
+      keycloak:
         condition: service_started
 
 volumes:

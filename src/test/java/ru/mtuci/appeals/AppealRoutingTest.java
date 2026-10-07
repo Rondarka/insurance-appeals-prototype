@@ -70,7 +70,8 @@ class AppealRoutingTest extends IntegrationTest {
     }
 
     private List<EventAuditResponse> auditedEvents(UUID appealId) {
-        EventAuditResponse[] events = rest.getForObject("/api/events", EventAuditResponse[].class);
+        EventAuditResponse[] events = as(CLAIMS_SPECIALIST)
+                .getForObject("/api/events", EventAuditResponse[].class);
         return Arrays.stream(events).filter(event -> appealId.equals(event.appealId())).toList();
     }
 

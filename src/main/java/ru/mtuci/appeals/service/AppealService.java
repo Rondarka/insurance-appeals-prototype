@@ -26,7 +26,7 @@ import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealStatus;
-import ru.mtuci.appeals.domain.Client;
+import ru.mtuci.appeals.domain.AuthorType;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.EventAudit;
@@ -36,9 +36,9 @@ import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealMessageRepository;
 import ru.mtuci.appeals.repository.AppealRepository;
 import ru.mtuci.appeals.repository.AppealAttachmentRepository;
-import ru.mtuci.appeals.repository.ClientRepository;
 import ru.mtuci.appeals.repository.DepartmentRepository;
 import ru.mtuci.appeals.repository.EventAuditRepository;
+import ru.mtuci.appeals.security.CurrentUser;
 
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -46,6 +46,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -56,7 +57,6 @@ public class AppealService {
 
     private final AppealRepository appealRepository;
     private final AppealAttachmentRepository attachmentRepository;
-    private final ClientRepository clientRepository;
     private final ContractsClient contractsClient;
     private final TransactionTemplate transactionTemplate;
     private final DepartmentRepository departmentRepository;
@@ -69,10 +69,10 @@ public class AppealService {
     private final DirectoryService directoryService;
     private final TransferService transferService;
     private final ObjectMapper objectMapper;
+    private final AppealAccess access;
 
     public AppealService(AppealRepository appealRepository,
                          AppealAttachmentRepository attachmentRepository,
-                         ClientRepository clientRepository,
                          ContractsClient contractsClient,
                          PlatformTransactionManager transactionManager,
                          DepartmentRepository departmentRepository,
@@ -84,10 +84,10 @@ public class AppealService {
                          AttachmentService attachmentService,
                          DirectoryService directoryService,
                          TransferService transferService,
-                         ObjectMapper objectMapper) {
+                         ObjectMapper objectMapper,
+                         AppealAccess access) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
-        this.clientRepository = clientRepository;
         this.contractsClient = contractsClient;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
         this.departmentRepository = departmentRepository;
@@ -100,30 +100,32 @@ public class AppealService {
         this.directoryService = directoryService;
         this.transferService = transferService;
         this.objectMapper = objectMapper;
+        this.access = access;
     }
 
     /**
      * Регистрация обращения. Договор запрашивается у учётной системы до начала транзакции:
      * сетевой вызов не должен держать соединение с базой. Транзакция охватывает только запись.
      */
-    public AppealDetailResponse create(CreateAppealRequest request) {
+    public AppealDetailResponse create(CurrentUser user, CreateAppealRequest request) {
+        UUID counterpartyId = user.requireCounterparty();
         // «не найден» и «чужой» неразличимы для клиента: не раскрываем, существует ли договор
         ContractSnapshot contract = contractsClient.contract(request.contractId())
-                .filter(found -> found.belongsTo(request.clientId()))
+                .filter(found -> found.belongsTo(counterpartyId))
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Договор не найден или не принадлежит выбранному клиенту"))
                 .toSnapshot();
         Map<String, String> details = formPolicy.details(
                 request.category(), request.subcategory(), contract, request.details());
 
-        return transactionTemplate.execute(transaction -> register(request, contract, details));
+        return transactionTemplate.execute(transaction -> register(user, request, contract, details));
     }
 
-    private AppealDetailResponse register(CreateAppealRequest request, ContractSnapshot contract,
-                                          Map<String, String> details) {
-        Client client = clientRepository.findById(request.clientId())
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Клиент не найден: " + request.clientId()));
+    private AppealDetailResponse register(CurrentUser user, CreateAppealRequest request,
+                                          ContractSnapshot contract, Map<String, String> details) {
+        // имя и почта — из токена на момент регистрации, как и снимок договора
+        String customerName = Objects.requireNonNullElse(user.name(), "Клиент");
+        String customerEmail = Objects.requireNonNullElse(user.email(), "");
         Instant now = Instant.now();
         UUID id = UUID.randomUUID();
         String publicNumber = "APP-" + NUMBER_DATE.format(now) + "-"
@@ -132,7 +134,9 @@ public class AppealService {
         Appeal appeal = new Appeal(
                 id,
                 publicNumber,
-                client,
+                user.counterpartyId(),
+                customerName,
+                customerEmail,
                 contract,
                 request.category(),
                 request.subcategory(),
@@ -146,7 +150,7 @@ public class AppealService {
                 appeal,
                 "CREATED",
                 "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация.",
-                client.getFullName(),
+                customerName,
                 now
         ));
 
@@ -168,19 +172,19 @@ public class AppealService {
     }
 
     @Transactional(readOnly = true)
-    public List<AppealSummaryResponse> list(
-            String departmentCode, AppealStatus status, UUID clientId) {
-        Specification<Appeal> spec = Specification.where(null);
-
-        if (departmentCode != null && !departmentCode.isBlank()) {
-            spec = spec.and((root, query, cb) ->
-                    cb.equal(root.join("department", JoinType.LEFT).get("code"), departmentCode));
+    /** Клиенту — его обращения, сотруднику — очередь его подразделения. */
+    public List<AppealSummaryResponse> list(CurrentUser user, AppealStatus status) {
+        Specification<Appeal> spec;
+        if (user.isClient()) {
+            UUID counterpartyId = user.requireCounterparty();
+            spec = (root, query, cb) -> cb.equal(root.get("counterpartyId"), counterpartyId);
+        } else {
+            String departmentCode = user.requireDepartment();
+            spec = (root, query, cb) ->
+                    cb.equal(root.join("department", JoinType.LEFT).get("code"), departmentCode);
         }
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
-        }
-        if (clientId != null) {
-            spec = spec.and((root, query, cb) -> cb.equal(root.get("client").get("id"), clientId));
         }
 
         return appealRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
@@ -190,24 +194,28 @@ public class AppealService {
     }
 
     @Transactional(readOnly = true)
-    public AppealDetailResponse get(UUID id) {
-        return toDetail(findAppeal(id));
+    public AppealDetailResponse get(CurrentUser user, UUID id) {
+        Appeal appeal = findAppeal(id);
+        access.checkView(user, appeal);
+        return toDetail(appeal);
     }
 
     @Transactional
-    public AppealDetailResponse changeStatus(UUID id, ChangeStatusRequest request) {
+    public AppealDetailResponse changeStatus(CurrentUser user, UUID id, ChangeStatusRequest request) {
         Appeal appeal = findAppeal(id);
+        access.checkWork(user, appeal);
         validateStatusChange(appeal.getStatus(), request.status());
+        String employeeName = Objects.requireNonNullElse(user.name(), user.subject());
 
         Instant now = Instant.now();
         AppealStatus previous = appeal.getStatus();
-        appeal.changeStatus(request.status(), request.employeeName().trim(), now);
+        appeal.changeStatus(request.status(), employeeName, now);
 
         historyRepository.save(new AppealHistory(
                 appeal,
                 "STATUS_CHANGED",
                 "Статус изменён: " + previous + " -> " + request.status(),
-                request.employeeName().trim(),
+                employeeName,
                 now
         ));
 
@@ -225,14 +233,24 @@ public class AppealService {
     }
 
     @Transactional
-    public AppealDetailResponse addMessage(UUID id, AddMessageRequest request) {
+    public AppealDetailResponse addMessage(CurrentUser user, UUID id, AddMessageRequest request) {
         Appeal appeal = findAppeal(id);
+        // клиент пишет в своё обращение, сотрудник — в обращение своего подразделения
+        AuthorType authorType;
+        if (user.isClient()) {
+            access.checkView(user, appeal);
+            authorType = AuthorType.CLIENT;
+        } else {
+            access.checkWork(user, appeal);
+            authorType = AuthorType.EMPLOYEE;
+        }
+        String authorName = Objects.requireNonNullElse(user.name(), user.subject());
         Instant now = Instant.now();
 
         messageRepository.save(new AppealMessage(
                 appeal,
-                request.authorType(),
-                request.authorName().trim(),
+                authorType,
+                authorName,
                 request.body().trim(),
                 now
         ));
@@ -240,16 +258,16 @@ public class AppealService {
         historyRepository.save(new AppealHistory(
                 appeal,
                 "MESSAGE_ADDED",
-                "Добавлено сообщение от: " + request.authorName().trim(),
-                request.authorName().trim(),
+                "Добавлено сообщение от: " + authorName,
+                authorName,
                 now
         ));
 
         eventPublisher.publishEvent(new AppealDomainEvent(
                 "APPEAL_MESSAGE_ADDED",
                 appeal.getId(),
-                "appeal.message." + request.authorType().name().toLowerCase(Locale.ROOT),
-                Map.of("authorType", request.authorType().name())
+                "appeal.message." + authorType.name().toLowerCase(Locale.ROOT),
+                Map.of("authorType", authorType.name())
         ));
 
         return toDetail(appeal);
@@ -273,7 +291,7 @@ public class AppealService {
 
     private Appeal findAppeal(UUID id) {
         return appealRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Обращение не найдено: " + id));
+                .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
     private void validateStatusChange(AppealStatus current, AppealStatus target) {

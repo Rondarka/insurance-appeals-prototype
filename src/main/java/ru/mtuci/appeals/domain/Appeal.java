@@ -31,9 +31,9 @@ public class Appeal {
     @Column(name = "customer_email", nullable = false, length = 254)
     private String customerEmail;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "client_id", nullable = false)
-    private Client client;
+    /** Клиент — контрагент учётной системы, идентификатор из токена IdP. */
+    @Column(name = "counterparty_id", nullable = false)
+    private UUID counterpartyId;
 
     @Embedded
     private ContractSnapshot contract;
@@ -84,15 +84,15 @@ public class Appeal {
     protected Appeal() {
     }
 
-    public Appeal(UUID id, String publicNumber, Client client, ContractSnapshot contract,
-                  String category, String subcategory, String detailsJson,
+    public Appeal(UUID id, String publicNumber, UUID counterpartyId, String customerName, String customerEmail,
+                  ContractSnapshot contract, String category, String subcategory, String detailsJson,
                   String subject, String description, Instant now) {
         this.id = id;
         this.publicNumber = publicNumber;
-        this.client = client;
+        this.counterpartyId = counterpartyId;
+        this.customerName = customerName;
+        this.customerEmail = customerEmail;
         this.contract = contract;
-        this.customerName = client.getFullName();
-        this.customerEmail = client.getEmail();
         this.category = category;
         this.subcategory = subcategory;
         this.detailsJson = detailsJson;
@@ -145,8 +145,8 @@ public class Appeal {
         return customerEmail;
     }
 
-    public Client getClient() {
-        return client;
+    public UUID getCounterpartyId() {
+        return counterpartyId;
     }
 
     public ContractSnapshot getContract() {

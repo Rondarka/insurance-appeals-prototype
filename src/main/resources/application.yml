@@ -36,6 +36,17 @@ spring:
   jackson:
     serialization:
       write-dates-as-timestamps: false
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # издатель — поставщик идентификации страховой, каким его видит браузер;
+          # в токене поле iss должно совпасть с этим адресом
+          issuer-uri: ${IDP_ISSUER_URI:http://localhost:18082/realms/insurer}
+          # открытые ключи для проверки подписи; в compose — по внутреннему адресу IdP
+          jwk-set-uri: ${IDP_JWK_SET_URI:http://localhost:18082/realms/insurer/protocol/openid-connect/certs}
+          # токен должен быть выпущен для подсистемы
+          audiences: insurance-appeals
 
 server:
   port: 8080
@@ -44,6 +55,9 @@ appeals:
   attachments:
     path: ${ATTACHMENT_STORAGE_PATH:/data/attachments}
     max-count: 5
+  auth:
+    # публичный клиент OAuth, через который входит интерфейс (код авторизации + PKCE)
+    ui-client-id: appeals-ui
   contracts:
     # учётная система договоров страховой; в стенде — заглушка WireMock
     base-url: ${CONTRACTS_BASE_URL:http://localhost:18081}

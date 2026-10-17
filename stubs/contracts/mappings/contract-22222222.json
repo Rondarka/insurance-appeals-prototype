@@ -21,7 +21,25 @@
       "validFrom": "2026-03-15",
       "validTo": "2027-03-14",
       "terminatedOn": null,
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "insuredSum": 3200000,
+      "deductible": 15000,
+      "premium": 98400,
+      "paymentStatus": "INSTALLMENTS",
+      "coverages": [
+        {
+          "code": "DAMAGE",
+          "name": "Ущерб"
+        },
+        {
+          "code": "THEFT",
+          "name": "Угон и хищение"
+        },
+        {
+          "code": "GLASS",
+          "name": "Повреждение стёкол без справок"
+        }
+      ]
     }
   }
 }

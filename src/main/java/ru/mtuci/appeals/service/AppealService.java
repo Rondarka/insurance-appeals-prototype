@@ -24,6 +24,9 @@ import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
 import ru.mtuci.appeals.api.ApiModels.MessageResponse;
 import ru.mtuci.appeals.api.ApiModels.NormResponse;
+import ru.mtuci.appeals.api.ApiModels.ContractTermsResponse;
+import ru.mtuci.appeals.api.ApiModels.CoverageResponse;
+import ru.mtuci.appeals.api.ApiModels.RelatedAppealResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
@@ -80,6 +83,7 @@ public class AppealService {
     private final AppealAccess access;
     private final DeadlineNormService normService;
     private final ProductionCalendar calendar;
+    private final AppealChecks checks;
     private final ZoneId zone;
 
     public AppealService(AppealRepository appealRepository,
@@ -99,6 +103,7 @@ public class AppealService {
                          AppealAccess access,
                          DeadlineNormService normService,
                          ProductionCalendar calendar,
+                         AppealChecks checks,
                          @Value("${appeals.timezone}") String timezone) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
@@ -117,6 +122,7 @@ public class AppealService {
         this.access = access;
         this.normService = normService;
         this.calendar = calendar;
+        this.checks = checks;
         this.zone = ZoneId.of(timezone);
     }
 
@@ -370,6 +376,51 @@ public class AppealService {
         return toDetail(appeal);
     }
 
+    /**
+     * Условия договора обращения — из учётной системы в момент запроса. Доступ — как к самому
+     * обращению; сетевой вызов — вне транзакции базы.
+     */
+    public ContractTermsResponse contractTerms(CurrentUser user, UUID id) {
+        UUID contractId = transactionTemplate.execute(transaction -> {
+            Appeal appeal = findAppeal(id);
+            access.checkView(user, appeal);
+            return appeal.getContract().getContractId();
+        });
+        var contract = contractsClient.contract(contractId)
+                .orElseThrow(() -> new IllegalArgumentException("Договор не найден в учётной системе"));
+        return new ContractTermsResponse(
+                directoryService.toContract(contract.toSnapshot()),
+                contract.insuredSum(),
+                contract.deductible(),
+                contract.premium(),
+                contract.paymentStatus(),
+                contract.coverages() == null ? List.of() : contract.coverages().stream()
+                        .map(item -> new CoverageResponse(item.code(), item.name())).toList()
+        );
+    }
+
+    /** Другие обращения того же клиента — краткие сведения; открыть можно только доступные. */
+    @Transactional(readOnly = true)
+    public List<RelatedAppealResponse> related(CurrentUser user, UUID id) {
+        Appeal appeal = findAppeal(id);
+        access.checkView(user, appeal);
+        return appealRepository.findByCounterpartyIdOrderByCreatedAtDesc(appeal.getCounterpartyId()).stream()
+                .filter(other -> !other.getId().equals(appeal.getId()))
+                .map(other -> new RelatedAppealResponse(
+                        other.getId(),
+                        other.getPublicNumber(),
+                        other.getSubject(),
+                        other.getCategory(),
+                        other.getSubcategory(),
+                        other.getStatus(),
+                        other.getOutcome(),
+                        other.getDepartment() == null ? null : other.getDepartment().getName(),
+                        other.getContract().getContractId().equals(appeal.getContract().getContractId()),
+                        access.canView(user, other),
+                        other.getCreatedAt()))
+                .toList();
+    }
+
     @Transactional(readOnly = true)
     public List<DepartmentResponse> departments() {
         return departmentRepository.findAll(Sort.by("name"))
@@ -471,7 +522,9 @@ public class AppealService {
                 messages,
                 attachments,
                 transferService.forAppeal(appeal.getId()),
-                appeal.getStatus().next()
+                appeal.getStatus().next(),
+                checks.run(appeal, readDetails(appeal.getDetailsJson()),
+                        appealRepository.findByCounterpartyIdOrderByCreatedAtDesc(appeal.getCounterpartyId()))
         );
     }
 

@@ -21,7 +21,29 @@
       "validFrom": "2026-01-10",
       "validTo": "2027-01-09",
       "terminatedOn": "2026-08-01",
-      "status": "TERMINATED"
+      "status": "TERMINATED",
+      "insuredSum": 4000000,
+      "deductible": 10000,
+      "premium": 21500,
+      "paymentStatus": "OVERDUE",
+      "coverages": [
+        {
+          "code": "FIRE",
+          "name": "Пожар"
+        },
+        {
+          "code": "FLOOD",
+          "name": "Залив"
+        },
+        {
+          "code": "NATURAL",
+          "name": "Стихийные бедствия"
+        },
+        {
+          "code": "THEFT",
+          "name": "Кража"
+        }
+      ]
     }
   }
 }

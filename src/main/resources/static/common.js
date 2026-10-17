@@ -19,6 +19,8 @@ const OUTCOME_LABELS = {
     EXPLAINED: "Даны разъяснения"
 };
 
+const PAYMENT_STATUS_LABELS = {PAID: "оплачена", INSTALLMENTS: "в рассрочку по графику", OVERDUE: "просрочена"};
+
 const PRIORITY_LABELS = {LOW: "Низкий", NORMAL: "Обычный", HIGH: "Высокий", CRITICAL: "Критический"};
 
 const CONTRACT_STATUS_LABELS = {
@@ -276,6 +278,88 @@ function renderContract(contract) {
             <dt>Статус</dt><dd>${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</dd>
         </dl>`;
 }
+
+/** Проверки, которые подсистема сделала за сотрудника: покрытие, договор, повторность. */
+function renderChecks(appeal) {
+    if (!appeal.checks?.length) return "";
+    return `<ul class="checks">${appeal.checks.map(check => `
+        <li class="${check.level === "WARNING" ? "warning" : "ok"}">
+            <span class="check-mark">${check.level === "WARNING" ? "!" : "✓"}</span>${escapeHtml(check.message)}
+        </li>`).join("")}</ul>`;
+}
+
+const money = value => value == null ? "нет" : `${Number(value).toLocaleString("ru-RU")} ₽`;
+
+/** Условия договора — из учётной системы в момент запроса. */
+function renderTerms(terms) {
+    return `
+        <dl class="kv terms">
+            <dt>Страховая сумма</dt><dd>${money(terms.insuredSum)}</dd>
+            <dt>Франшиза</dt><dd>${money(terms.deductible)}</dd>
+            <dt>Премия</dt><dd>${money(terms.premium)}, ${escapeHtml(PAYMENT_STATUS_LABELS[terms.paymentStatus] || "оплата неизвестна")}</dd>
+            <dt>Статус сейчас</dt><dd>${escapeHtml(CONTRACT_STATUS_LABELS[terms.current.status] || terms.current.status)}</dd>
+            <dt>Риски</dt><dd>${terms.coverages.map(item => escapeHtml(item.name)).join(", ") || "не указаны"}</dd>
+        </dl>
+        <small class="muted">Из учётной системы договоров, на ${formatDateTime(new Date())}</small>`;
+}
+
+function renderRelated(related) {
+    if (!related.length) return `<p class="muted">Других обращений нет</p>`;
+    return `<ul class="related">${related.map(item => `
+        <li>
+            ${item.canOpen
+                ? `<button type="button" class="link" data-open-related="${item.id}">${escapeHtml(item.subject)}</button>`
+                : `<span title="Обращение другого отдела">${escapeHtml(item.subject)}</span>`}
+            <small class="muted">${escapeHtml(item.publicNumber)} · ${formatDateTime(item.createdAt)}
+                ${item.sameContract ? " · этот договор" : ""}</small>
+            <small>${statusChip(item.status)}${item.outcome ? ` ${escapeHtml(OUTCOME_LABELS[item.outcome])}` : ""}
+                ${item.departmentName ? ` · ${escapeHtml(item.departmentName)}` : ""}</small>
+        </li>`).join("")}</ul>`;
+}
+
+async function loadRelated(appealId, target) {
+    try {
+        const related = await api(`/api/appeals/${appealId}/related`);
+        target.innerHTML = renderRelated(related);
+        target.closest("[data-related-section]")?.querySelector("[data-related-count]")
+            ?.replaceChildren(document.createTextNode(` · ${related.length}`));
+    } catch (error) {
+        target.innerHTML = `<p class="muted">Не удалось загрузить историю: ${escapeHtml(error.message)}</p>`;
+    }
+}
+
+async function loadTerms(appealId, target) {
+    target.innerHTML = `<p class="muted">Запрашиваем учётную систему…</p>`;
+    try {
+        target.innerHTML = renderTerms(await api(`/api/appeals/${appealId}/contract`));
+    } catch (error) {
+        target.innerHTML = `<p class="muted">${escapeHtml(error.message)}</p>`;
+    }
+}
+
+/** Блоки «Договор» и «История клиента» — общие для сотрудника и администратора. */
+function renderContractSection(appeal) {
+    return `
+        <h4>Договор</h4>${renderContract(appeal.contract)}
+        <div id="terms-${appeal.id}"></div>
+        <button type="button" class="btn ghost small" data-load-terms="${appeal.id}">Условия договора из учётной системы</button>`;
+}
+
+function renderRelatedSection(appeal) {
+    return `
+        <div data-related-section>
+            <h4>История клиента<span data-related-count></span></h4>
+            <div id="related-${appeal.id}"><p class="muted">Загрузка…</p></div>
+        </div>`;
+}
+
+document.addEventListener("click", event => {
+    const terms = event.target.closest("[data-load-terms]");
+    if (terms) {
+        loadTerms(terms.dataset.loadTerms, document.querySelector(`#terms-${terms.dataset.loadTerms}`));
+        terms.remove();
+    }
+});
 
 function renderDetails(appeal) {
     const entries = Object.entries(appeal.details || {}).filter(([key]) => key !== "policyNumber");

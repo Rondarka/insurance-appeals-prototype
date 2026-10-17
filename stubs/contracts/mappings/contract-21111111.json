@@ -21,7 +21,24 @@
       "validFrom": "2026-02-01",
       "validTo": "2027-01-31",
       "terminatedOn": null,
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "insuredSum": 6500000,
+      "premium": 9750,
+      "paymentStatus": "PAID",
+      "coverages": [
+        {
+          "code": "STRUCTURE",
+          "name": "Повреждение конструктивных элементов"
+        },
+        {
+          "code": "FLOOD",
+          "name": "Залив"
+        },
+        {
+          "code": "FIRE",
+          "name": "Пожар"
+        }
+      ]
     }
   }
 }

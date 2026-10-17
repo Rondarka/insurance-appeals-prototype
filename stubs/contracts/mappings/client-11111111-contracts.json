@@ -22,7 +22,24 @@
         "validFrom": "2026-02-01",
         "validTo": "2027-01-31",
         "terminatedOn": null,
-        "status": "ACTIVE"
+        "status": "ACTIVE",
+        "insuredSum": 6500000,
+        "premium": 9750,
+        "paymentStatus": "PAID",
+        "coverages": [
+          {
+            "code": "STRUCTURE",
+            "name": "Повреждение конструктивных элементов"
+          },
+          {
+            "code": "FLOOD",
+            "name": "Залив"
+          },
+          {
+            "code": "FIRE",
+            "name": "Пожар"
+          }
+        ]
       },
       {
         "contractId": "22222222-2222-2222-2222-222222222222",
@@ -36,7 +53,25 @@
         "validFrom": "2026-03-15",
         "validTo": "2027-03-14",
         "terminatedOn": null,
-        "status": "ACTIVE"
+        "status": "ACTIVE",
+        "insuredSum": 3200000,
+        "deductible": 15000,
+        "premium": 98400,
+        "paymentStatus": "INSTALLMENTS",
+        "coverages": [
+          {
+            "code": "DAMAGE",
+            "name": "Ущерб"
+          },
+          {
+            "code": "THEFT",
+            "name": "Угон и хищение"
+          },
+          {
+            "code": "GLASS",
+            "name": "Повреждение стёкол без справок"
+          }
+        ]
       },
       {
         "contractId": "23333333-3333-3333-3333-333333333333",
@@ -50,7 +85,16 @@
         "validFrom": "2025-03-15",
         "validTo": "2026-03-14",
         "terminatedOn": null,
-        "status": "EXPIRED"
+        "status": "EXPIRED",
+        "insuredSum": 400000,
+        "premium": 7860,
+        "paymentStatus": "PAID",
+        "coverages": [
+          {
+            "code": "LIABILITY",
+            "name": "Гражданская ответственность владельца ТС"
+          }
+        ]
       },
       {
         "contractId": "24444444-4444-4444-4444-444444444444",
@@ -64,7 +108,29 @@
         "validFrom": "2026-01-10",
         "validTo": "2027-01-09",
         "terminatedOn": "2026-08-01",
-        "status": "TERMINATED"
+        "status": "TERMINATED",
+        "insuredSum": 4000000,
+        "deductible": 10000,
+        "premium": 21500,
+        "paymentStatus": "OVERDUE",
+        "coverages": [
+          {
+            "code": "FIRE",
+            "name": "Пожар"
+          },
+          {
+            "code": "FLOOD",
+            "name": "Залив"
+          },
+          {
+            "code": "NATURAL",
+            "name": "Стихийные бедствия"
+          },
+          {
+            "code": "THEFT",
+            "name": "Кража"
+          }
+        ]
       }
     ]
   }

@@ -250,6 +250,17 @@ textarea { resize: vertical; }
 .small-text { font-size: 13px; }
 .transfer-form { display: grid; gap: 8px; padding: 12px; border-radius: 8px; background: var(--soft); }
 
+.checks { list-style: none; margin: 0 0 14px; padding: 0; display: grid; gap: 6px; }
+.checks li { display: flex; gap: 8px; align-items: flex-start; padding: 8px 12px; border-radius: 8px; font-size: 14px; }
+.checks li.ok { color: var(--green); background: var(--green-soft); }
+.checks li.warning { color: var(--amber); background: var(--amber-soft); font-weight: 600; }
+.check-mark { flex: none; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%;
+    font-size: 12px; border: 1.5px solid currentColor; }
+.related { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.related li { display: grid; gap: 2px; }
+.link { border: 0; padding: 0; background: none; color: var(--blue); text-align: left; font-weight: 600; }
+.btn.small { padding: 4px 0; font-size: 13px; }
+.terms { margin-top: 8px; }
 .kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 10px; margin: 0; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; }

@@ -21,7 +21,16 @@
       "validFrom": "2025-03-15",
       "validTo": "2026-03-14",
       "terminatedOn": null,
-      "status": "EXPIRED"
+      "status": "EXPIRED",
+      "insuredSum": 400000,
+      "premium": 7860,
+      "paymentStatus": "PAID",
+      "coverages": [
+        {
+          "code": "LIABILITY",
+          "name": "Гражданская ответственность владельца ТС"
+        }
+      ]
     }
   }
 }

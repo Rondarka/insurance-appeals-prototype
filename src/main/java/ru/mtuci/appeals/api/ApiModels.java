@@ -11,6 +11,7 @@ import ru.mtuci.appeals.domain.DeadlineCounting;
 import ru.mtuci.appeals.domain.EmployeeRole;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -73,6 +74,43 @@ public final class ApiModels {
             LocalDate validTo,
             LocalDate terminatedOn,
             String status
+    ) {
+    }
+
+    /**
+     * Условия договора — по запросу сотрудника из учётной системы, всегда актуальные.
+     * current — договор сейчас; в обращении хранится его снимок на момент регистрации.
+     */
+    public record ContractTermsResponse(
+            ContractResponse current,
+            BigDecimal insuredSum,
+            BigDecimal deductible,
+            BigDecimal premium,
+            String paymentStatus,
+            List<CoverageResponse> coverages
+    ) {
+    }
+
+    public record CoverageResponse(String code, String name) {
+    }
+
+    /** Проверка, сделанная подсистемой: level — OK или WARNING. */
+    public record CheckResponse(String code, String level, String message) {
+    }
+
+    /** Другое обращение того же клиента. canOpen — можно ли открыть его карточку. */
+    public record RelatedAppealResponse(
+            UUID id,
+            String publicNumber,
+            String subject,
+            String category,
+            String subcategory,
+            AppealStatus status,
+            AppealOutcome outcome,
+            String departmentName,
+            boolean sameContract,
+            boolean canOpen,
+            Instant createdAt
     ) {
     }
 
@@ -202,7 +240,8 @@ public final class ApiModels {
             List<MessageResponse> messages,
             List<AttachmentResponse> attachments,
             List<TransferRequestResponse> transfers,
-            List<AppealStatus> nextStatuses
+            List<AppealStatus> nextStatuses,
+            List<CheckResponse> checks
     ) {
     }
 

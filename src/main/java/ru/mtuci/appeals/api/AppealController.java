@@ -21,6 +21,8 @@ import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
 import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
+import ru.mtuci.appeals.api.ApiModels.ContractTermsResponse;
+import ru.mtuci.appeals.api.ApiModels.RelatedAppealResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
@@ -90,6 +92,18 @@ public class AppealController {
     @GetMapping("/appeals/{id}")
     AppealDetailResponse get(CurrentUser user, @PathVariable UUID id) {
         return appealService.get(user, id);
+    }
+
+    /** Условия договора обращения — из учётной системы, на момент запроса. */
+    @GetMapping("/appeals/{id}/contract")
+    ContractTermsResponse contractTerms(CurrentUser user, @PathVariable UUID id) {
+        return appealService.contractTerms(user, id);
+    }
+
+    /** Другие обращения того же клиента. */
+    @GetMapping("/appeals/{id}/related")
+    List<RelatedAppealResponse> related(CurrentUser user, @PathVariable UUID id) {
+        return appealService.related(user, id);
     }
 
     @PostMapping("/appeals/{id}/transfer-requests")

@@ -92,6 +92,7 @@ async function openCard(id) {
     }
     ws.openedId = id;
     $("#card").innerHTML = renderCard(appeal);
+    loadRelated(id, $(`#related-${id}`));
     renderQueue();
 }
 
@@ -135,6 +136,7 @@ function renderCard(appeal) {
         ${appealHeading(appeal)}
         <div class="card-body">
             <div class="main-col">
+                ${renderChecks(appeal)}
                 ${renderThread(appeal, "EMPLOYEE")}
                 ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}</p>` : ""}
                 ${canWork && ws.resolveForm && appeal.nextStatuses.includes("RESOLVED") ? `
@@ -169,9 +171,10 @@ function renderCard(appeal) {
                 <h4>Клиент</h4>
                 <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></p>
                 ${appeal.assignedEmployee ? `<h4>Исполнитель</h4><p>${escapeHtml(appeal.assignedEmployee)}</p>` : ""}
-                <h4>Договор</h4>${renderContract(appeal.contract)}
+                ${renderContractSection(appeal)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}
+                ${renderRelatedSection(appeal)}
                 <details class="more">
                     <summary>Журнал обработки · ${appeal.history.length}</summary>
                     ${renderHistory(appeal)}${renderTransfers(appeal)}
@@ -185,6 +188,13 @@ async function changeStatus(status) {
 }
 
 $("#card").addEventListener("click", async event => {
+    const related = event.target.closest("[data-open-related]");
+    if (related) {
+        const appeal = ws.appeals.find(item => item.id === related.dataset.openRelated);
+        if (appeal) ws.group = groupOf(appeal.status).key;
+        openCard(related.dataset.openRelated).catch(error => showToast(error.message, true));
+        return;
+    }
     const step = event.target.closest("[data-status]");
     const toggle = event.target.closest("[data-toggle-transfer]");
     const toggleResolve = event.target.closest("[data-toggle-resolve]");

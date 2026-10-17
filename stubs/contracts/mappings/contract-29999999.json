@@ -21,7 +21,21 @@
       "validFrom": "2026-01-01",
       "validTo": "2026-12-31",
       "terminatedOn": null,
-      "status": "ACTIVE"
+      "status": "ACTIVE",
+      "insuredSum": 2100000,
+      "deductible": 0,
+      "premium": 76000,
+      "paymentStatus": "PAID",
+      "coverages": [
+        {
+          "code": "DAMAGE",
+          "name": "Ущерб"
+        },
+        {
+          "code": "THEFT",
+          "name": "Угон и хищение"
+        }
+      ]
     }
   }
 }

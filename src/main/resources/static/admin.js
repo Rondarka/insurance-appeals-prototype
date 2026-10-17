@@ -110,6 +110,11 @@ function renderList() {
 ["#filter-department", "#filter-status"].forEach(id => $(id).addEventListener("change", renderList));
 $("#filter-text").addEventListener("input", renderList);
 
+$("#admin-card").addEventListener("click", event => {
+    const related = event.target.closest("[data-open-related]");
+    if (related) openCard(related.dataset.openRelated).catch(error => showToast(error.message, true));
+});
+
 $("#admin-list").addEventListener("click", event => {
     const item = event.target.closest("[data-appeal]");
     if (item) openCard(item.dataset.appeal).catch(error => showToast(error.message, true));
@@ -122,6 +127,7 @@ async function openCard(id) {
         ${appealHeading(appeal)}
         <div class="card-body">
             <div class="main-col">
+                ${renderChecks(appeal)}
                 <h4>Переписка</h4>
                 ${renderThread(appeal, "NOBODY")}
                 <h4>Журнал обработки</h4>
@@ -139,10 +145,12 @@ async function openCard(id) {
                     <dt>Срок отдела</dt><dd>${formatDateTime(appeal.deadlineAt)}</dd>
                 </dl>
                 <h4>Срок по закону</h4>${renderNorm(appeal)}
-                <h4>Договор</h4>${renderContract(appeal.contract)}
+                ${renderContractSection(appeal)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}
+                ${renderRelatedSection(appeal)}
             </aside>
         </div>`;
+    loadRelated(id, $(`#related-${id}`));
     renderList();
 }

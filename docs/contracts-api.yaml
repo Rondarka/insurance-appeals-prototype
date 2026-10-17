@@ -143,6 +143,37 @@ components:
             Отсутствует, если договор досрочно не прекращался.
         status:
           $ref: '#/components/schemas/ContractStatus'
+        insuredSum:
+          type: number
+          description: Страховая сумма, рубли. Для ОСАГО — лимит возмещения по имуществу
+        deductible:
+          type: number
+          nullable: true
+          description: Франшиза, рубли. Отсутствует, если франшизы нет
+        premium:
+          type: number
+          description: Страховая премия за период, рубли
+        paymentStatus:
+          $ref: '#/components/schemas/PaymentStatus'
+        coverages:
+          type: array
+          description: Застрахованные риски
+          items:
+            $ref: '#/components/schemas/Coverage'
+    Coverage:
+      type: object
+      required: [code, name]
+      properties:
+        code:
+          type: string
+          description: Код риска в учётной системе
+        name:
+          type: string
+    PaymentStatus:
+      type: string
+      enum: [PAID, INSTALLMENTS, OVERDUE]
+      description: |
+        Оплата премии: оплачена, оплачивается в рассрочку по графику, просрочена.
     Product:
       type: object
       required: [code, name]

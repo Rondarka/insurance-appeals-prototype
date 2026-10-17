@@ -5,13 +5,17 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealAttachment;
 import ru.mtuci.appeals.domain.AppealHistory;
+import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.messaging.AppealDomainEvent;
 import ru.mtuci.appeals.repository.AppealAttachmentRepository;
 import ru.mtuci.appeals.repository.AppealHistoryRepository;
@@ -26,6 +30,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -48,6 +53,7 @@ public class AttachmentService {
     private final ApplicationEventPublisher eventPublisher;
     private final Path storageRoot;
     private final int maxCount;
+    private final int maxPerAppeal;
     private final AppealAccess access;
 
     public AttachmentService(AppealRepository appealRepository,
@@ -56,6 +62,7 @@ public class AttachmentService {
                              ApplicationEventPublisher eventPublisher,
                              @Value("${appeals.attachments.path}") String storagePath,
                              @Value("${appeals.attachments.max-count}") int maxCount,
+                             @Value("${appeals.attachments.max-per-appeal}") int maxPerAppeal,
                              AppealAccess access) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
@@ -63,6 +70,7 @@ public class AttachmentService {
         this.eventPublisher = eventPublisher;
         this.storageRoot = Path.of(storagePath).toAbsolutePath().normalize();
         this.maxCount = maxCount;
+        this.maxPerAppeal = maxPerAppeal;
         this.access = access;
     }
 
@@ -71,35 +79,68 @@ public class AttachmentService {
         Files.createDirectories(storageRoot);
     }
 
+    /**
+     * Файлы из формы обращения: клиент прикладывает их сразу после отправки. Дослать документ
+     * позже — сообщением в переписке ({@link #attach}), чтобы сотрудник видел, к чему он.
+     */
     @Transactional
     public List<AttachmentResponse> store(CurrentUser user, UUID appealId, List<MultipartFile> files) {
         Appeal appeal = appealRepository.findById(appealId)
                 .orElseThrow(() -> new AppealNotFoundException(appealId));
         access.checkView(user, appeal);
+        if (!user.isClient()) {
+            throw new AccessDeniedException("Сотрудник прикладывает файлы к сообщению в переписке");
+        }
+        if (appeal.getStatus() == AppealStatus.CLOSED) {
+            throw new IllegalStateException("Обращение закрыто — создайте новое");
+        }
+        List<MultipartFile> accepted = accepted(appeal, files);
+        if (accepted.isEmpty()) {
+            throw new IllegalArgumentException("Не выбраны файлы для загрузки");
+        }
+        return attach(appeal, null, accepted, appeal.getCustomerName()).stream()
+                .map(this::toResponse)
+                .toList();
+    }
 
+    /**
+     * Проверяет файлы до того, как что-либо сохранено: сколько за раз и всего у обращения,
+     * размер и тип. Возвращает выбранные файлы без пустых полей формы.
+     */
+    public List<MultipartFile> accepted(Appeal appeal, List<MultipartFile> files) {
         List<MultipartFile> actualFiles = files == null
                 ? List.of()
                 : files.stream().filter(file -> !file.isEmpty()).toList();
-
-        long existingCount = attachmentRepository.countByAppeal_Id(appealId);
-        if (actualFiles.isEmpty()) {
-            throw new IllegalArgumentException("Не выбраны файлы для загрузки");
+        if (actualFiles.size() > maxCount) {
+            throw new IllegalArgumentException("За один раз можно приложить не более " + maxCount + " файлов");
         }
-        if (existingCount + actualFiles.size() > maxCount) {
-            throw new IllegalArgumentException("К обращению можно прикрепить не более " + maxCount + " файлов");
+        if (attachmentRepository.countByAppeal_Id(appeal.getId()) + actualFiles.size() > maxPerAppeal) {
+            throw new IllegalArgumentException("К обращению можно приложить не более " + maxPerAppeal + " файлов");
         }
-
         actualFiles.forEach(this::validateFile);
+        return actualFiles;
+    }
 
+    /**
+     * Сохраняет проверенные файлы обращения или его сообщения (messageId). Если транзакция
+     * откатится — например, не сохранилось само сообщение, — файлы удаляются и с диска.
+     */
+    public List<AppealAttachment> attach(Appeal appeal, Long messageId, List<MultipartFile> files, String actor) {
+        if (files.isEmpty()) {
+            return List.of();
+        }
         Instant now = Instant.now();
+        List<String> written = new ArrayList<>();
+        deleteOnRollback(written);
         List<AppealAttachment> stored = new ArrayList<>();
         try {
-            for (MultipartFile file : actualFiles) {
+            for (MultipartFile file : files) {
                 UUID id = UUID.randomUUID();
                 String originalName = cleanOriginalName(file.getOriginalFilename());
                 String storageName = id + extension(originalName);
                 Path target = resolveStoragePath(storageName);
 
+                written.add(storageName);
                 try (InputStream input = file.getInputStream()) {
                     Files.copy(input, target, StandardCopyOption.REPLACE_EXISTING);
                 }
@@ -107,6 +148,7 @@ public class AttachmentService {
                 stored.add(attachmentRepository.save(new AppealAttachment(
                         id,
                         appeal,
+                        messageId,
                         originalName,
                         storageName,
                         file.getContentType(),
@@ -115,7 +157,7 @@ public class AttachmentService {
                 )));
             }
         } catch (IOException exception) {
-            stored.forEach(item -> deleteQuietly(item.getStorageName()));
+            written.forEach(this::deleteQuietly);
             throw new IllegalStateException("Не удалось сохранить вложение", exception);
         }
 
@@ -126,18 +168,23 @@ public class AttachmentService {
                         .map(AppealAttachment::getOriginalName)
                         .reduce((left, right) -> left + ", " + right)
                         .orElse(""),
-                appeal.getCustomerName(),
+                actor,
                 now
         ));
 
+        Map<String, String> details = new LinkedHashMap<>();
+        details.put("count", Integer.toString(stored.size()));
+        if (messageId != null) {
+            details.put("messageId", messageId.toString());
+        }
         eventPublisher.publishEvent(new AppealDomainEvent(
                 "APPEAL_ATTACHMENTS_ADDED",
                 appeal.getId(),
                 "appeal.attachment.added",
-                Map.of("count", Integer.toString(stored.size()))
+                details
         ));
 
-        return stored.stream().map(this::toResponse).toList();
+        return stored;
     }
 
     @Transactional(readOnly = true)
@@ -159,6 +206,7 @@ public class AttachmentService {
     public AttachmentResponse toResponse(AppealAttachment attachment) {
         return new AttachmentResponse(
                 attachment.getId(),
+                attachment.getMessageId(),
                 attachment.getOriginalName(),
                 attachment.getContentType(),
                 attachment.getSizeBytes(),
@@ -197,6 +245,20 @@ public class AttachmentService {
             throw new IllegalArgumentException("Недопустимое имя файла");
         }
         return target;
+    }
+
+    private void deleteOnRollback(List<String> written) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status != STATUS_COMMITTED) {
+                    written.forEach(AttachmentService.this::deleteQuietly);
+                }
+            }
+        });
     }
 
     private void deleteQuietly(String storageName) {

@@ -245,8 +245,12 @@ function formatDetailValue(key, value) {
  * viewer — CLIENT или EMPLOYEE: с чьей стороны смотрим.
  */
 function renderThread(appeal, viewer) {
+    // первое сообщение — само обращение, с файлами из его формы
     const items = [
-        {authorType: "CLIENT", authorName: appeal.customerName, body: appeal.description, createdAt: appeal.createdAt},
+        {
+            authorType: "CLIENT", authorName: appeal.customerName, body: appeal.description, createdAt: appeal.createdAt,
+            attachments: appeal.attachments.filter(file => file.messageId == null)
+        },
         ...appeal.messages
     ];
     return `<div class="thread">${items.map(item => {
@@ -255,18 +259,65 @@ function renderThread(appeal, viewer) {
         return `
             <div class="bubble ${own ? "own" : ""}">
                 <small>${escapeHtml(who)} · ${formatDateTime(item.createdAt)}</small>
-                <p>${escapeHtml(item.body)}</p>
+                ${item.body ? `<p>${escapeHtml(item.body)}</p>` : ""}
+                ${item.attachments?.length ? renderFileList(item.attachments) : ""}
             </div>`;
     }).join("")}</div>`;
 }
 
-function renderAttachments(appeal) {
-    if (!appeal.attachments.length) return `<p class="muted">Файлов нет</p>`;
-    return `<div class="files">${appeal.attachments.map(file => `
+function renderFileList(files) {
+    return `<div class="files">${files.map(file => `
         <button type="button" class="file" data-download="${file.id}" data-name="${escapeHtml(file.originalName)}">
             <span>${escapeHtml(file.originalName)}</span>
             <small>${formatFileSize(file.sizeBytes)}</small>
         </button>`).join("")}</div>`;
+}
+
+/** Все файлы обращения в одном месте: из формы и из переписки. */
+function renderAttachments(appeal) {
+    if (!appeal.attachments.length) return `<p class="muted">Файлов нет</p>`;
+    return renderFileList(appeal.attachments);
+}
+
+// ---------- файлы в ответе ----------
+
+const FILE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";
+const FILE_HINT = "PDF, JPG или PNG, до 10 МБ, не больше 5 за раз";
+
+/** Кнопка «Прикрепить файлы» для формы ответа: выбранные файлы видны до отправки. */
+function attachField() {
+    return `
+        <span class="attach">
+            <label class="btn ghost attach-button">Прикрепить файлы
+                <input type="file" name="files" multiple accept="${FILE_ACCEPT}">
+            </label>
+            <small class="muted" data-attach-list>${FILE_HINT}</small>
+        </span>`;
+}
+
+document.addEventListener("change", event => {
+    const input = event.target.closest('.attach input[type="file"]');
+    if (!input) return;
+    input.closest(".attach").querySelector("[data-attach-list]").textContent = input.files.length
+        ? [...input.files].map(file => file.name).join(", ")
+        : FILE_HINT;
+});
+
+/** Текст и файлы ответа одним запросом. null — если отправлять нечего. */
+function replyFormData(form) {
+    const data = new FormData(form);
+    // пустое поле файла браузер всё равно кладёт в форму — убираем его
+    const files = data.getAll("files").filter(file => file.size > 0);
+    data.delete("files");
+    files.forEach(file => data.append("files", file));
+    return String(data.get("body") || "").trim() || files.length ? data : null;
+}
+
+/** Начатый ответ — текст или выбранные файлы: фоновое обновление его не стирает. */
+function hasDraft(container) {
+    if (!container) return false;
+    return [...container.querySelectorAll("textarea")].some(item => item.value.trim())
+        || [...container.querySelectorAll('input[type="file"]')].some(item => item.files.length);
 }
 
 function renderContract(contract) {

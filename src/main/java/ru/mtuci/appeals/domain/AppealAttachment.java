@@ -22,6 +22,10 @@ public class AppealAttachment {
     @JoinColumn(name = "appeal_id", nullable = false)
     private Appeal appeal;
 
+    /** Сообщение, с которым пришёл файл; у файлов из формы обращения — null. */
+    @Column(name = "message_id")
+    private Long messageId;
+
     @Column(name = "original_name", nullable = false, length = 255)
     private String originalName;
 
@@ -40,10 +44,11 @@ public class AppealAttachment {
     protected AppealAttachment() {
     }
 
-    public AppealAttachment(UUID id, Appeal appeal, String originalName, String storageName,
+    public AppealAttachment(UUID id, Appeal appeal, Long messageId, String originalName, String storageName,
                             String contentType, long sizeBytes, Instant uploadedAt) {
         this.id = id;
         this.appeal = appeal;
+        this.messageId = messageId;
         this.originalName = originalName;
         this.storageName = storageName;
         this.contentType = contentType;
@@ -61,6 +66,10 @@ public class AppealAttachment {
 
     public Appeal getAppeal() {
         return appeal;
+    }
+
+    public Long getMessageId() {
+        return messageId;
     }
 
     public String getOriginalName() {

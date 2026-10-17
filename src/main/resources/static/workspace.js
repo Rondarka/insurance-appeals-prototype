@@ -161,8 +161,9 @@ function renderCard(appeal) {
                     </div>
                 </form>` : canWork && appeal.status !== "CLOSED" ? `
                 <form class="reply" data-reply>
-                    <textarea name="body" rows="3" maxlength="5000" required placeholder="Ответ клиенту"></textarea>
+                    <textarea name="body" rows="3" maxlength="5000" placeholder="Ответ клиенту"></textarea>
                     <div class="reply-actions">
+                        ${attachField()}
                         ${appeal.nextStatuses.includes("WAITING_CUSTOMER")
                             ? `<button class="btn" type="submit" name="wait" value="1">Отправить и ждать ответа</button>` : ""}
                         <button class="btn primary" type="submit">Отправить</button>
@@ -226,9 +227,12 @@ $("#card").addEventListener("submit", async event => {
     const form = new FormData(event.target);
     try {
         if (event.target.matches("[data-reply]")) {
-            await api(`/api/appeals/${ws.openedId}/messages`, {
-                method: "POST", body: JSON.stringify({body: form.get("body")})
-            });
+            const data = replyFormData(event.target);
+            if (!data) {
+                showToast("Напишите ответ или приложите файл", true);
+                return;
+            }
+            await api(`/api/appeals/${ws.openedId}/messages`, {method: "POST", body: data});
             if (event.submitter?.name === "wait") await changeStatus("WAITING_CUSTOMER");
             showToast(event.submitter?.name === "wait" ? "Ответ отправлен, ждём клиента" : "Ответ отправлен");
         }
@@ -423,7 +427,7 @@ async function refresh() {
     if (isSupervisor() && !$("#transfers-view").classList.contains("active")) {
         await loadTransfers().catch(() => {});
     }
-    const typing = document.querySelector("#card textarea")?.value || document.querySelector("#card [data-transfer]");
+    const typing = hasDraft($("#card")) || document.querySelector("#card [data-transfer]");
     if (!ws.openedId || typing) return;
     const appeal = await api(`/api/appeals/${ws.openedId}`).catch(() => null);
     if (appeal && cardSignature(appeal) !== ws.openedSignature) await openCard(ws.openedId).catch(() => {});

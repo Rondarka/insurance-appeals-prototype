@@ -244,7 +244,13 @@ textarea { resize: vertical; }
 .bubble p { white-space: pre-wrap; }
 
 .reply { display: grid; gap: 8px; margin-top: 16px; }
-.reply-actions, .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.reply-actions, .form-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; align-items: center; gap: 8px; }
+.attach { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin-right: auto; min-width: 0; }
+.attach small { overflow-wrap: anywhere; }
+label.attach-button { position: relative; display: inline-flex; padding-left: 0; font-size: 14px; cursor: pointer; }
+.attach-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.attach-button:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
+.bubble .files { margin-top: 8px; }
 .resolve-form { padding: 14px; border: 1px solid var(--blue); border-radius: var(--radius); background: var(--blue-soft); }
 .resolve-form h4 { margin-top: 0; color: var(--ink); }
 .small-text { font-size: 13px; }

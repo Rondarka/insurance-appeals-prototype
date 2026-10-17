@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import ru.mtuci.appeals.api.ApiModels.AddMessageRequest;
+import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
@@ -58,6 +58,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class AppealService {
@@ -65,6 +66,7 @@ public class AppealService {
     private static final DateTimeFormatter NUMBER_DATE =
             DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+    private static final int MAX_MESSAGE_LENGTH = 5000;
 
     private final AppealRepository appealRepository;
     private final AppealAttachmentRepository attachmentRepository;
@@ -313,8 +315,12 @@ public class AppealService {
         return toDetail(appeal);
     }
 
+    /**
+     * Сообщение в переписке, при необходимости с файлами: клиент досылает запрошенный документ,
+     * сотрудник прикладывает расчёт или письмо. Сообщение может состоять из одних файлов.
+     */
     @Transactional
-    public AppealDetailResponse addMessage(CurrentUser user, UUID id, AddMessageRequest request) {
+    public AppealDetailResponse addMessage(CurrentUser user, UUID id, String body, List<MultipartFile> files) {
         Appeal appeal = findAppeal(id);
         // клиент пишет в своё обращение, сотрудник — в обращение своего подразделения
         AuthorType authorType;
@@ -328,16 +334,25 @@ public class AppealService {
         if (appeal.getStatus() == AppealStatus.CLOSED) {
             throw new IllegalStateException("Обращение закрыто — создайте новое");
         }
+        String text = body == null ? "" : body.trim();
+        List<MultipartFile> accepted = attachmentService.accepted(appeal, files);
+        if (text.isEmpty() && accepted.isEmpty()) {
+            throw new IllegalArgumentException("Напишите сообщение или приложите файл");
+        }
+        if (text.length() > MAX_MESSAGE_LENGTH) {
+            throw new IllegalArgumentException("Сообщение длиннее " + MAX_MESSAGE_LENGTH + " символов");
+        }
         String authorName = Objects.requireNonNullElse(user.name(), user.subject());
         Instant now = Instant.now();
 
-        messageRepository.save(new AppealMessage(
+        AppealMessage message = messageRepository.save(new AppealMessage(
                 appeal,
                 authorType,
                 authorName,
-                request.body().trim(),
+                text,
                 now
         ));
+        attachmentService.attach(appeal, message.getId(), accepted, authorName);
 
         historyRepository.save(new AppealHistory(
                 appeal,
@@ -351,7 +366,7 @@ public class AppealService {
                 "APPEAL_MESSAGE_ADDED",
                 appeal.getId(),
                 "appeal.message." + authorType.name().toLowerCase(Locale.ROOT),
-                Map.of("authorType", authorType.name())
+                Map.of("authorType", authorType.name(), "attachments", Integer.toString(accepted.size()))
         ));
 
         // клиент ответил на запрос — обращение снова в работе, без участия сотрудника
@@ -478,6 +493,15 @@ public class AppealService {
                 ))
                 .toList();
 
+        List<AttachmentResponse> attachments = attachmentRepository
+                .findByAppeal_IdOrderByUploadedAtAsc(appeal.getId())
+                .stream()
+                .map(attachmentService::toResponse)
+                .toList();
+        Map<Long, List<AttachmentResponse>> byMessage = attachments.stream()
+                .filter(file -> file.messageId() != null)
+                .collect(Collectors.groupingBy(AttachmentResponse::messageId));
+
         List<MessageResponse> messages = messageRepository.findByAppealIdOrderByCreatedAtAsc(appeal.getId())
                 .stream()
                 .map(item -> new MessageResponse(
@@ -485,14 +509,9 @@ public class AppealService {
                         item.getAuthorType(),
                         item.getAuthorName(),
                         item.getBody(),
-                        item.getCreatedAt()
+                        item.getCreatedAt(),
+                        byMessage.getOrDefault(item.getId(), List.of())
                 ))
-                .toList();
-
-        List<AttachmentResponse> attachments = attachmentRepository
-                .findByAppeal_IdOrderByUploadedAtAsc(appeal.getId())
-                .stream()
-                .map(attachmentService::toResponse)
                 .toList();
 
         return new AppealDetailResponse(

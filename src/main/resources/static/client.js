@@ -166,14 +166,17 @@ async function openAppeal(id) {
             </div>
             <div class="card-badges">${statusChip(appeal.status, CLIENT_STATUS)}</div>
         </div>
-        ${appeal.status === "WAITING_CUSTOMER" ? `<div class="notice">Сотрудник ждёт вашего ответа — напишите ниже.</div>` : ""}
+        ${appeal.status === "WAITING_CUSTOMER" ? `<div class="notice">Сотрудник ждёт вашего ответа — напишите ниже и приложите документы, если их запросили.</div>` : ""}
         <div class="card-body">
             <div class="main-col">
                 ${renderThread(appeal, "CLIENT")}
                 ${appeal.status === "CLOSED" ? `<p class="muted">Обращение закрыто. Если вопрос остался, создайте новое.</p>` : `
                 <form class="reply" id="client-reply">
-                    <textarea name="body" rows="3" maxlength="5000" required placeholder="Ваше сообщение"></textarea>
-                    <div class="reply-actions"><button class="btn primary" type="submit">Отправить</button></div>
+                    <textarea name="body" rows="3" maxlength="5000" placeholder="Ваше сообщение"></textarea>
+                    <div class="reply-actions">
+                        ${attachField()}
+                        <button class="btn primary" type="submit">Отправить</button>
+                    </div>
                 </form>`}
             </div>
             <aside class="side-col">
@@ -188,12 +191,18 @@ async function openAppeal(id) {
 
 $("#appeal-view").addEventListener("submit", async event => {
     event.preventDefault();
-    const body = new FormData(event.target).get("body");
+    const data = replyFormData(event.target);
+    if (!data) {
+        showToast("Напишите сообщение или приложите файл", true);
+        return;
+    }
+    event.submitter.disabled = true;
     try {
-        await api(`/api/appeals/${openedId}/messages`, {method: "POST", body: JSON.stringify({body})});
+        await api(`/api/appeals/${openedId}/messages`, {method: "POST", body: data});
         await openAppeal(openedId);
         await loadMyAppeals();
     } catch (error) {
+        event.submitter.disabled = false;
         showToast(error.message, true);
     }
 });
@@ -201,6 +210,5 @@ $("#appeal-view").addEventListener("submit", async event => {
 /** Обновление в фоне — не трогая начатое сообщение. */
 async function refresh() {
     await loadMyAppeals().catch(() => {});
-    const typing = $("#client-reply textarea")?.value;
-    if (openedId && !typing) await openAppeal(openedId).catch(() => {});
+    if (openedId && !hasDraft($("#client-reply"))) await openAppeal(openedId).catch(() => {});
 }

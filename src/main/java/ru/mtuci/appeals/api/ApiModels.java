@@ -199,12 +199,15 @@ public final class ApiModels {
             AuthorType authorType,
             String authorName,
             String body,
-            Instant createdAt
+            Instant createdAt,
+            List<AttachmentResponse> attachments
     ) {
     }
 
+    /** messageId — сообщение, с которым пришёл файл; null — файл из формы обращения. */
     public record AttachmentResponse(
             UUID id,
+            Long messageId,
             String originalName,
             String contentType,
             long sizeBytes,

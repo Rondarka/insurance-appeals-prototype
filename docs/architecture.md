@@ -277,7 +277,7 @@ appeal >──── department           (counterparty_id — клиент из
   │
   ├──< appeal_history      (что происходило)
   ├──< appeal_message      (переписка)
-  ├──< appeal_attachment   (файлы)
+  ├──< appeal_attachment   (файлы; message_id — если пришёл с сообщением)
   └──< transfer_request >──── department (целевой)
 
 routing_rule ──── department      (категория + подтип → отдел, приоритет, срок)

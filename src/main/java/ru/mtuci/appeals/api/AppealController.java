@@ -145,12 +145,22 @@ public class AppealController {
         return appealService.resolve(user, id, request);
     }
 
-    @PostMapping("/appeals/{id}/messages")
+    @PostMapping(value = "/appeals/{id}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
     AppealDetailResponse addMessage(
             CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody AddMessageRequest request) {
-        return appealService.addMessage(user, id, request);
+        return appealService.addMessage(user, id, request.body(), List.of());
+    }
+
+    /** То же сообщение, но с файлами: текст можно не писать, если приложен файл. */
+    @PostMapping(value = "/appeals/{id}/messages", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    AppealDetailResponse addMessageWithFiles(
+            CurrentUser user,
+            @PathVariable UUID id,
+            @RequestParam(value = "body", required = false) String body,
+            @RequestParam(value = "files", required = false) List<MultipartFile> files) {
+        return appealService.addMessage(user, id, body, files);
     }
 
     @PostMapping(

@@ -172,8 +172,8 @@ Server: принимает токен из заголовка `Authorization: Be
 | `APPEAL_CREATED` | `appeal.created.<категория>.<тип>` | обращение зарегистрировано | `category`, `subcategory`, `publicNumber` |
 | `APPEAL_ROUTED` | `appeal.routed.<отдел>` | назначен отдел и срок | `departmentCode`, `subcategory`, `priority`, `slaHours` |
 | `APPEAL_STATUS_CHANGED` | `appeal.status.<статус>` | сменился статус | `fromStatus`, `toStatus` |
-| `APPEAL_MESSAGE_ADDED` | `appeal.message.<автор>` | новое сообщение в переписке | `authorType` |
-| `APPEAL_ATTACHMENTS_ADDED` | `appeal.attachment.added` | приложены файлы | `count` |
+| `APPEAL_MESSAGE_ADDED` | `appeal.message.<автор>` | новое сообщение в переписке | `authorType`, `attachments` (число файлов) |
+| `APPEAL_ATTACHMENTS_ADDED` | `appeal.attachment.added` | приложены файлы | `count`; `messageId` — если файлы пришли с сообщением |
 | `APPEAL_TRANSFER_REQUESTED` | `appeal.transfer.requested.<целевой отдел>` | запрошена передача | `fromDepartment`, `toDepartment`, `requestedBy` |
 | `APPEAL_TRANSFER_APPROVED` | `appeal.transfer.approved.<целевой отдел>` | передача согласована | `fromDepartment`, `toDepartment`, `reviewedBy` |
 | `APPEAL_TRANSFER_REJECTED` | `appeal.transfer.rejected.<целевой отдел>` | передача отклонена | `fromDepartment`, `toDepartment`, `reviewedBy` |

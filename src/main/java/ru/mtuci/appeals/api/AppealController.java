@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AddMessageRequest;
+import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
@@ -143,6 +144,14 @@ public class AppealController {
             @PathVariable UUID id,
             @Valid @RequestBody ResolveAppealRequest request) {
         return appealService.resolve(user, id, request);
+    }
+
+    @PostMapping("/appeals/{id}/extend-deadline")
+    AppealDetailResponse extendDeadline(
+            CurrentUser user,
+            @PathVariable UUID id,
+            @Valid @RequestBody ExtendDeadlineRequest request) {
+        return appealService.extendDeadline(user, id, request);
     }
 
     @PostMapping(value = "/appeals/{id}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)

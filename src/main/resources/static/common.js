@@ -184,7 +184,8 @@ function renderNorm(appeal) {
             <dt>Срок</dt><dd><strong>до ${formatDate(appeal.legalDeadline)}</strong>${isLegallyOverdue(appeal) ? ` <span class="late-text">просрочен</span>` : ""}</dd>
             <dt>Норматив</dt><dd>${escapeHtml(norm.title)}: ${norm.termDays} ${COUNTING_LABELS[norm.counting] || ""}</dd>
             <dt>Основание</dt><dd>${escapeHtml(norm.legalBasis)}</dd>
-            ${appeal.deadlineExtendedDays ? `<dt>Продлён</dt><dd>на ${appeal.deadlineExtendedDays} раб. дн.</dd>` : ""}
+            ${appeal.deadlineExtendedDays ? `<dt>Продлён</dt><dd>на ${appeal.deadlineExtendedDays} раб. дн.${appeal.deadlineExtensionReason
+                ? `<br><small class="muted">${escapeHtml(appeal.deadlineExtensionReason)}</small>` : ""}</dd>` : ""}
         </dl>`;
 }
 

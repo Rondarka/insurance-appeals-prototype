@@ -84,6 +84,9 @@ public class Appeal {
     @Column(name = "deadline_extended_days", nullable = false)
     private int deadlineExtendedDays;
 
+    @Column(name = "deadline_extension_reason", length = 1000)
+    private String deadlineExtensionReason;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 30)
     private AppealOutcome outcome;
@@ -127,6 +130,36 @@ public class Appeal {
     public void applyNorm(DeadlineNorm norm, LocalDate legalDeadline) {
         this.norm = norm;
         this.legalDeadline = legalDeadline;
+    }
+
+    /**
+     * Продление срока по закону: только если норматив его допускает, не больше чем на
+     * допустимое число рабочих дней, один раз и пока срок не истёк — задним числом не продлить.
+     * Новую дату считает производственный календарь.
+     */
+    public void extendLegalDeadline(int days, LocalDate newDeadline, String reason, LocalDate today, Instant now) {
+        if (norm == null || legalDeadline == null) {
+            throw new IllegalStateException("У обращения нет срока по закону — продлевать нечего");
+        }
+        if (status == AppealStatus.RESOLVED || status == AppealStatus.CLOSED) {
+            throw new IllegalStateException("Обращение уже решено");
+        }
+        if (norm.getMaxExtensionDays() == 0) {
+            throw new IllegalStateException("Норматив «" + norm.getTitle() + "» продления не предусматривает");
+        }
+        if (deadlineExtendedDays > 0) {
+            throw new IllegalStateException("Срок уже продлевался на " + deadlineExtendedDays + " раб. дн.");
+        }
+        if (days < 1 || days > norm.getMaxExtensionDays()) {
+            throw new IllegalArgumentException("Продлить можно на 1–" + norm.getMaxExtensionDays() + " рабочих дней");
+        }
+        if (today.isAfter(legalDeadline)) {
+            throw new IllegalStateException("Срок уже истёк — продлить его задним числом нельзя");
+        }
+        this.legalDeadline = newDeadline;
+        this.deadlineExtendedDays = days;
+        this.deadlineExtensionReason = reason;
+        this.updatedAt = now;
     }
 
     public void routeTo(Department department, AppealPriority priority, Instant deadlineAt, Instant now) {
@@ -262,6 +295,10 @@ public class Appeal {
 
     public int getDeadlineExtendedDays() {
         return deadlineExtendedDays;
+    }
+
+    public String getDeadlineExtensionReason() {
+        return deadlineExtensionReason;
     }
 
     public Instant getCreatedAt() {

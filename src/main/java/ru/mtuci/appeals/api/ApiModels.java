@@ -1,5 +1,7 @@
 package ru.mtuci.appeals.api;
 
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -50,6 +52,13 @@ public final class ApiModels {
     }
 
     /** Ответ клиенту по существу: результат рассмотрения и обоснование (4015-1, ст. 6.2 п. 6). */
+    /** Продление срока по закону руководителем: на сколько рабочих дней и почему. */
+    public record ExtendDeadlineRequest(
+            @Min(1) @Max(30) int days,
+            @NotBlank @Size(min = 10, max = 1000) String reason
+    ) {
+    }
+
     public record ResolveAppealRequest(
             @NotNull AppealOutcome outcome,
             @NotBlank @Size(min = 20, max = 5000) String answer
@@ -235,6 +244,7 @@ public final class ApiModels {
             LocalDate legalDeadline,
             NormResponse norm,
             int deadlineExtendedDays,
+            String deadlineExtensionReason,
             AppealOutcome outcome,
             Instant resolvedAt,
             Instant createdAt,

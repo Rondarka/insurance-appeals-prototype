@@ -9,6 +9,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +22,7 @@ import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
+import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
 import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
 import ru.mtuci.appeals.api.ApiModels.MessageResponse;
 import ru.mtuci.appeals.api.ApiModels.NormResponse;
@@ -316,6 +318,47 @@ public class AppealService {
     }
 
     /**
+     * Продление срока по закону — решение руководителя отдела (Закон № 4015-1, ст. 6.2 п. 5).
+     * Новый срок отсчитывается рабочими днями от прежнего, клиент получает уведомление
+     * с обоснованием в переписке.
+     */
+    @Transactional
+    public AppealDetailResponse extendDeadline(CurrentUser user, UUID id, ExtendDeadlineRequest request) {
+        Appeal appeal = findAppeal(id);
+        access.checkWork(user, appeal);
+        if (!user.isSupervisor()) {
+            throw new AccessDeniedException("Продлить срок может руководитель отдела");
+        }
+        String supervisorName = Objects.requireNonNullElse(user.name(), user.subject());
+        Instant now = Instant.now();
+        String reason = request.reason().trim();
+        LocalDate newDeadline = appeal.getLegalDeadline() == null
+                ? null
+                : calendar.addWorkingDays(appeal.getLegalDeadline(), request.days());
+        appeal.extendLegalDeadline(request.days(), newDeadline, reason, LocalDate.now(zone), now);
+
+        messageRepository.save(new AppealMessage(appeal, AuthorType.EMPLOYEE, supervisorName,
+                "Срок рассмотрения вашего обращения продлён на " + request.days() + " раб. дн. — до "
+                        + DAY.format(newDeadline) + ".\nПричина: " + reason,
+                now));
+        historyRepository.save(new AppealHistory(
+                appeal,
+                "DEADLINE_EXTENDED",
+                "Срок по закону продлён на " + request.days() + " раб. дн., до " + DAY.format(newDeadline)
+                        + ". Причина: " + reason,
+                supervisorName,
+                now
+        ));
+        eventPublisher.publishEvent(new AppealDomainEvent(
+                "APPEAL_DEADLINE_EXTENDED",
+                appeal.getId(),
+                "appeal.deadline.extended",
+                Map.of("days", Integer.toString(request.days()), "legalDeadline", newDeadline.toString())
+        ));
+        return toDetail(appeal);
+    }
+
+    /**
      * Сообщение в переписке, при необходимости с файлами: клиент досылает запрошенный документ,
      * сотрудник прикладывает расчёт или письмо. Сообщение может состоять из одних файлов.
      */
@@ -533,6 +576,7 @@ public class AppealService {
                 appeal.getLegalDeadline(),
                 toNorm(appeal.getNorm()),
                 appeal.getDeadlineExtendedDays(),
+                appeal.getDeadlineExtensionReason(),
                 appeal.getOutcome(),
                 appeal.getResolvedAt(),
                 appeal.getCreatedAt(),

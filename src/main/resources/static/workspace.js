@@ -8,7 +8,7 @@ const GROUPS = [
     {key: "done", label: "Решённые", statuses: ["RESOLVED", "CLOSED"]}
 ];
 
-const ws = {appeals: [], group: "new", openedId: null, departments: [], transferForm: false, resolveForm: false};
+const ws = {appeals: [], group: "new", openedId: null, departments: [], transferForm: false, resolveForm: false, extendForm: false};
 const $ = selector => document.querySelector(selector);
 const isSupervisor = () => hasRole("SUPERVISOR");
 
@@ -92,6 +92,7 @@ async function openCard(id) {
     if (ws.openedId !== id) {
         ws.transferForm = false;
         ws.resolveForm = false;
+        ws.extendForm = false;
     }
     ws.openedId = id;
     ws.openedSignature = cardSignature(appeal);
@@ -172,7 +173,7 @@ function renderCard(appeal) {
             </div>
             <aside class="side-col">
                 ${actions}
-                <h4>Срок по закону</h4>${renderNorm(appeal)}
+                <h4>Срок по закону</h4>${renderNorm(appeal)}${renderExtension(appeal, canWork)}
                 <h4>Клиент</h4>
                 <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></p>
                 ${appeal.assignedEmployee ? `<h4>Исполнитель</h4><p>${escapeHtml(appeal.assignedEmployee)}</p>` : ""}
@@ -186,6 +187,39 @@ function renderCard(appeal) {
                 </details>
             </aside>
         </div>`;
+}
+
+/** Продлить срок по закону может руководитель отдела — один раз и пока срок не истёк. */
+const canExtend = appeal => appeal.norm?.maxExtensionDays > 0 && !appeal.deadlineExtendedDays
+    && !["RESOLVED", "CLOSED"].includes(appeal.status) && !isLegallyOverdue(appeal);
+
+function renderExtension(appeal, canWork) {
+    if (!canWork || !canExtend(appeal)) return "";
+    const max = appeal.norm.maxExtensionDays;
+    if (!hasRole("SUPERVISOR")) {
+        return `<p class="muted small-text">Не успеваете из-за документов? Руководитель отдела может продлить срок
+            до ${max} раб. дн.</p>`;
+    }
+    if (!ws.extendForm) {
+        return `<button type="button" class="btn ghost wide" data-toggle-extend>Продлить срок</button>`;
+    }
+    return `
+        <form class="transfer-form" data-extend>
+            <label>На сколько рабочих дней
+                <select name="days">${Array.from({length: max}, (_, index) => max - index)
+                    .map(days => `<option value="${days}">${days}</option>`).join("")}</select>
+            </label>
+            <label>Причина — её увидит клиент
+                <textarea name="reason" rows="3" minlength="10" maxlength="1000" required
+                          placeholder="Какие документы нужны, у кого запрошены и когда ждём ответ"></textarea>
+            </label>
+            <p class="muted small-text">Закон допускает продление до ${max} рабочих дней, если нужны
+                дополнительные документы (Закон № 4015-1, ст. 6.2 п. 5).</p>
+            <div class="reply-actions">
+                <button class="btn" type="button" data-toggle-extend>Отмена</button>
+                <button class="btn primary" type="submit">Продлить и уведомить</button>
+            </div>
+        </form>`;
 }
 
 async function changeStatus(status) {
@@ -203,7 +237,12 @@ $("#card").addEventListener("click", async event => {
     const step = event.target.closest("[data-status]");
     const toggle = event.target.closest("[data-toggle-transfer]");
     const toggleResolve = event.target.closest("[data-toggle-resolve]");
+    const toggleExtend = event.target.closest("[data-toggle-extend]");
     try {
+        if (toggleExtend) {
+            ws.extendForm = !ws.extendForm;
+            await openCard(ws.openedId);
+        }
         if (toggleResolve) {
             ws.resolveForm = !ws.resolveForm;
             await openCard(ws.openedId);
@@ -243,6 +282,14 @@ $("#card").addEventListener("submit", async event => {
             });
             ws.resolveForm = false;
             showToast("Ответ отправлен клиенту, обращение решено");
+        }
+        if (event.target.matches("[data-extend]")) {
+            const updated = await api(`/api/appeals/${ws.openedId}/extend-deadline`, {
+                method: "POST",
+                body: JSON.stringify({days: Number(form.get("days")), reason: form.get("reason")})
+            });
+            ws.extendForm = false;
+            showToast(`Срок продлён до ${formatDate(updated.legalDeadline)}, клиент уведомлён`);
         }
         if (event.target.matches("[data-transfer]")) {
             await api(`/api/appeals/${ws.openedId}/transfer-requests`, {
@@ -427,7 +474,7 @@ async function refresh() {
     if (isSupervisor() && !$("#transfers-view").classList.contains("active")) {
         await loadTransfers().catch(() => {});
     }
-    const typing = hasDraft($("#card")) || document.querySelector("#card [data-transfer]");
+    const typing = hasDraft($("#card")) || document.querySelector("#card [data-transfer], #card [data-extend]");
     if (!ws.openedId || typing) return;
     const appeal = await api(`/api/appeals/${ws.openedId}`).catch(() => null);
     if (appeal && cardSignature(appeal) !== ws.openedSignature) await openCard(ws.openedId).catch(() => {});

@@ -57,6 +57,11 @@ appeals:
   calendar:
     # каталог с файлами утверждённого производственного календаря
     path: ${CALENDAR_PATH:calendar}
+  escalation:
+    # за сколько рабочих дней до срока по закону предупреждать и как часто проверять
+    warn-working-days: 2
+    initial-delay: PT30S
+    interval: PT5M
   attachments:
     path: ${ATTACHMENT_STORAGE_PATH:/data/attachments}
     # за один раз (форма обращения или сообщение) и всего у обращения

@@ -10,6 +10,7 @@ import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
 import ru.mtuci.appeals.domain.DeadlineCounting;
+import ru.mtuci.appeals.domain.EscalationLevel;
 import ru.mtuci.appeals.domain.EmployeeRole;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 
@@ -177,6 +178,7 @@ public final class ApiModels {
             String assignedEmployee,
             Instant deadlineAt,
             LocalDate legalDeadline,
+            EscalationLevel escalationLevel,
             AppealOutcome outcome,
             Instant createdAt,
             Instant updatedAt
@@ -245,6 +247,7 @@ public final class ApiModels {
             NormResponse norm,
             int deadlineExtendedDays,
             String deadlineExtensionReason,
+            EscalationLevel escalationLevel,
             AppealOutcome outcome,
             Instant resolvedAt,
             Instant createdAt,

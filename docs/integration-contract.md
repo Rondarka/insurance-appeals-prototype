@@ -178,7 +178,8 @@ Server: принимает токен из заголовка `Authorization: Be
 | `APPEAL_TRANSFER_REQUESTED` | `appeal.transfer.requested.<целевой отдел>` | запрошена передача | `fromDepartment`, `toDepartment`, `requestedBy` |
 | `APPEAL_TRANSFER_APPROVED` | `appeal.transfer.approved.<целевой отдел>` | передача согласована | `fromDepartment`, `toDepartment`, `reviewedBy` |
 | `APPEAL_TRANSFER_REJECTED` | `appeal.transfer.rejected.<целевой отдел>` | передача отклонена | `fromDepartment`, `toDepartment`, `reviewedBy` |
-| `APPEAL_SLA_BREACHING` | `appeal.sla.breaching.<отдел>` | срок истекает — **планируется** (решение 14) | `departmentCode`, `deadlineAt` |
+| `APPEAL_SLA_BREACHING` | `appeal.sla.breaching.<отдел>` | до срока по закону 2 рабочих дня или меньше (решение 14) | `departmentCode`, `legalDeadline`, `priority` |
+| `APPEAL_SLA_BREACHED` | `appeal.sla.breached.<отдел>` | срок по закону истёк без ответа по существу | `departmentCode`, `legalDeadline`, `priority` |
 
 Сегменты ключа — в нижнем регистре. Примеры подписок:
 

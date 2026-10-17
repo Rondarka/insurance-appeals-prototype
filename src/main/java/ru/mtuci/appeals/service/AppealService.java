@@ -518,6 +518,7 @@ public class AppealService {
                 appeal.getAssignedEmployee(),
                 appeal.getDeadlineAt(),
                 appeal.getLegalDeadline(),
+                appeal.getEscalationLevel(),
                 appeal.getOutcome(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt()
@@ -577,6 +578,7 @@ public class AppealService {
                 toNorm(appeal.getNorm()),
                 appeal.getDeadlineExtendedDays(),
                 appeal.getDeadlineExtensionReason(),
+                appeal.getEscalationLevel(),
                 appeal.getOutcome(),
                 appeal.getResolvedAt(),
                 appeal.getCreatedAt(),

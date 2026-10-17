@@ -88,6 +88,13 @@ public class Appeal {
     private String deadlineExtensionReason;
 
     @Enumerated(EnumType.STRING)
+    @Column(name = "escalation_level", nullable = false, length = 20)
+    private EscalationLevel escalationLevel = EscalationLevel.NONE;
+
+    @Column(name = "escalated_at")
+    private Instant escalatedAt;
+
+    @Enumerated(EnumType.STRING)
     @Column(length = 30)
     private AppealOutcome outcome;
 
@@ -159,7 +166,30 @@ public class Appeal {
         this.legalDeadline = newDeadline;
         this.deadlineExtendedDays = days;
         this.deadlineExtensionReason = reason;
+        // срок отодвинут — прежняя эскалация больше не актуальна, планировщик оценит заново
+        this.escalationLevel = EscalationLevel.NONE;
+        this.escalatedAt = null;
         this.updatedAt = now;
+    }
+
+    /**
+     * Эскалация по сроку закона: уровень только растёт, вместе с ним растёт приоритет —
+     * «срок истекает» не ниже высокого, «срок нарушен» — критический. Клиенту это не видно,
+     * поэтому дата изменения обращения не трогается.
+     *
+     * @return false, если обращение уже на этом уровне или выше
+     */
+    public boolean escalate(EscalationLevel level, Instant now) {
+        if (level.compareTo(escalationLevel) <= 0) {
+            return false;
+        }
+        this.escalationLevel = level;
+        this.escalatedAt = now;
+        AppealPriority atLeast = level == EscalationLevel.BREACHED ? AppealPriority.CRITICAL : AppealPriority.HIGH;
+        if (priority.compareTo(atLeast) < 0) {
+            this.priority = atLeast;
+        }
+        return true;
     }
 
     public void routeTo(Department department, AppealPriority priority, Instant deadlineAt, Instant now) {
@@ -299,6 +329,14 @@ public class Appeal {
 
     public String getDeadlineExtensionReason() {
         return deadlineExtensionReason;
+    }
+
+    public EscalationLevel getEscalationLevel() {
+        return escalationLevel;
+    }
+
+    public Instant getEscalatedAt() {
+        return escalatedAt;
     }
 
     public Instant getCreatedAt() {

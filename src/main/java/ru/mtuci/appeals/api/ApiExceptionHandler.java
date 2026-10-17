@@ -1,5 +1,6 @@
 package ru.mtuci.appeals.api;
 
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
@@ -43,6 +44,13 @@ public class ApiExceptionHandler {
     ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException exception) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse(exception.getMessage(), Instant.now()));
+    }
+
+    /** Обращение изменили одновременно — сотрудник или планировщик эскалации. */
+    @ExceptionHandler(OptimisticLockingFailureException.class)
+    ResponseEntity<ErrorResponse> handleConcurrentChange(OptimisticLockingFailureException exception) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse("Обращение только что изменилось — обновите карточку и повторите", Instant.now()));
     }
 
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})

@@ -80,6 +80,17 @@ public class ProductionCalendar {
         return day;
     }
 
+    /** Сколько рабочих дней после from до to включительно; 0 — to уже сегодня или раньше. */
+    public int workingDaysAfter(LocalDate from, LocalDate to) {
+        int count = 0;
+        for (LocalDate day = from.plusDays(1); !day.isAfter(to); day = day.plusDays(1)) {
+            if (isWorkday(day)) {
+                count++;
+            }
+        }
+        return count;
+    }
+
     public LocalDate addWorkingDays(LocalDate start, int days) {
         LocalDate day = start;
         for (int left = days; left > 0; ) {

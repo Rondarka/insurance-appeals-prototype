@@ -102,6 +102,8 @@ public abstract class IntegrationTest {
         // в compose приложение ходит в отдельный vhost, в тестовом контейнере есть только корневой
         registry.add("spring.rabbitmq.virtual-host", () -> "/");
         registry.add("appeals.attachments.path", () -> ATTACHMENTS_DIR);
+        // планировщик эскалации в тестах не запускается сам: тесты вызывают проход с нужной датой
+        registry.add("appeals.escalation.initial-delay", () -> "PT24H");
         registry.add("appeals.contracts.base-url",
                 () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> TestIdentityProvider.ISSUER);

@@ -59,17 +59,18 @@ function renderQueue() {
     }).join("");
 
     const group = GROUPS.find(item => item.key === ws.group);
-    // сверху то, что сгорит первым; решённые — свежие сверху
+    // сверху то, что сгорит первым: сначала эскалации по сроку закона; решённые — свежие сверху
+    const urgency = appeal => ({BREACHED: 0, AT_RISK: 1}[appeal.escalationLevel] ?? 2);
     const items = ws.appeals
         .filter(appeal => group.statuses.includes(appeal.status))
         .sort((a, b) => group.key === "done"
             ? new Date(b.updatedAt) - new Date(a.updatedAt)
-            : new Date(a.deadlineAt || 8.64e15) - new Date(b.deadlineAt || 8.64e15));
+            : urgency(a) - urgency(b) || new Date(a.deadlineAt || 8.64e15) - new Date(b.deadlineAt || 8.64e15));
 
     $("#queue").innerHTML = items.length ? items.map(appeal => `
         <button type="button" class="queue-item ${appeal.id === ws.openedId ? "selected" : ""}" data-appeal="${appeal.id}">
             <span class="queue-row">${priorityMark(appeal.priority)}<strong>${escapeHtml(appeal.subject)}</strong></span>
-            <span class="queue-row meta"><small>${escapeHtml(appeal.customerName)} · ${escapeHtml(appeal.publicNumber)}</small>${deadlinePill(appeal)}</span>
+            <span class="queue-row meta"><small>${escapeHtml(appeal.customerName)} · ${escapeHtml(appeal.publicNumber)}</small>${isEscalated(appeal) ? escalationPill(appeal) : deadlinePill(appeal)}</span>
         </button>`).join("") : `<p class="empty">Здесь пусто</p>`;
 }
 

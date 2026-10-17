@@ -47,6 +47,8 @@ function renderOverview() {
         ["В работе", count(a => a.status === "IN_PROGRESS"), ""],
         ["Ждут клиента", count(a => a.status === "WAITING_CUSTOMER"), ""],
         ["Просрочено отделом", count(isOverdue), count(isOverdue) ? "late" : ""],
+        ["Срок по закону истекает", count(a => isEscalated(a) && a.escalationLevel === "AT_RISK"),
+            count(a => isEscalated(a) && a.escalationLevel === "AT_RISK") ? "soon" : ""],
         ["Просрочено по закону", count(isLegallyOverdue), count(isLegallyOverdue) ? "late" : ""],
         ["Решено и закрыто", count(a => ["RESOLVED", "CLOSED"].includes(a.status)), ""]
     ];

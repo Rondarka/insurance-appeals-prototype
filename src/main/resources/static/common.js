@@ -38,8 +38,14 @@ const EVENT_LABELS = {
     APPEAL_ATTACHMENTS_ADDED: "Приложены файлы",
     APPEAL_TRANSFER_REQUESTED: "Запрошена передача",
     APPEAL_TRANSFER_APPROVED: "Передача согласована",
-    APPEAL_TRANSFER_REJECTED: "Передача отклонена"
+    APPEAL_TRANSFER_REJECTED: "Передача отклонена",
+    APPEAL_DEADLINE_EXTENDED: "Срок по закону продлён",
+    APPEAL_SLA_BREACHING: "Срок по закону истекает",
+    APPEAL_SLA_BREACHED: "Срок по закону нарушен"
 };
+
+/** Эскалация по сроку закона — только для сотрудников, клиенту не показывается. */
+const ESCALATION_LABELS = {AT_RISK: "срок по закону истекает", BREACHED: "срок по закону нарушен"};
 
 const COUNTING_LABELS = {
     WORKING_DAYS: "рабочих дней",
@@ -170,8 +176,20 @@ function isLegallyOverdue(appeal) {
 
 function legalPill(appeal) {
     if (!appeal.legalDeadline) return "";
-    const tone = ["RESOLVED", "CLOSED"].includes(appeal.status) ? "done" : isLegallyOverdue(appeal) ? "late" : "legal";
+    const tone = ["RESOLVED", "CLOSED"].includes(appeal.status) ? "done"
+        : isLegallyOverdue(appeal) || appeal.escalationLevel === "BREACHED" ? "late"
+        : appeal.escalationLevel === "AT_RISK" ? "soon" : "legal";
     return `<span class="pill ${tone}" title="Срок по закону">по закону до ${formatDate(appeal.legalDeadline)}</span>`;
+}
+
+function isEscalated(appeal) {
+    return ESCALATION_LABELS[appeal.escalationLevel] && !["RESOLVED", "CLOSED"].includes(appeal.status);
+}
+
+function escalationPill(appeal) {
+    if (!isEscalated(appeal)) return "";
+    const tone = appeal.escalationLevel === "BREACHED" ? "late" : "soon";
+    return `<span class="pill ${tone}" title="Срок по закону: до ${formatDate(appeal.legalDeadline)}">${ESCALATION_LABELS[appeal.escalationLevel]}</span>`;
 }
 
 function renderNorm(appeal) {

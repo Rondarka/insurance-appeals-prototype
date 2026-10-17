@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.JoinType;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -22,12 +23,14 @@ import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
 import ru.mtuci.appeals.api.ApiModels.MessageResponse;
+import ru.mtuci.appeals.api.ApiModels.NormResponse;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
 import ru.mtuci.appeals.domain.ContractSnapshot;
+import ru.mtuci.appeals.domain.DeadlineNorm;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.EventAudit;
 import ru.mtuci.appeals.integration.ContractsClient;
@@ -41,6 +44,8 @@ import ru.mtuci.appeals.repository.EventAuditRepository;
 import ru.mtuci.appeals.security.CurrentUser;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
@@ -55,6 +60,7 @@ public class AppealService {
 
     private static final DateTimeFormatter NUMBER_DATE =
             DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
+    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
 
     private final AppealRepository appealRepository;
     private final AppealAttachmentRepository attachmentRepository;
@@ -71,6 +77,9 @@ public class AppealService {
     private final TransferService transferService;
     private final ObjectMapper objectMapper;
     private final AppealAccess access;
+    private final DeadlineNormService normService;
+    private final ProductionCalendar calendar;
+    private final ZoneId zone;
 
     public AppealService(AppealRepository appealRepository,
                          AppealAttachmentRepository attachmentRepository,
@@ -86,7 +95,10 @@ public class AppealService {
                          DirectoryService directoryService,
                          TransferService transferService,
                          ObjectMapper objectMapper,
-                         AppealAccess access) {
+                         AppealAccess access,
+                         DeadlineNormService normService,
+                         ProductionCalendar calendar,
+                         @Value("${appeals.timezone}") String timezone) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
         this.contractsClient = contractsClient;
@@ -102,6 +114,9 @@ public class AppealService {
         this.transferService = transferService;
         this.objectMapper = objectMapper;
         this.access = access;
+        this.normService = normService;
+        this.calendar = calendar;
+        this.zone = ZoneId.of(timezone);
     }
 
     /**
@@ -146,12 +161,26 @@ public class AppealService {
                 request.description().trim(),
                 now
         );
+        // срок по закону считается со дня регистрации по норме, действующей на этот день
+        LocalDate registeredOn = LocalDate.ofInstant(now, zone);
+        DeadlineNorm norm = normService.choose(request.category(), request.subcategory(),
+                contract.getProductCode(), details, registeredOn);
+        LocalDate legalDeadline = calendar.deadline(registeredOn, norm.getTermDays(), norm.getCounting());
+        appeal.applyNorm(norm, legalDeadline);
         appealRepository.save(appeal);
         historyRepository.save(new AppealHistory(
                 appeal,
                 "CREATED",
                 "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация.",
                 customerName,
+                now
+        ));
+        historyRepository.save(new AppealHistory(
+                appeal,
+                "DEADLINE_SET",
+                "Срок ответа по закону — до " + legalDeadline.format(DAY) + ": " + norm.getTitle().toLowerCase(Locale.ROOT)
+                        + " (" + norm.getLegalBasis() + ")",
+                "Подсистема",
                 now
         ));
 
@@ -337,6 +366,7 @@ public class AppealService {
                 toDepartment(appeal.getDepartment()),
                 appeal.getAssignedEmployee(),
                 appeal.getDeadlineAt(),
+                appeal.getLegalDeadline(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt()
         );
@@ -387,6 +417,9 @@ public class AppealService {
                 toDepartment(appeal.getDepartment()),
                 appeal.getAssignedEmployee(),
                 appeal.getDeadlineAt(),
+                appeal.getLegalDeadline(),
+                toNorm(appeal.getNorm()),
+                appeal.getDeadlineExtendedDays(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt(),
                 history,
@@ -395,6 +428,14 @@ public class AppealService {
                 transferService.forAppeal(appeal.getId()),
                 appeal.getStatus().next()
         );
+    }
+
+    private NormResponse toNorm(DeadlineNorm norm) {
+        if (norm == null) {
+            return null;
+        }
+        return new NormResponse(norm.getCode(), norm.getTitle(), norm.getTermDays(), norm.getCounting(),
+                norm.getMaxExtensionDays(), norm.getLegalBasis());
     }
 
     private DepartmentResponse toDepartment(Department department) {

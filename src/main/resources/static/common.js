@@ -32,6 +32,12 @@ const EVENT_LABELS = {
     APPEAL_TRANSFER_REJECTED: "Передача отклонена"
 };
 
+const COUNTING_LABELS = {
+    WORKING_DAYS: "рабочих дней",
+    CALENDAR_DAYS: "календарных дней",
+    CALENDAR_EXCEPT_HOLIDAYS: "календарных дней без праздников"
+};
+
 const ROLE_LABELS = {CLIENT: "Клиент", SPECIALIST: "Специалист", SUPERVISOR: "Руководитель", ADMIN: "Администратор"};
 
 const hasRole = role => session.me?.roles.includes(role);
@@ -145,6 +151,32 @@ function deadlineInfo(appeal) {
 function deadlinePill(appeal) {
     const info = deadlineInfo(appeal);
     return `<span class="pill ${info.tone}" title="Срок ответа: ${formatDateTime(appeal.deadlineAt)}">${escapeHtml(info.text)}</span>`;
+}
+
+/** Срок по закону — граница, а не целевой срок отдела (решение 20). */
+function isLegallyOverdue(appeal) {
+    if (!appeal.legalDeadline || ["RESOLVED", "CLOSED"].includes(appeal.status)) return false;
+    return new Date(`${appeal.legalDeadline}T23:59:59`) < new Date();
+}
+
+function legalPill(appeal) {
+    if (!appeal.legalDeadline) return "";
+    const tone = ["RESOLVED", "CLOSED"].includes(appeal.status) ? "done" : isLegallyOverdue(appeal) ? "late" : "legal";
+    return `<span class="pill ${tone}" title="Срок по закону">по закону до ${formatDate(appeal.legalDeadline)}</span>`;
+}
+
+function renderNorm(appeal) {
+    if (!appeal.legalDeadline || !appeal.norm) {
+        return `<p class="muted">Норматив не назначен: обращение создано до справочника сроков</p>`;
+    }
+    const norm = appeal.norm;
+    return `
+        <dl class="kv">
+            <dt>Срок</dt><dd><strong>до ${formatDate(appeal.legalDeadline)}</strong>${isLegallyOverdue(appeal) ? ` <span class="late-text">просрочен</span>` : ""}</dd>
+            <dt>Норматив</dt><dd>${escapeHtml(norm.title)}: ${norm.termDays} ${COUNTING_LABELS[norm.counting] || ""}</dd>
+            <dt>Основание</dt><dd>${escapeHtml(norm.legalBasis)}</dd>
+            ${appeal.deadlineExtendedDays ? `<dt>Продлён</dt><dd>на ${appeal.deadlineExtendedDays} раб. дн.</dd>` : ""}
+        </dl>`;
 }
 
 function statusChip(status, labels = STATUS_LABELS) {
@@ -271,7 +303,7 @@ function appealHeading(appeal) {
                 <small>${escapeHtml(appeal.publicNumber)} · ${escapeHtml(categoryLabel(appeal.category))} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}</small>
                 <h2>${escapeHtml(appeal.subject)}</h2>
             </div>
-            <div class="card-badges">${statusChip(appeal.status)}${deadlinePill(appeal)}</div>
+            <div class="card-badges">${statusChip(appeal.status)}${deadlinePill(appeal)}${legalPill(appeal)}</div>
         </div>`;
 }
 

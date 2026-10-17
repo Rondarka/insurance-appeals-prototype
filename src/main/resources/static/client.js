@@ -153,8 +153,9 @@ async function openAppeal(id) {
     $("#new-appeal").hidden = true;
     const view = $("#appeal-view");
     view.hidden = false;
-    const answerBy = appeal.deadlineAt && !["RESOLVED", "CLOSED"].includes(appeal.status)
-        ? ` · ответим до ${formatDateTime(appeal.deadlineAt)}` : "";
+    // клиенту обещаем срок по закону, а не внутренний срок отдела
+    const answerBy = appeal.legalDeadline && !["RESOLVED", "CLOSED"].includes(appeal.status)
+        ? ` · ответим до ${formatDate(appeal.legalDeadline)}` : "";
     view.innerHTML = `
         <div class="card-head">
             <div class="card-title">
@@ -175,6 +176,7 @@ async function openAppeal(id) {
                 </form>`}
             </div>
             <aside class="side-col">
+                <h4>Срок ответа</h4>${renderNorm(appeal)}
                 <h4>Договор</h4>${renderContract(appeal.contract)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}

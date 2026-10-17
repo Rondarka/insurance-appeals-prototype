@@ -13,6 +13,7 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.UUID;
 
 @Entity
@@ -68,8 +69,20 @@ public class Appeal {
     @Column(name = "assigned_employee", length = 160)
     private String assignedEmployee;
 
+    /** Целевой срок отдела — из правила маршрутизации, его ставит себе компания. */
     @Column(name = "deadline_at")
     private Instant deadlineAt;
+
+    /** Применённый норматив и срок по нему — граница, установленная законом (решение 20). */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "norm_id")
+    private DeadlineNorm norm;
+
+    @Column(name = "legal_deadline")
+    private LocalDate legalDeadline;
+
+    @Column(name = "deadline_extended_days", nullable = false)
+    private int deadlineExtendedDays;
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -102,6 +115,11 @@ public class Appeal {
         this.priority = AppealPriority.NORMAL;
         this.createdAt = now;
         this.updatedAt = now;
+    }
+
+    public void applyNorm(DeadlineNorm norm, LocalDate legalDeadline) {
+        this.norm = norm;
+        this.legalDeadline = legalDeadline;
     }
 
     public void routeTo(Department department, AppealPriority priority, Instant deadlineAt, Instant now) {
@@ -196,6 +214,18 @@ public class Appeal {
 
     public Instant getDeadlineAt() {
         return deadlineAt;
+    }
+
+    public DeadlineNorm getNorm() {
+        return norm;
+    }
+
+    public LocalDate getLegalDeadline() {
+        return legalDeadline;
+    }
+
+    public int getDeadlineExtendedDays() {
+        return deadlineExtendedDays;
     }
 
     public Instant getCreatedAt() {

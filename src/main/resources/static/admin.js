@@ -46,7 +46,8 @@ function renderOverview() {
         ["Новые", count(a => a.status === "ROUTED"), ""],
         ["В работе", count(a => a.status === "IN_PROGRESS"), ""],
         ["Ждут клиента", count(a => a.status === "WAITING_CUSTOMER"), ""],
-        ["Просрочено", count(isOverdue), count(isOverdue) ? "late" : ""],
+        ["Просрочено отделом", count(isOverdue), count(isOverdue) ? "late" : ""],
+        ["Просрочено по закону", count(isLegallyOverdue), count(isLegallyOverdue) ? "late" : ""],
         ["Решено и закрыто", count(a => ["RESOLVED", "CLOSED"].includes(a.status)), ""]
     ];
     $("#metrics").innerHTML = metrics.map(([label, value, tone]) =>
@@ -59,7 +60,7 @@ function renderOverview() {
     const unrouted = adm.appeals.filter(a => !a.department);
     const cell = (list, predicate) => list.filter(predicate).length || "";
     $("#by-department").innerHTML = `
-        <thead><tr><th>Отдел</th><th>Новые</th><th>В работе</th><th>Ждут клиента</th><th>Просрочено</th><th>Решено</th><th>Всего</th></tr></thead>
+        <thead><tr><th>Отдел</th><th>Новые</th><th>В работе</th><th>Ждут клиента</th><th>Просрочено по закону</th><th>Решено</th><th>Всего</th></tr></thead>
         <tbody>
             ${rows.map(({department, own}) => `
                 <tr class="clickable" data-department="${department.code}">
@@ -67,7 +68,7 @@ function renderOverview() {
                     <td>${cell(own, a => a.status === "ROUTED")}</td>
                     <td>${cell(own, a => a.status === "IN_PROGRESS")}</td>
                     <td>${cell(own, a => a.status === "WAITING_CUSTOMER")}</td>
-                    <td class="${own.some(isOverdue) ? "late-text" : ""}">${cell(own, isOverdue)}</td>
+                    <td class="${own.some(isLegallyOverdue) ? "late-text" : ""}">${cell(own, isLegallyOverdue)}</td>
                     <td>${cell(own, a => ["RESOLVED", "CLOSED"].includes(a.status))}</td>
                     <td><strong>${own.length}</strong></td>
                 </tr>`).join("")}
@@ -134,8 +135,9 @@ async function openCard(id) {
                     <dt>Исполнитель</dt><dd>${escapeHtml(appeal.assignedEmployee || "не назначен")}</dd>
                     <dt>Приоритет</dt><dd>${escapeHtml(PRIORITY_LABELS[appeal.priority])}</dd>
                     <dt>Создано</dt><dd>${formatDateTime(appeal.createdAt)}</dd>
-                    <dt>Срок ответа</dt><dd>${formatDateTime(appeal.deadlineAt)}</dd>
+                    <dt>Срок отдела</dt><dd>${formatDateTime(appeal.deadlineAt)}</dd>
                 </dl>
+                <h4>Срок по закону</h4>${renderNorm(appeal)}
                 <h4>Договор</h4>${renderContract(appeal.contract)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}

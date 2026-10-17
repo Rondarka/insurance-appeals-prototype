@@ -52,6 +52,11 @@ server:
   port: 8080
 
 appeals:
+  # часовой пояс страховой: от него зависит, каким днём зарегистрировано обращение
+  timezone: Europe/Moscow
+  calendar:
+    # каталог с файлами утверждённого производственного календаря
+    path: ${CALENDAR_PATH:calendar}
   attachments:
     path: ${ATTACHMENT_STORAGE_PATH:/data/attachments}
     max-count: 5

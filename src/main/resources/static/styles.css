@@ -160,6 +160,7 @@ textarea { resize: vertical; }
 .pill.soon { color: var(--amber); }
 .pill.late { color: var(--red); }
 .pill.done, .pill.none { color: var(--muted); font-weight: 400; }
+.pill.legal { color: var(--violet); }
 
 .priority-mark {
     flex: 0 0 8px;
@@ -289,7 +290,7 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .table tr.clickable:hover { background: var(--soft); }
 .late-text { color: var(--red); font-weight: 600; }
 
-.metrics { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.metrics { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
 .metric { padding: 14px 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
 .metric small { color: var(--muted); }
 .metric strong { display: block; font-size: 26px; }

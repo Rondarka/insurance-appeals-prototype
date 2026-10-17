@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
+import ru.mtuci.appeals.domain.DeadlineCounting;
 import ru.mtuci.appeals.domain.EmployeeRole;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 
@@ -120,8 +121,20 @@ public final class ApiModels {
             DepartmentResponse department,
             String assignedEmployee,
             Instant deadlineAt,
+            LocalDate legalDeadline,
             Instant createdAt,
             Instant updatedAt
+    ) {
+    }
+
+    /** Применённый норматив срока: почему у обращения такой срок. */
+    public record NormResponse(
+            String code,
+            String title,
+            int termDays,
+            DeadlineCounting counting,
+            int maxExtensionDays,
+            String legalBasis
     ) {
     }
 
@@ -169,6 +182,9 @@ public final class ApiModels {
             DepartmentResponse department,
             String assignedEmployee,
             Instant deadlineAt,
+            LocalDate legalDeadline,
+            NormResponse norm,
+            int deadlineExtendedDays,
             Instant createdAt,
             Instant updatedAt,
             List<HistoryResponse> history,

@@ -140,6 +140,7 @@ function renderCard(appeal) {
             </div>
             <aside class="side-col">
                 ${actions}
+                <h4>Срок по закону</h4>${renderNorm(appeal)}
                 <h4>Клиент</h4>
                 <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></p>
                 ${appeal.assignedEmployee ? `<h4>Исполнитель</h4><p>${escapeHtml(appeal.assignedEmployee)}</p>` : ""}

@@ -15,12 +15,21 @@ spring:
           time_zone: UTC
   flyway:
     enabled: true
+  task:
+    scheduling:
+      pool:
+        # outbox, эскалация и привязка договоров не ждут друг друга, если внешняя система висит
+        size: 3
   rabbitmq:
     host: ${SPRING_RABBITMQ_HOST:localhost}
     port: ${SPRING_RABBITMQ_PORT:5672}
     username: ${SPRING_RABBITMQ_USERNAME:appeals}
     password: ${SPRING_RABBITMQ_PASSWORD:appeals_dev}
     virtual-host: ${SPRING_RABBITMQ_VIRTUAL_HOST:appeals}
+    # событие из outbox помечается отправленным только после подтверждения брокера
+    publisher-confirm-type: simple
+    # брокер недоступен — ретранслятор outbox не должен висеть на соединении
+    connection-timeout: 3s
     listener:
       simple:
         default-requeue-rejected: false
@@ -57,6 +66,14 @@ appeals:
   calendar:
     # каталог с файлами утверждённого производственного календаря
     path: ${CALENDAR_PATH:calendar}
+  outbox:
+    # доставка событий из outbox в RabbitMQ (решение 3)
+    initial-delay: PT1S
+    interval: PT0.5S
+    batch-size: 100
+    # отправленные события хранятся неделю, затем удаляются
+    retention: P7D
+    cleanup-interval: PT1H
   contract-link:
     # фоновая привязка договора, если при регистрации учётная система была недоступна
     initial-delay: PT20S

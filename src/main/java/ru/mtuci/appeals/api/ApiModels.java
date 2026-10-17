@@ -154,10 +154,11 @@ public final class ApiModels {
 
     /**
      * Состояние внешней системы глазами подсистемы (решение 30): CLOSED — работает,
-     * OPEN — обращения приостановлены, HALF_OPEN — пробные вызовы после паузы.
-     * failureRate — доля сбоев среди последних вызовов, %; -1 — вызовов пока мало.
+     * OPEN — обращения приостановлены, HALF_OPEN — пробные вызовы после паузы; для доставки
+     * событий OK или DELAYED — события дольше минуты ждут отправки в брокер (pending — сколько).
+     * failureRate — доля сбоев среди последних вызовов, %; -1 — вызовов пока мало или неприменимо.
      */
-    public record IntegrationStatusResponse(String code, String name, String state, float failureRate) {
+    public record IntegrationStatusResponse(String code, String name, String state, float failureRate, long pending) {
     }
 
     public record ChooseContractRequest(@NotNull UUID contractId) {

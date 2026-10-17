@@ -39,6 +39,7 @@ import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.integration.ContractsClient;
+import ru.mtuci.appeals.messaging.OutboxRelay;
 import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
@@ -48,6 +49,7 @@ import ru.mtuci.appeals.service.DirectoryService;
 import ru.mtuci.appeals.service.TransferService;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -66,6 +68,7 @@ public class AppealController {
     private final AppealFormPolicy formPolicy;
     private final ContractLinkService contractLinkService;
     private final ContractsClient contractsClient;
+    private final OutboxRelay outboxRelay;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
@@ -73,7 +76,8 @@ public class AppealController {
                             TransferService transferService,
                             AppealFormPolicy formPolicy,
                             ContractLinkService contractLinkService,
-                            ContractsClient contractsClient) {
+                            ContractsClient contractsClient,
+                            OutboxRelay outboxRelay) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
@@ -81,6 +85,7 @@ public class AppealController {
         this.formPolicy = formPolicy;
         this.contractLinkService = contractLinkService;
         this.contractsClient = contractsClient;
+        this.outboxRelay = outboxRelay;
     }
 
     @GetMapping("/me")
@@ -161,8 +166,13 @@ public class AppealController {
     @GetMapping("/integrations")
     List<IntegrationStatusResponse> integrations() {
         var circuit = contractsClient.circuitBreaker();
-        return List.of(new IntegrationStatusResponse("CONTRACTS", "Учётная система договоров",
-                circuit.getState().name(), circuit.getMetrics().getFailureRate()));
+        OutboxRelay.Backlog backlog = outboxRelay.backlog();
+        boolean delayed = backlog.oldest() != null && backlog.oldest().isBefore(Instant.now().minusSeconds(60));
+        return List.of(
+                new IntegrationStatusResponse("CONTRACTS", "Учётная система договоров",
+                        circuit.getState().name(), circuit.getMetrics().getFailureRate(), 0),
+                new IntegrationStatusResponse("EVENTS", "Доставка событий в RabbitMQ",
+                        delayed ? "DELAYED" : "OK", -1, backlog.pending()));
     }
 
     /** Виды страхования — когда договоры клиента загрузить не удалось. */

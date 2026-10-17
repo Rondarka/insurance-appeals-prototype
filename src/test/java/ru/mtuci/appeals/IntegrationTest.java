@@ -153,6 +153,15 @@ public abstract class IntegrationTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).as("учётная система положена").isTrue();
     }
 
+    /** Брокер остановлен: соединения рвутся, публикация отказывает, очереди и сообщения сохраняются. */
+    protected void brokerDown() throws Exception {
+        assertThat(RABBIT.execInContainer("rabbitmqctl", "stop_app").getExitCode()).isZero();
+    }
+
+    protected void brokerUp() throws Exception {
+        assertThat(RABBIT.execInContainer("rabbitmqctl", "start_app").getExitCode()).isZero();
+    }
+
     /** Система вернулась, и цепь сброшена — следующий тест начинает с чистого листа. */
     protected void contractsSourceUp() {
         contractsSourceRecovers();

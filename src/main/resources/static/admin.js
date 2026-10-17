@@ -30,6 +30,8 @@ function showTab(name) {
 
 const INTEGRATION_STATE = {
     CLOSED: ["ok", "работает"],
+    OK: ["ok", "работает"],
+    DELAYED: ["late", "события задерживаются — брокер недоступен, события ждут в outbox и уйдут, когда он вернётся"],
     HALF_OPEN: ["soon", "проверяется после сбоя"],
     OPEN: ["late", "недоступна — обращения к ней приостановлены, кабинет работает в резервном режиме"]
 };
@@ -40,7 +42,8 @@ async function loadAll() {
     $("#integrations").innerHTML = integrations.map(item => {
         const [tone, text] = INTEGRATION_STATE[item.state] || ["", item.state];
         return `<p class="integration ${tone}"><span class="dot"></span>${escapeHtml(item.name)}: ${text}${
-            item.failureRate >= 0 ? ` <small class="muted">· сбоев ${Math.round(item.failureRate)} %</small>` : ""}</p>`;
+            item.failureRate >= 0 ? ` <small class="muted">· сбоев ${Math.round(item.failureRate)} %</small>` : ""}${
+            item.pending ? ` <small class="muted">· ждут отправки: ${item.pending}</small>` : ""}</p>`;
     }).join("");
     renderOverview();
     renderList();

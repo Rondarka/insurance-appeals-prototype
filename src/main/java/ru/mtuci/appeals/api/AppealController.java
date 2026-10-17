@@ -27,6 +27,7 @@ import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
 import ru.mtuci.appeals.api.ApiModels.MeResponse;
+import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
@@ -120,6 +121,14 @@ public class AppealController {
             @PathVariable UUID id,
             @Valid @RequestBody ChangeStatusRequest request) {
         return appealService.changeStatus(user, id, request);
+    }
+
+    @PostMapping("/appeals/{id}/resolve")
+    AppealDetailResponse resolve(
+            CurrentUser user,
+            @PathVariable UUID id,
+            @Valid @RequestBody ResolveAppealRequest request) {
+        return appealService.resolve(user, id, request);
     }
 
     @PostMapping("/appeals/{id}/messages")

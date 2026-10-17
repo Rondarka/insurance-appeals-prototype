@@ -12,6 +12,13 @@ const STATUS_LABELS = {
     CLOSED: "Закрыто"
 };
 
+const OUTCOME_LABELS = {
+    SATISFIED: "Требование удовлетворено",
+    PARTIALLY_SATISFIED: "Удовлетворено частично",
+    REJECTED: "Отказано",
+    EXPLAINED: "Даны разъяснения"
+};
+
 const PRIORITY_LABELS = {LOW: "Низкий", NORMAL: "Обычный", HIGH: "Высокий", CRITICAL: "Критический"};
 
 const CONTRACT_STATUS_LABELS = {

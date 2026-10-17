@@ -243,6 +243,9 @@ textarea { resize: vertical; }
 
 .reply { display: grid; gap: 8px; margin-top: 16px; }
 .reply-actions, .form-actions { display: flex; justify-content: flex-end; gap: 8px; }
+.resolve-form { padding: 14px; border: 1px solid var(--blue); border-radius: var(--radius); background: var(--blue-soft); }
+.resolve-form h4 { margin-top: 0; color: var(--ink); }
+.small-text { font-size: 13px; }
 .transfer-form { display: grid; gap: 8px; padding: 12px; border-radius: 8px; background: var(--soft); }
 
 .kv { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 4px 10px; margin: 0; }

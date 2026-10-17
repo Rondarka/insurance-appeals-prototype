@@ -162,6 +162,7 @@ async function openAppeal(id) {
                 <small>${escapeHtml(appeal.publicNumber)} · ${escapeHtml(categoryLabel(appeal.category))} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}</small>
                 <h2>${escapeHtml(appeal.subject)}</h2>
                 <p class="muted">${appeal.department ? `Рассматривает отдел «${escapeHtml(appeal.department.name)}»` : "Обращение регистрируется"}${answerBy}</p>
+                ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}</p>` : ""}
             </div>
             <div class="card-badges">${statusChip(appeal.status, CLIENT_STATUS)}</div>
         </div>

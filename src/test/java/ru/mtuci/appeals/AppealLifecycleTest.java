@@ -8,6 +8,8 @@ import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
+import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
+import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealStatus;
 
 import java.util.UUID;
@@ -49,7 +51,7 @@ class AppealLifecycleTest extends IntegrationTest {
     void closedAppealAcceptsNoMessages() {
         UUID appeal = routedClaim();
         changeStatus(appeal, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
-        changeStatus(appeal, AppealStatus.RESOLVED, AppealDetailResponse.class);
+        resolve(appeal, AppealOutcome.EXPLAINED, "Разъяснили порядок выплаты по договору КАСКО.", AppealDetailResponse.class);
         changeStatus(appeal, AppealStatus.CLOSED, AppealDetailResponse.class);
 
         ResponseEntity<ErrorResponse> reply = as(ANNA).postForEntity("/api/appeals/{id}/messages",
@@ -57,6 +59,28 @@ class AppealLifecycleTest extends IntegrationTest {
 
         assertThat(reply.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(getAppeal(appeal).nextStatuses()).isEmpty();
+    }
+
+    @Test
+    void appealIsResolvedOnlyByAnswerToClient() {
+        UUID appeal = routedClaim();
+        changeStatus(appeal, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
+
+        // просто сменить статус на «решено» нельзя, и ответ должен быть по существу
+        ResponseEntity<ErrorResponse> bareStatus = changeStatus(appeal, AppealStatus.RESOLVED, ErrorResponse.class);
+        ResponseEntity<ErrorResponse> emptyAnswer = resolve(appeal, AppealOutcome.SATISFIED, "Решено", ErrorResponse.class);
+        assertThat(bareStatus.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(emptyAnswer.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(getAppeal(appeal).status()).isEqualTo(AppealStatus.IN_PROGRESS);
+
+        String answer = "Ущерб признан страховым случаем, выплата 85 000 ₽ направлена на ваш счёт.";
+        resolve(appeal, AppealOutcome.SATISFIED, answer, AppealDetailResponse.class);
+
+        // клиент видит и ответ в переписке, и итог
+        AppealDetailResponse seenByClient = getAppeal(appeal);
+        assertThat(seenByClient.status()).isEqualTo(AppealStatus.RESOLVED);
+        assertThat(seenByClient.outcome()).isEqualTo(AppealOutcome.SATISFIED);
+        assertThat(seenByClient.messages()).extracting(message -> message.body()).contains(answer);
     }
 
     @Test
@@ -83,6 +107,11 @@ class AppealLifecycleTest extends IntegrationTest {
         UUID id = createAppeal(cascoClaim()).id();
         awaitRouted(id);
         return id;
+    }
+
+    private <T> ResponseEntity<T> resolve(UUID appeal, AppealOutcome outcome, String answer, Class<T> type) {
+        return as(CLAIMS_SPECIALIST).postForEntity("/api/appeals/{id}/resolve",
+                new ResolveAppealRequest(outcome, answer), type, appeal);
     }
 
     private <T> ResponseEntity<T> changeStatus(UUID appeal, AppealStatus status, Class<T> type) {

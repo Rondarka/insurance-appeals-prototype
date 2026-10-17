@@ -24,6 +24,7 @@ import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
 import ru.mtuci.appeals.api.ApiModels.MessageResponse;
 import ru.mtuci.appeals.api.ApiModels.NormResponse;
+import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
@@ -265,6 +266,47 @@ public class AppealService {
         return toDetail(appeal);
     }
 
+    /**
+     * Решить обращение — значит ответить клиенту по существу: результат и обоснование уходят
+     * в переписку, у обращения появляется итог. Без ответа решить нельзя (4015-1, ст. 6.2).
+     */
+    @Transactional
+    public AppealDetailResponse resolve(CurrentUser user, UUID id, ResolveAppealRequest request) {
+        Appeal appeal = findAppeal(id);
+        access.checkWork(user, appeal);
+        String employeeName = Objects.requireNonNullElse(user.name(), user.subject());
+        Instant now = Instant.now();
+        AppealStatus previous = appeal.getStatus();
+        appeal.resolve(request.outcome(), now);
+
+        messageRepository.save(new AppealMessage(appeal, AuthorType.EMPLOYEE, employeeName, request.answer().trim(), now));
+        historyRepository.save(new AppealHistory(
+                appeal,
+                "RESOLVED",
+                "Клиенту направлен ответ по существу. Итог: " + request.outcome().label().toLowerCase(Locale.ROOT),
+                employeeName,
+                now
+        ));
+
+        eventPublisher.publishEvent(new AppealDomainEvent(
+                "APPEAL_MESSAGE_ADDED",
+                appeal.getId(),
+                "appeal.message.employee",
+                Map.of("authorType", AuthorType.EMPLOYEE.name())
+        ));
+        eventPublisher.publishEvent(new AppealDomainEvent(
+                "APPEAL_STATUS_CHANGED",
+                appeal.getId(),
+                "appeal.status.resolved",
+                Map.of(
+                        "fromStatus", previous.name(),
+                        "toStatus", AppealStatus.RESOLVED.name(),
+                        "outcome", request.outcome().name()
+                )
+        ));
+        return toDetail(appeal);
+    }
+
     @Transactional
     public AppealDetailResponse addMessage(CurrentUser user, UUID id, AddMessageRequest request) {
         Appeal appeal = findAppeal(id);
@@ -367,6 +409,7 @@ public class AppealService {
                 appeal.getAssignedEmployee(),
                 appeal.getDeadlineAt(),
                 appeal.getLegalDeadline(),
+                appeal.getOutcome(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt()
         );
@@ -420,6 +463,8 @@ public class AppealService {
                 appeal.getLegalDeadline(),
                 toNorm(appeal.getNorm()),
                 appeal.getDeadlineExtendedDays(),
+                appeal.getOutcome(),
+                appeal.getResolvedAt(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt(),
                 history,

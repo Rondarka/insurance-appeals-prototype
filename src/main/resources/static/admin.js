@@ -134,6 +134,7 @@ async function openCard(id) {
                     <dt>Отдел</dt><dd>${escapeHtml(appeal.department?.name || "ожидает маршрутизации")}</dd>
                     <dt>Исполнитель</dt><dd>${escapeHtml(appeal.assignedEmployee || "не назначен")}</dd>
                     <dt>Приоритет</dt><dd>${escapeHtml(PRIORITY_LABELS[appeal.priority])}</dd>
+                    ${appeal.outcome ? `<dt>Итог</dt><dd>${escapeHtml(OUTCOME_LABELS[appeal.outcome])}</dd>` : ""}
                     <dt>Создано</dt><dd>${formatDateTime(appeal.createdAt)}</dd>
                     <dt>Срок отдела</dt><dd>${formatDateTime(appeal.deadlineAt)}</dd>
                 </dl>

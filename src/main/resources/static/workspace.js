@@ -8,7 +8,7 @@ const GROUPS = [
     {key: "done", label: "Решённые", statuses: ["RESOLVED", "CLOSED"]}
 ];
 
-const ws = {appeals: [], group: "new", openedId: null, departments: [], transferForm: false};
+const ws = {appeals: [], group: "new", openedId: null, departments: [], transferForm: false, resolveForm: false};
 const $ = selector => document.querySelector(selector);
 const isSupervisor = () => hasRole("SUPERVISOR");
 
@@ -82,7 +82,10 @@ $("#queue").addEventListener("click", event => {
 
 async function openCard(id) {
     const appeal = await api(`/api/appeals/${id}`);
-    if (ws.openedId !== id) ws.transferForm = false;
+    if (ws.openedId !== id) {
+        ws.transferForm = false;
+        ws.resolveForm = false;
+    }
     ws.openedId = id;
     $("#card").innerHTML = renderCard(appeal);
     renderQueue();
@@ -90,7 +93,7 @@ async function openCard(id) {
 
 function actionLabel(target, current) {
     if (target === "IN_PROGRESS") return current === "ROUTED" ? "Взять в работу" : "Вернуть в работу";
-    if (target === "RESOLVED") return "Решено";
+    if (target === "RESOLVED") return "Решено — ответить по существу";
     if (target === "CLOSED") return "Закрыть обращение";
     return STATUS_LABELS[target];
 }
@@ -105,8 +108,9 @@ function renderCard(appeal) {
     const actions = canWork ? `
         <div class="actions">
             <h4>Следующий шаг</h4>
-            ${steps.map(status => `<button type="button" class="btn ${status === "RESOLVED" ? "primary" : ""} wide"
-                    data-status="${status}">${actionLabel(status, appeal.status)}</button>`).join("")}
+            ${steps.map(status => status === "RESOLVED"
+                ? `<button type="button" class="btn primary wide" data-toggle-resolve>${actionLabel(status, appeal.status)}</button>`
+                : `<button type="button" class="btn wide" data-status="${status}">${actionLabel(status, appeal.status)}</button>`).join("")}
             ${canTransfer ? `<button type="button" class="btn ghost wide" data-toggle-transfer>Передать в другой отдел</button>` : ""}
             ${pending ? `<p class="notice small">Ждёт решения руководителя отдела «${escapeHtml(pending.targetDepartment.name)}»</p>` : ""}
             ${ws.transferForm && canTransfer ? `
@@ -128,7 +132,24 @@ function renderCard(appeal) {
         <div class="card-body">
             <div class="main-col">
                 ${renderThread(appeal, "EMPLOYEE")}
-                ${canWork && appeal.status !== "CLOSED" ? `
+                ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}</p>` : ""}
+                ${canWork && ws.resolveForm && appeal.nextStatuses.includes("RESOLVED") ? `
+                <form class="reply resolve-form" data-resolve>
+                    <h4>Ответ клиенту по существу</h4>
+                    <p class="muted small-text">Закон требует обоснованный ответ: результат рассмотрения, на каком основании,
+                        что сделано (Закон № 4015-1, ст. 6.2 п. 6). Сама выплата или перерасчёт выполняются в учётных системах
+                        страховой — здесь фиксируется результат.</p>
+                    <label>Итог
+                        <select name="outcome">${Object.entries(OUTCOME_LABELS)
+                            .map(([code, label]) => `<option value="${code}">${label}</option>`).join("")}</select>
+                    </label>
+                    <textarea name="answer" rows="5" minlength="20" maxlength="5000" required
+                              placeholder="Например: ущерб признан страховым случаем, выплата 85 000 ₽ направлена на ваш счёт 20.10.2026"></textarea>
+                    <div class="reply-actions">
+                        <button class="btn" type="button" data-toggle-resolve>Отмена</button>
+                        <button class="btn primary" type="submit">Отправить ответ и решить</button>
+                    </div>
+                </form>` : canWork && appeal.status !== "CLOSED" ? `
                 <form class="reply" data-reply>
                     <textarea name="body" rows="3" maxlength="5000" required placeholder="Ответ клиенту"></textarea>
                     <div class="reply-actions">
@@ -162,7 +183,12 @@ async function changeStatus(status) {
 $("#card").addEventListener("click", async event => {
     const step = event.target.closest("[data-status]");
     const toggle = event.target.closest("[data-toggle-transfer]");
+    const toggleResolve = event.target.closest("[data-toggle-resolve]");
     try {
+        if (toggleResolve) {
+            ws.resolveForm = !ws.resolveForm;
+            await openCard(ws.openedId);
+        }
         if (step) {
             await changeStatus(step.dataset.status);
             showToast(`Статус: ${STATUS_LABELS[step.dataset.status]}`);
@@ -187,6 +213,14 @@ $("#card").addEventListener("submit", async event => {
             });
             if (event.submitter?.name === "wait") await changeStatus("WAITING_CUSTOMER");
             showToast(event.submitter?.name === "wait" ? "Ответ отправлен, ждём клиента" : "Ответ отправлен");
+        }
+        if (event.target.matches("[data-resolve]")) {
+            await api(`/api/appeals/${ws.openedId}/resolve`, {
+                method: "POST",
+                body: JSON.stringify({outcome: form.get("outcome"), answer: form.get("answer")})
+            });
+            ws.resolveForm = false;
+            showToast("Ответ отправлен клиенту, обращение решено");
         }
         if (event.target.matches("[data-transfer]")) {
             await api(`/api/appeals/${ws.openedId}/transfer-requests`, {

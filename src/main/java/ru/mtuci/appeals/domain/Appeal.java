@@ -84,6 +84,13 @@ public class Appeal {
     @Column(name = "deadline_extended_days", nullable = false)
     private int deadlineExtendedDays;
 
+    @Enumerated(EnumType.STRING)
+    @Column(length = 30)
+    private AppealOutcome outcome;
+
+    @Column(name = "resolved_at")
+    private Instant resolvedAt;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -141,15 +148,36 @@ public class Appeal {
 
     /** Сотрудник меняет статус только по разрешённым переходам — см. {@link AppealStatus#next()}. */
     public void changeStatus(AppealStatus status, String employee, Instant now) {
-        if (!this.status.canMoveTo(status)) {
-            throw new IllegalStateException("Нельзя перевести обращение из статуса «"
-                    + this.status.label() + "» в «" + status.label() + "»");
+        if (status == AppealStatus.RESOLVED) {
+            throw new IllegalStateException("Решить обращение можно только ответом клиенту по существу");
+        }
+        checkTransition(status);
+        if (this.status == AppealStatus.RESOLVED) {
+            // клиент не согласен с решением — прежний итог больше не действует
+            this.outcome = null;
+            this.resolvedAt = null;
         }
         this.status = status;
         if (status == AppealStatus.IN_PROGRESS && employee != null && !employee.isBlank()) {
             this.assignedEmployee = employee;
         }
         this.updatedAt = now;
+    }
+
+    /** Решение — это ответ клиенту по существу с итогом; ответ сохраняет сервис. */
+    public void resolve(AppealOutcome outcome, Instant now) {
+        checkTransition(AppealStatus.RESOLVED);
+        this.status = AppealStatus.RESOLVED;
+        this.outcome = outcome;
+        this.resolvedAt = now;
+        this.updatedAt = now;
+    }
+
+    private void checkTransition(AppealStatus target) {
+        if (!this.status.canMoveTo(target)) {
+            throw new IllegalStateException("Нельзя перевести обращение из статуса «"
+                    + this.status.label() + "» в «" + target.label() + "»");
+        }
     }
 
     public UUID getId() {
@@ -214,6 +242,14 @@ public class Appeal {
 
     public Instant getDeadlineAt() {
         return deadlineAt;
+    }
+
+    public AppealOutcome getOutcome() {
+        return outcome;
+    }
+
+    public Instant getResolvedAt() {
+        return resolvedAt;
     }
 
     public DeadlineNorm getNorm() {

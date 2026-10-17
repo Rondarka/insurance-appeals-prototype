@@ -3,6 +3,7 @@ package ru.mtuci.appeals.api;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
@@ -45,6 +46,13 @@ public final class ApiModels {
     }
 
     public record ChangeStatusRequest(@NotNull AppealStatus status) {
+    }
+
+    /** Ответ клиенту по существу: результат рассмотрения и обоснование (4015-1, ст. 6.2 п. 6). */
+    public record ResolveAppealRequest(
+            @NotNull AppealOutcome outcome,
+            @NotBlank @Size(min = 20, max = 5000) String answer
+    ) {
     }
 
     /** Автор сообщения — тот, чей токен: клиент или сотрудник. */
@@ -122,6 +130,7 @@ public final class ApiModels {
             String assignedEmployee,
             Instant deadlineAt,
             LocalDate legalDeadline,
+            AppealOutcome outcome,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -185,6 +194,8 @@ public final class ApiModels {
             LocalDate legalDeadline,
             NormResponse norm,
             int deadlineExtendedDays,
+            AppealOutcome outcome,
+            Instant resolvedAt,
             Instant createdAt,
             Instant updatedAt,
             List<HistoryResponse> history,

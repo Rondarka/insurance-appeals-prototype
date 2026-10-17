@@ -217,7 +217,9 @@ textarea { resize: vertical; }
 }
 .queue-item:hover { background: var(--soft); }
 .queue-item.selected { background: var(--blue-soft); box-shadow: inset 3px 0 0 var(--blue); }
-.queue-row { display: flex; gap: 8px; align-items: flex-start; }
+.queue-row { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
+.queue-item > * { min-width: 0; }
+.master { overflow-x: hidden; }
 .queue-row strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-row.meta { justify-content: space-between; align-items: center; color: var(--muted); }
 .queue-row.meta small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -298,6 +300,56 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .metric small { color: var(--muted); }
 .metric strong { display: block; font-size: 26px; }
 .metric.late strong { color: var(--red); }
+
+/* ---------- календарь сроков ---------- */
+
+.view.wide-page { max-width: 1400px; }
+.calendar-controls { display: flex; align-items: center; gap: 8px; }
+.calendar-title { min-width: 140px; text-align: center; }
+.segmented { display: flex; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; margin-right: 8px; }
+.segmented button { border: 0; padding: 7px 12px; background: var(--surface); font-weight: 600; color: var(--muted); }
+.segmented button.active { color: var(--blue); background: var(--blue-soft); }
+.metrics.compact { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.metric.soon strong { color: var(--amber); }
+
+.calendar {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    border: 1px solid var(--line);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--line);
+    gap: 1px;
+}
+.calendar-head { padding: 8px 10px; font-size: 12px; font-weight: 600; color: var(--muted); background: var(--soft); }
+.calendar-day { min-height: 112px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); }
+.calendar-day.weekend { background: #f6f7fa; }
+.calendar-day.holiday { background: var(--red-soft); }
+.calendar-day.other-month { opacity: 0.45; }
+.calendar-day.today { box-shadow: inset 0 0 0 2px var(--blue); }
+.calendar-date { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
+.calendar-date small { font-weight: 400; color: var(--red); }
+.calendar-item {
+    border: 0;
+    border-left: 3px solid var(--green);
+    border-radius: 4px;
+    padding: 3px 6px;
+    font-size: 12px;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    background: var(--green-soft);
+}
+.calendar-item.soon { border-left-color: var(--amber); background: var(--amber-soft); }
+.calendar-item.late { border-left-color: var(--red); background: var(--red-soft); }
+.calendar-legend { display: flex; gap: 16px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.legend { display: inline-block; width: 12px; height: 12px; margin-right: 6px; vertical-align: -2px; border-radius: 3px; }
+.legend.late { background: var(--red); }
+.legend.soon { background: var(--amber); }
+.legend.ok { background: var(--green); }
+.legend.holiday { background: var(--red-soft); border: 1px solid var(--red); }
+.legend.weekend { background: #f6f7fa; border: 1px solid var(--line); }
 
 /* ---------- кабинет клиента ---------- */
 

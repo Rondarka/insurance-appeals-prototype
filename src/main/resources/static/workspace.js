@@ -24,12 +24,16 @@ startPage("/workspace.html", async () => {
 
 document.querySelector(".tabs").addEventListener("click", event => {
     const tab = event.target.closest("[data-tab]");
-    if (!tab) return;
-    document.querySelectorAll(".tab").forEach(item => item.classList.toggle("active", item === tab));
-    document.querySelectorAll(".view").forEach(item => item.classList.toggle("active", item.id === `${tab.dataset.tab}-view`));
-    if (tab.dataset.tab === "events") loadEvents($("#events")).catch(error => showToast(error.message, true));
-    if (tab.dataset.tab === "transfers") loadTransfers().catch(error => showToast(error.message, true));
+    if (tab) showTab(tab.dataset.tab);
 });
+
+function showTab(name) {
+    document.querySelectorAll(".tab").forEach(item => item.classList.toggle("active", item.dataset.tab === name));
+    document.querySelectorAll(".view").forEach(item => item.classList.toggle("active", item.id === `${name}-view`));
+    if (name === "events") loadEvents($("#events")).catch(error => showToast(error.message, true));
+    if (name === "transfers") loadTransfers().catch(error => showToast(error.message, true));
+    if (name === "calendar") loadCalendar().catch(error => showToast(error.message, true));
+}
 
 $("#refresh-events").addEventListener("click", () => loadEvents($("#events")).catch(error => showToast(error.message, true)));
 
@@ -243,6 +247,97 @@ async function refreshOpened() {
     if (opened) ws.group = groupOf(opened.status).key;
     await openCard(ws.openedId);
 }
+
+// ---------- календарь сроков ----------
+
+const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь",
+    "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+const cal = {month: null, scope: null};
+
+const isoDay = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+const addDays = (date, days) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+
+/** Последний день срока: по закону, а у старых обращений без норматива — срок отдела. */
+function dueDay(appeal) {
+    if (appeal.legalDeadline) return appeal.legalDeadline;
+    return appeal.deadlineAt ? isoDay(new Date(appeal.deadlineAt)) : null;
+}
+
+function dueTone(day, today) {
+    if (day < today) return "late";
+    return day <= isoDay(addDays(new Date(`${today}T00:00:00`), 2)) ? "soon" : "ok";
+}
+
+async function loadCalendar() {
+    const now = new Date();
+    if (!cal.month) cal.month = new Date(now.getFullYear(), now.getMonth(), 1);
+    // специалисту — свои обращения, руководителю — весь отдел
+    if (!cal.scope) cal.scope = isSupervisor() ? "department" : "mine";
+    document.querySelectorAll("[data-scope]").forEach(item => item.classList.toggle("active", item.dataset.scope === cal.scope));
+    $("#calendar-title").textContent = `${MONTHS[cal.month.getMonth()]} ${cal.month.getFullYear()}`;
+
+    const first = addDays(cal.month, -((cal.month.getDay() + 6) % 7));
+    const last = addDays(first, 41);
+    const days = await api(`/api/calendar?from=${isoDay(first)}&to=${isoDay(last)}`);
+    renderCalendar(days);
+}
+
+function renderCalendar(days) {
+    const today = isoDay(new Date());
+    const open = ws.appeals.filter(appeal => !["RESOLVED", "CLOSED"].includes(appeal.status) && dueDay(appeal));
+    const scoped = cal.scope === "mine" ? open.filter(appeal => appeal.assignedEmployee === session.me.name) : open;
+    const byDay = {};
+    scoped.forEach(appeal => (byDay[dueDay(appeal)] ||= []).push(appeal));
+
+    const weekEnd = isoDay(addDays(new Date(`${today}T00:00:00`), 7 - ((new Date().getDay() + 6) % 7) - 1));
+    const summary = [
+        ["Просрочено", scoped.filter(a => dueDay(a) < today).length, "late"],
+        ["Сегодня последний день", scoped.filter(a => dueDay(a) === today).length, "soon"],
+        ["До конца недели", scoped.filter(a => dueDay(a) > today && dueDay(a) <= weekEnd).length, ""],
+        ["Всего открытых", scoped.length, ""]
+    ];
+    $("#calendar-summary").innerHTML = summary.map(([label, value, tone]) =>
+        `<div class="metric ${value && tone ? tone : ""}"><small>${label}</small><strong>${value}</strong></div>`).join("");
+
+    const month = cal.month.getMonth();
+    $("#calendar-grid").innerHTML = WEEKDAYS.map(name => `<div class="calendar-head">${name}</div>`).join("")
+        + days.map(day => {
+            const date = new Date(`${day.date}T00:00:00`);
+            const items = (byDay[day.date] || []).sort((a, b) => a.publicNumber.localeCompare(b.publicNumber));
+            const classes = ["calendar-day", day.kind.toLowerCase(),
+                date.getMonth() !== month ? "other-month" : "", day.date === today ? "today" : ""].join(" ");
+            return `
+                <div class="${classes}">
+                    <div class="calendar-date">${date.getDate()}${day.kind === "HOLIDAY" ? `<small>праздник</small>` : ""}</div>
+                    ${items.slice(0, 3).map(appeal => `
+                        <button type="button" class="calendar-item ${dueTone(day.date, today)}" data-calendar-appeal="${appeal.id}"
+                                title="${escapeHtml(appeal.publicNumber)} · ${escapeHtml(appeal.subject)} · ${escapeHtml(appeal.customerName)}">
+                            ${escapeHtml(appeal.subject)}
+                        </button>`).join("")}
+                    ${items.length > 3 ? `<small class="muted">ещё ${items.length - 3}</small>` : ""}
+                </div>`;
+        }).join("");
+}
+
+$("#calendar-view").addEventListener("click", event => {
+    const scope = event.target.closest("[data-scope]");
+    const item = event.target.closest("[data-calendar-appeal]");
+    if (scope) cal.scope = scope.dataset.scope;
+    if (event.target.closest("#calendar-prev")) cal.month = new Date(cal.month.getFullYear(), cal.month.getMonth() - 1, 1);
+    if (event.target.closest("#calendar-next")) cal.month = new Date(cal.month.getFullYear(), cal.month.getMonth() + 1, 1);
+    if (event.target.closest("#calendar-today")) cal.month = null;
+    if (item) {
+        const appeal = ws.appeals.find(candidate => candidate.id === item.dataset.calendarAppeal);
+        ws.group = groupOf(appeal.status).key;
+        showTab("queue");
+        openCard(appeal.id).catch(error => showToast(error.message, true));
+        return;
+    }
+    if (scope || event.target.closest("#calendar-prev, #calendar-next, #calendar-today")) {
+        loadCalendar().catch(error => showToast(error.message, true));
+    }
+});
 
 // ---------- передачи (руководитель) ----------
 

@@ -4,8 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
+import ru.mtuci.appeals.api.CalendarController.CalendarDay;
 import ru.mtuci.appeals.domain.DeadlineCounting;
 import ru.mtuci.appeals.service.ProductionCalendar;
+import ru.mtuci.appeals.service.ProductionCalendar.DayKind;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -62,6 +64,16 @@ class DeadlineNormTest extends IntegrationTest {
         assertThat(recent.legalDeadline()).isEqualTo(calendar.deadline(today(), 15, DeadlineCounting.WORKING_DAYS));
         assertThat(old.norm().code()).isEqualTo("PRETENSION");
         assertThat(old.legalDeadline()).isEqualTo(calendar.deadline(today(), 30, DeadlineCounting.CALENDAR_DAYS));
+    }
+
+    @Test
+    void calendarApiShowsTransferredDaysOff() {
+        CalendarDay[] days = as(CLAIMS_SPECIALIST).getForObject(
+                "/api/calendar?from=2027-02-19&to=2027-02-23", CalendarDay[].class);
+
+        // постановление № 1187: суббота 20.02 рабочая, понедельник 22.02 выходной
+        assertThat(days).extracting(CalendarDay::kind).containsExactly(
+                DayKind.WORKDAY, DayKind.WORKDAY, DayKind.WEEKEND, DayKind.WEEKEND, DayKind.HOLIDAY);
     }
 
     private static CreateAppealRequest pretension(LocalDate violation) {

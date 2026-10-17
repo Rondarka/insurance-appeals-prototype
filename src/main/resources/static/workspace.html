@@ -14,6 +14,7 @@
     </div>
     <nav class="tabs">
         <button class="tab active" type="button" data-tab="queue">Очередь</button>
+        <button class="tab" type="button" data-tab="calendar">Календарь сроков</button>
         <button class="tab" type="button" data-tab="transfers" hidden>Передачи <span id="transfer-count" class="count"></span></button>
         <button class="tab" type="button" data-tab="events">Журнал событий</button>
     </nav>
@@ -27,6 +28,35 @@
             <div id="queue" class="queue-list"><p class="muted">Загрузка…</p></div>
         </aside>
         <article id="card" class="detail"><p class="empty">Выберите обращение в списке слева</p></article>
+    </section>
+
+    <section id="calendar-view" class="view page wide-page">
+        <div class="view-head">
+            <div>
+                <h1>Календарь сроков</h1>
+                <p class="muted">Последний день срока по закону для открытых обращений. Выходные и праздники —
+                    по производственному календарю.</p>
+            </div>
+            <div class="calendar-controls">
+                <div class="segmented" id="calendar-scope">
+                    <button type="button" data-scope="mine">Мои</button>
+                    <button type="button" data-scope="department">Весь отдел</button>
+                </div>
+                <button class="btn" type="button" id="calendar-prev" aria-label="Предыдущий месяц">‹</button>
+                <strong id="calendar-title" class="calendar-title"></strong>
+                <button class="btn" type="button" id="calendar-next" aria-label="Следующий месяц">›</button>
+                <button class="btn ghost" type="button" id="calendar-today">Сегодня</button>
+            </div>
+        </div>
+        <div id="calendar-summary" class="metrics compact"></div>
+        <div id="calendar-grid" class="calendar"></div>
+        <div class="calendar-legend">
+            <span><i class="legend late"></i>просрочено</span>
+            <span><i class="legend soon"></i>осталось до 2 дней</span>
+            <span><i class="legend ok"></i>в срок</span>
+            <span><i class="legend holiday"></i>праздник</span>
+            <span><i class="legend weekend"></i>выходной</span>
+        </div>
     </section>
 
     <section id="transfers-view" class="view page">

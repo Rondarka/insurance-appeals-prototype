@@ -78,7 +78,17 @@ appeals:
   contracts:
     # учётная система договоров страховой; в стенде — заглушка WireMock
     base-url: ${CONTRACTS_BASE_URL:http://localhost:18081}
-    timeout: 3s
+    # кабинет не ждёт дольше 2–3 с: таймаут и один быстрый повтор, дальше — резервный режим (решение 30)
+    timeout: 1s
+    retry:
+      max-attempts: 2
+      pause: PT0.2S
+    circuit:
+      # из последних 10 вызовов (не меньше 5) половина — сбои: 30 с к системе не обращаемся
+      sliding-window: 10
+      minimum-calls: 5
+      failure-rate-threshold: 50
+      open-duration: PT30S
 
 logging:
   level:

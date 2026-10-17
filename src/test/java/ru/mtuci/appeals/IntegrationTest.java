@@ -23,6 +23,7 @@ import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
 import ru.mtuci.appeals.domain.AppealStatus;
+import ru.mtuci.appeals.integration.ContractsClient;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -107,6 +108,8 @@ public abstract class IntegrationTest {
         // планировщик эскалации в тестах не запускается сам: тесты вызывают проход с нужной датой
         registry.add("appeals.escalation.initial-delay", () -> "PT24H");
         registry.add("appeals.contract-link.initial-delay", () -> "PT24H");
+        // разомкнутая цепь в тестах ждёт недолго
+        registry.add("appeals.contracts.circuit.open-duration", () -> "PT2S");
         registry.add("appeals.contracts.base-url",
                 () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> TestIdentityProvider.ISSUER);
@@ -119,6 +122,9 @@ public abstract class IntegrationTest {
 
     @LocalServerPort
     private int port;
+
+    @Autowired
+    private ContractsClient contractsClient;
 
     /** Запросы от имени пользователя: каждый с его токеном. */
     protected TestRestTemplate as(TestUser user) {
@@ -147,8 +153,24 @@ public abstract class IntegrationTest {
         assertThat(response.getStatusCode().is2xxSuccessful()).as("учётная система положена").isTrue();
     }
 
+    /** Система вернулась, и цепь сброшена — следующий тест начинает с чистого листа. */
     protected void contractsSourceUp() {
+        contractsSourceRecovers();
+        contractsClient.circuitBreaker().reset();
+    }
+
+    /** Система вернулась, а подсистема узнаёт об этом сама — через пробные вызовы цепи. */
+    protected void contractsSourceRecovers() {
         contractsStubAdmin().delete("/__admin/mappings/" + OUTAGE_MAPPING);
+    }
+
+    /** Сколько запросов о договорах клиентов получила учётная система. */
+    protected int clientContractRequests() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        Map<?, ?> count = contractsStubAdmin().postForObject("/__admin/requests/count",
+                new HttpEntity<>("{\"method\": \"GET\", \"urlPathPattern\": \"/clients/.*\"}", headers), Map.class);
+        return ((Number) count.get("count")).intValue();
     }
 
     private static TestRestTemplate contractsStubAdmin() {

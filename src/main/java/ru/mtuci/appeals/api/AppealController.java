@@ -32,11 +32,13 @@ import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
+import ru.mtuci.appeals.api.ApiModels.IntegrationStatusResponse;
 import ru.mtuci.appeals.api.ApiModels.MeResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
+import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
@@ -63,19 +65,22 @@ public class AppealController {
     private final TransferService transferService;
     private final AppealFormPolicy formPolicy;
     private final ContractLinkService contractLinkService;
+    private final ContractsClient contractsClient;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
                             DirectoryService directoryService,
                             TransferService transferService,
                             AppealFormPolicy formPolicy,
-                            ContractLinkService contractLinkService) {
+                            ContractLinkService contractLinkService,
+                            ContractsClient contractsClient) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
         this.transferService = transferService;
         this.formPolicy = formPolicy;
         this.contractLinkService = contractLinkService;
+        this.contractsClient = contractsClient;
     }
 
     @GetMapping("/me")
@@ -151,6 +156,13 @@ public class AppealController {
             @PathVariable UUID id,
             @Valid @RequestBody ResolveAppealRequest request) {
         return appealService.resolve(user, id, request);
+    }
+
+    @GetMapping("/integrations")
+    List<IntegrationStatusResponse> integrations() {
+        var circuit = contractsClient.circuitBreaker();
+        return List.of(new IntegrationStatusResponse("CONTRACTS", "Учётная система договоров",
+                circuit.getState().name(), circuit.getMetrics().getFailureRate()));
     }
 
     /** Виды страхования — когда договоры клиента загрузить не удалось. */

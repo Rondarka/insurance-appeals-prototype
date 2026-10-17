@@ -28,8 +28,20 @@ function showTab(name) {
     if (name === "events") loadEvents($("#events")).catch(error => showToast(error.message, true));
 }
 
+const INTEGRATION_STATE = {
+    CLOSED: ["ok", "работает"],
+    HALF_OPEN: ["soon", "проверяется после сбоя"],
+    OPEN: ["late", "недоступна — обращения к ней приостановлены, кабинет работает в резервном режиме"]
+};
+
 async function loadAll() {
     adm.appeals = await api("/api/appeals");
+    const integrations = await api("/api/integrations").catch(() => []);
+    $("#integrations").innerHTML = integrations.map(item => {
+        const [tone, text] = INTEGRATION_STATE[item.state] || ["", item.state];
+        return `<p class="integration ${tone}"><span class="dot"></span>${escapeHtml(item.name)}: ${text}${
+            item.failureRate >= 0 ? ` <small class="muted">· сбоев ${Math.round(item.failureRate)} %</small>` : ""}</p>`;
+    }).join("");
     renderOverview();
     renderList();
 }

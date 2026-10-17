@@ -6,7 +6,10 @@ package ru.mtuci.appeals.integration;
  */
 public class ContractSourceUnavailableException extends RuntimeException {
 
-    /** HTTP-статус ответа; 0 — ответа не было вовсе: таймаут или нет соединения. */
+    /** Цепь разомкнута: подсистема не обращалась к учётной системе вовсе (решение 30). */
+    public static final int CIRCUIT_OPEN = -1;
+
+    /** HTTP-статус ответа; 0 — ответа не было вовсе: таймаут или нет соединения; {@link #CIRCUIT_OPEN}. */
     private final int status;
 
     public ContractSourceUnavailableException(String message, int status, Throwable cause) {

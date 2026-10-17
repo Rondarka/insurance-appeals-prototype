@@ -180,7 +180,11 @@ public class ContractLinkService {
         if (request == null) {
             return;
         }
-        Selection selection = select(contractsClient.clientContracts(request.counterpartyId()), request);
+        // сотрудник в «Привязать сейчас» ждёт ответа, фоновый проход — нет
+        List<ExternalContract> contracts = "Подсистема".equals(actor)
+                ? contractsClient.clientContractsInBackground(request.counterpartyId())
+                : contractsClient.clientContracts(request.counterpartyId());
+        Selection selection = select(contracts, request);
         transactions.executeWithoutResult(status -> {
             Appeal appeal = find(id);
             if (appeal.getContractLink() != ContractLink.PENDING) {

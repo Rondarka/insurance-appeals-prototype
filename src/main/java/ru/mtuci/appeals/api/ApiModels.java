@@ -152,6 +152,14 @@ public final class ApiModels {
     public record ProductResponse(String code, String label) {
     }
 
+    /**
+     * Состояние внешней системы глазами подсистемы (решение 30): CLOSED — работает,
+     * OPEN — обращения приостановлены, HALF_OPEN — пробные вызовы после паузы.
+     * failureRate — доля сбоев среди последних вызовов, %; -1 — вызовов пока мало.
+     */
+    public record IntegrationStatusResponse(String code, String name, String state, float failureRate) {
+    }
+
     public record ChooseContractRequest(@NotNull UUID contractId) {
     }
 

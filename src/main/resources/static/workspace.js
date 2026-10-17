@@ -44,6 +44,9 @@ async function loadQueue() {
     renderQueue();
 }
 
+/** Отпечаток обращения: изменился статус, переписка или история — значит, есть что показать. */
+const cardSignature = appeal => `${appeal.status}|${appeal.updatedAt}|${appeal.messages.length}|${appeal.history.length}|${appeal.attachments.length}`;
+
 function groupOf(status) {
     return GROUPS.find(group => group.statuses.includes(status));
 }
@@ -91,6 +94,7 @@ async function openCard(id) {
         ws.resolveForm = false;
     }
     ws.openedId = id;
+    ws.openedSignature = cardSignature(appeal);
     $("#card").innerHTML = renderCard(appeal);
     loadRelated(id, $(`#related-${id}`));
     renderQueue();
@@ -407,12 +411,20 @@ $("#transfers").addEventListener("submit", async event => {
 });
 
 /** Обновление в фоне — не трогая начатый ответ. */
+/**
+ * Обновление в фоне. Перерисовывает только изменившееся: иначе раз в 10 секунд пропадали бы
+ * раскрытые условия договора, а клик в момент перерисовки терялся.
+ */
 async function refresh() {
-    await loadQueue().catch(() => {});
+    const before = JSON.stringify(ws.appeals);
+    ws.appeals = await api("/api/appeals").catch(() => ws.appeals);
+    if (JSON.stringify(ws.appeals) !== before) renderQueue();
     // открытую вкладку передач не перерисовываем: там может быть начатый комментарий
     if (isSupervisor() && !$("#transfers-view").classList.contains("active")) {
         await loadTransfers().catch(() => {});
     }
     const typing = document.querySelector("#card textarea")?.value || document.querySelector("#card [data-transfer]");
-    if (ws.openedId && !typing) await openCard(ws.openedId).catch(() => {});
+    if (!ws.openedId || typing) return;
+    const appeal = await api(`/api/appeals/${ws.openedId}`).catch(() => null);
+    if (appeal && cardSignature(appeal) !== ws.openedSignature) await openCard(ws.openedId).catch(() => {});
 }

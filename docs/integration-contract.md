@@ -175,6 +175,8 @@ Server: принимает токен из заголовка `Authorization: Be
 | `APPEAL_MESSAGE_ADDED` | `appeal.message.<автор>` | новое сообщение в переписке | `authorType`, `attachments` (число файлов) |
 | `APPEAL_ATTACHMENTS_ADDED` | `appeal.attachment.added` | приложены файлы | `count`; `messageId` — если файлы пришли с сообщением |
 | `APPEAL_DEADLINE_EXTENDED` | `appeal.deadline.extended` | руководитель продлил срок по закону | `days`, `legalDeadline` |
+| `APPEAL_CONTRACT_LINKED` | `appeal.contract.linked` | договор привязан после регистрации (решение 29) | `productCode`, `policyNumber` |
+| `APPEAL_CONTRACT_CHOICE_REQUIRED` | `appeal.contract.choice_required` | подходит несколько договоров или ни одного — клиенту нужно выбрать | `reason`: `NEEDS_CHOICE` или `NOT_FOUND` |
 | `APPEAL_TRANSFER_REQUESTED` | `appeal.transfer.requested.<целевой отдел>` | запрошена передача | `fromDepartment`, `toDepartment`, `requestedBy` |
 | `APPEAL_TRANSFER_APPROVED` | `appeal.transfer.approved.<целевой отдел>` | передача согласована | `fromDepartment`, `toDepartment`, `reviewedBy` |
 | `APPEAL_TRANSFER_REJECTED` | `appeal.transfer.rejected.<целевой отдел>` | передача отклонена | `fromDepartment`, `toDepartment`, `reviewedBy` |

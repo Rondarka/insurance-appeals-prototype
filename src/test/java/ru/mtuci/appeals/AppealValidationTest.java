@@ -20,7 +20,7 @@ class AppealValidationTest extends IntegrationTest {
     void rejectsSubcategoryThatDoesNotBelongToCategory() {
         int before = appealsOf(ANNA);
         CreateAppealRequest claimWithMortgageSubcategory = new CreateAppealRequest(
-                CASCO_CONTRACT, "CLAIM", "RENEWAL",
+                CASCO_CONTRACT, null, null, "CLAIM", "RENEWAL",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва"),
                 "Продление", "Хочу продлить договор");
 
@@ -35,7 +35,7 @@ class AppealValidationTest extends IntegrationTest {
     void rejectsMissingRequiredDetails() {
         int before = appealsOf(ANNA);
         CreateAppealRequest claimWithoutPlace = new CreateAppealRequest(
-                CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10"),
                 "ДТП", "Без места происшествия");
 

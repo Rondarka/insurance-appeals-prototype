@@ -57,6 +57,11 @@ appeals:
   calendar:
     # каталог с файлами утверждённого производственного календаря
     path: ${CALENDAR_PATH:calendar}
+  contract-link:
+    # фоновая привязка договора, если при регистрации учётная система была недоступна
+    initial-delay: PT20S
+    interval: PT1M
+    max-backoff: PT1H
   escalation:
     # за сколько рабочих дней до срока по закону предупреждать и как часто проверять
     warn-working-days: 2

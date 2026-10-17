@@ -39,7 +39,7 @@ class DeadlineNormTest extends IntegrationTest {
     @Test
     void osagoClaimCountsCalendarDaysWithoutHolidays() {
         AppealDetailResponse appeal = createAppeal(new CreateAppealRequest(
-                OSAGO_CONTRACT, "CLAIM", "AUTO",
+                OSAGO_CONTRACT, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-03-01", "incidentPlace", "Москва"),
                 "ДТП по ОСАГО", "Прошу возместить ущерб по ОСАГО."));
 
@@ -78,7 +78,7 @@ class DeadlineNormTest extends IntegrationTest {
 
     private static CreateAppealRequest pretension(LocalDate violation) {
         return new CreateAppealRequest(
-                CASCO_CONTRACT, "COMPLAINT", "PRETENSION",
+                CASCO_CONTRACT, null, null, "COMPLAINT", "PRETENSION",
                 Map.of("violationDate", violation.toString(), "claimAmount", "85000",
                         "desiredOutcome", "Выплатить возмещение полностью"),
                 "Не согласна с суммой выплаты", "Выплата занижена, прошу пересчитать.");

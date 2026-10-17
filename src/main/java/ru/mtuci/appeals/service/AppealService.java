@@ -26,6 +26,7 @@ import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
 import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
 import ru.mtuci.appeals.api.ApiModels.MessageResponse;
 import ru.mtuci.appeals.api.ApiModels.NormResponse;
+import ru.mtuci.appeals.api.ApiModels.ProductResponse;
 import ru.mtuci.appeals.api.ApiModels.ContractTermsResponse;
 import ru.mtuci.appeals.api.ApiModels.CoverageResponse;
 import ru.mtuci.appeals.api.ApiModels.RelatedAppealResponse;
@@ -40,6 +41,7 @@ import ru.mtuci.appeals.domain.DeadlineNorm;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.EventAudit;
 import ru.mtuci.appeals.integration.ContractsClient;
+import ru.mtuci.appeals.integration.ContractSourceUnavailableException;
 import ru.mtuci.appeals.messaging.AppealDomainEvent;
 import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealMessageRepository;
@@ -136,20 +138,38 @@ public class AppealService {
      */
     public AppealDetailResponse create(CurrentUser user, CreateAppealRequest request) {
         UUID counterpartyId = user.requireCounterparty();
-        // «не найден» и «чужой» неразличимы для клиента: не раскрываем, существует ли договор
-        ContractSnapshot contract = contractsClient.contract(request.contractId())
-                .filter(found -> found.belongsTo(counterpartyId))
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Договор не найден или не принадлежит выбранному клиенту"))
-                .toSnapshot();
+        ContractSnapshot found = null;
+        if (request.contractId() != null) {
+            try {
+                // «не найден» и «чужой» неразличимы для клиента: не раскрываем, существует ли договор
+                found = contractsClient.contract(request.contractId())
+                        .filter(contract -> contract.belongsTo(counterpartyId))
+                        .orElseThrow(() -> new IllegalArgumentException(
+                                "Договор не найден или не принадлежит выбранному клиенту"))
+                        .toSnapshot();
+            } catch (ContractSourceUnavailableException exception) {
+                // клиенту не отказываем: договор привяжем, когда учётная система вернётся (решение 29)
+                if (blank(request.productCode())) {
+                    throw exception;
+                }
+            }
+        } else if (blank(request.productCode())) {
+            throw new IllegalArgumentException("Выберите договор или вид страхования");
+        }
+        ContractSnapshot contract = found;
+        String productCode = contract != null ? contract.getProductCode() : request.productCode().trim();
         Map<String, String> details = formPolicy.details(
-                request.category(), request.subcategory(), contract, request.details());
+                request.category(), request.subcategory(), productCode, contract, request.details());
 
-        return transactionTemplate.execute(transaction -> register(user, request, contract, details));
+        return transactionTemplate.execute(transaction -> register(user, request, contract, productCode, details));
     }
 
-    private AppealDetailResponse register(CurrentUser user, CreateAppealRequest request,
-                                          ContractSnapshot contract, Map<String, String> details) {
+    private static boolean blank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private AppealDetailResponse register(CurrentUser user, CreateAppealRequest request, ContractSnapshot contract,
+                                          String productCode, Map<String, String> details) {
         // имя и почта — из токена на момент регистрации, как и снимок договора
         String customerName = Objects.requireNonNullElse(user.name(), "Клиент");
         String customerEmail = Objects.requireNonNullElse(user.email(), "");
@@ -172,10 +192,14 @@ public class AppealService {
                 request.description().trim(),
                 now
         );
+        if (contract == null) {
+            appeal.awaitContract(request.contractId(), productCode,
+                    blank(request.policyNumber()) ? null : request.policyNumber().trim(), now);
+        }
         // срок по закону считается со дня регистрации по норме, действующей на этот день
         LocalDate registeredOn = LocalDate.ofInstant(now, zone);
         DeadlineNorm norm = normService.choose(request.category(), request.subcategory(),
-                contract.getProductCode(), details, registeredOn);
+                productCode, details, registeredOn);
         LocalDate legalDeadline = calendar.deadline(registeredOn, norm.getTermDays(), norm.getCounting());
         appeal.applyNorm(norm, legalDeadline);
         appealRepository.save(appeal);
@@ -186,6 +210,16 @@ public class AppealService {
                 customerName,
                 now
         ));
+        if (contract == null) {
+            historyRepository.save(new AppealHistory(
+                    appeal,
+                    "CONTRACT_PENDING",
+                    "Учётная система договоров недоступна — договор «" + formPolicy.productLabel(productCode)
+                            + "» будет подобран автоматически, когда она заработает",
+                    "Подсистема",
+                    now
+            ));
+        }
         historyRepository.save(new AppealHistory(
                 appeal,
                 "DEADLINE_SET",
@@ -442,6 +476,9 @@ public class AppealService {
         UUID contractId = transactionTemplate.execute(transaction -> {
             Appeal appeal = findAppeal(id);
             access.checkView(user, appeal);
+            if (appeal.getContract() == null) {
+                throw new IllegalStateException("Договор ещё не привязан к обращению");
+            }
             return appeal.getContract().getContractId();
         });
         var contract = contractsClient.contract(contractId)
@@ -473,7 +510,8 @@ public class AppealService {
                         other.getStatus(),
                         other.getOutcome(),
                         other.getDepartment() == null ? null : other.getDepartment().getName(),
-                        other.getContract().getContractId().equals(appeal.getContract().getContractId()),
+                        other.getContract() != null && appeal.getContract() != null
+                                && other.getContract().getContractId().equals(appeal.getContract().getContractId()),
                         access.canView(user, other),
                         other.getCreatedAt()))
                 .toList();
@@ -519,6 +557,7 @@ public class AppealService {
                 appeal.getDeadlineAt(),
                 appeal.getLegalDeadline(),
                 appeal.getEscalationLevel(),
+                appeal.getContractLink(),
                 appeal.getOutcome(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt()
@@ -579,6 +618,11 @@ public class AppealService {
                 appeal.getDeadlineExtendedDays(),
                 appeal.getDeadlineExtensionReason(),
                 appeal.getEscalationLevel(),
+                appeal.getContractLink(),
+                appeal.getRequestedProductCode() == null ? null
+                        : new ProductResponse(appeal.getRequestedProductCode(),
+                                formPolicy.productLabel(appeal.getRequestedProductCode())),
+                appeal.getRequestedPolicyNumber(),
                 appeal.getOutcome(),
                 appeal.getResolvedAt(),
                 appeal.getCreatedAt(),

@@ -94,6 +94,26 @@ public class Appeal {
     @Column(name = "escalated_at")
     private Instant escalatedAt;
 
+    /** Привязка договора (решение 29): пока не LINKED, снимок договора пуст. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contract_link", nullable = false, length = 20)
+    private ContractLink contractLink = ContractLink.LINKED;
+
+    @Column(name = "requested_contract_id")
+    private UUID requestedContractId;
+
+    @Column(name = "requested_product_code", length = 30)
+    private String requestedProductCode;
+
+    @Column(name = "requested_policy_number", length = 80)
+    private String requestedPolicyNumber;
+
+    @Column(name = "contract_link_attempts", nullable = false)
+    private int contractLinkAttempts;
+
+    @Column(name = "contract_link_next_at")
+    private Instant contractLinkNextAt;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 30)
     private AppealOutcome outcome;
@@ -132,6 +152,52 @@ public class Appeal {
         this.priority = AppealPriority.NORMAL;
         this.createdAt = now;
         this.updatedAt = now;
+    }
+
+    /**
+     * Учётная система недоступна: договор подберём позже по тому, что указал клиент —
+     * договор из списка, вид страхования, номер (решение 29).
+     */
+    public void awaitContract(UUID requestedContractId, String productCode, String policyNumber, Instant now) {
+        if (contract != null) {
+            throw new IllegalStateException("Договор уже привязан");
+        }
+        this.contractLink = ContractLink.PENDING;
+        this.requestedContractId = requestedContractId;
+        this.requestedProductCode = productCode;
+        this.requestedPolicyNumber = policyNumber;
+        this.contractLinkNextAt = now;
+    }
+
+    public void linkContract(ContractSnapshot contract, String detailsJson, Instant now) {
+        if (contractLink == ContractLink.LINKED) {
+            throw new IllegalStateException("Договор уже привязан");
+        }
+        this.contract = contract;
+        this.detailsJson = detailsJson;
+        this.contractLink = ContractLink.LINKED;
+        this.contractLinkNextAt = null;
+        this.updatedAt = now;
+    }
+
+    /** Подходит несколько договоров или ни одного — выбирает человек. */
+    public void requireContractChoice(ContractLink reason, Instant now) {
+        if (reason != ContractLink.NEEDS_CHOICE && reason != ContractLink.NOT_FOUND) {
+            throw new IllegalArgumentException("Не причина для выбора договора: " + reason);
+        }
+        this.contractLink = reason;
+        this.contractLinkNextAt = null;
+        this.updatedAt = now;
+    }
+
+    public void postponeContractLink(Instant nextAttempt) {
+        this.contractLinkAttempts++;
+        this.contractLinkNextAt = nextAttempt;
+    }
+
+    /** Вид страхования: по договору, а пока договор не привязан — указанный клиентом. */
+    public String getProductCode() {
+        return contract != null ? contract.getProductCode() : requestedProductCode;
     }
 
     public void applyNorm(DeadlineNorm norm, LocalDate legalDeadline) {
@@ -329,6 +395,26 @@ public class Appeal {
 
     public String getDeadlineExtensionReason() {
         return deadlineExtensionReason;
+    }
+
+    public ContractLink getContractLink() {
+        return contractLink;
+    }
+
+    public UUID getRequestedContractId() {
+        return requestedContractId;
+    }
+
+    public String getRequestedProductCode() {
+        return requestedProductCode;
+    }
+
+    public String getRequestedPolicyNumber() {
+        return requestedPolicyNumber;
+    }
+
+    public int getContractLinkAttempts() {
+        return contractLinkAttempts;
     }
 
     public EscalationLevel getEscalationLevel() {

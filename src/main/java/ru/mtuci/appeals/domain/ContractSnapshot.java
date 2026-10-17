@@ -16,31 +16,31 @@ import java.util.UUID;
 @Embeddable
 public class ContractSnapshot {
 
-    @Column(name = "contract_id", nullable = false)
+    @Column(name = "contract_id")
     private UUID contractId;
 
-    @Column(name = "contract_policy_number", nullable = false, length = 80)
+    @Column(name = "contract_policy_number", length = 80)
     private String policyNumber;
 
-    @Column(name = "contract_product_code", nullable = false, length = 20)
+    @Column(name = "contract_product_code", length = 20)
     private String productCode;
 
-    @Column(name = "contract_product_name", nullable = false, length = 100)
+    @Column(name = "contract_product_name", length = 100)
     private String productName;
 
-    @Column(name = "contract_insured_object", nullable = false, length = 500)
+    @Column(name = "contract_insured_object", length = 500)
     private String insuredObject;
 
-    @Column(name = "contract_valid_from", nullable = false)
+    @Column(name = "contract_valid_from")
     private LocalDate validFrom;
 
-    @Column(name = "contract_valid_to", nullable = false)
+    @Column(name = "contract_valid_to")
     private LocalDate validTo;
 
     @Column(name = "contract_terminated_on")
     private LocalDate terminatedOn;
 
-    @Column(name = "contract_status", nullable = false, length = 20)
+    @Column(name = "contract_status", length = 20)
     private String status;
 
     protected ContractSnapshot() {

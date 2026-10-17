@@ -55,7 +55,7 @@ class FormSchemaTest extends IntegrationTest {
     void rejectsTypeNotAvailableForContractProduct() {
         int before = appealsOf(ANNA);
         CreateAppealRequest mortgageTypeOnCasco = new CreateAppealRequest(
-                CASCO_CONTRACT, "MORTGAGE", "DOCUMENTS", Map.of(),
+                CASCO_CONTRACT, null, null, "MORTGAGE", "DOCUMENTS", Map.of(),
                 "Документы", "Нужны документы по договору");
 
         ResponseEntity<ErrorResponse> response = post(mortgageTypeOnCasco);
@@ -70,7 +70,7 @@ class FormSchemaTest extends IntegrationTest {
     void rejectsValueOfWrongFormat() {
         int before = appealsOf(ANNA);
         CreateAppealRequest claimWithRussianDate = new CreateAppealRequest(
-                CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "10.09.2026", "incidentPlace", "Москва"),
                 "ДТП", "Дата не в формате ISO");
 
@@ -84,7 +84,7 @@ class FormSchemaTest extends IntegrationTest {
     @Test
     void contractFieldsComeFromContractAndUnknownFieldsAreDropped() {
         CreateAppealRequest request = new CreateAppealRequest(
-                CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва",
                         "policyNumber", "ПОДДЕЛЬНЫЙ-001", "bonus", "выплатить вдвое"),
                 "ДТП", "Попытка подменить номер полиса");

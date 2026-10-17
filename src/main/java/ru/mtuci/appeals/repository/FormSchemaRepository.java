@@ -33,6 +33,16 @@ public class FormSchemaRepository {
         this.jdbc = jdbc;
     }
 
+    /** Вид страхования из справочника подсистемы. */
+    public record Product(String code, String label) {
+    }
+
+    public List<Product> products() {
+        return jdbc.sql("select code, label from insurance_product order by sort_order")
+                .query(Product.class)
+                .list();
+    }
+
     /** productCode == null — все типы, иначе только допустимые для продукта договора. */
     public List<Row> rows(String productCode) {
         return jdbc.sql("""

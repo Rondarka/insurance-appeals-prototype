@@ -5,6 +5,7 @@ import ru.mtuci.appeals.api.ApiModels.FormAppealType;
 import ru.mtuci.appeals.api.ApiModels.FormCategory;
 import ru.mtuci.appeals.api.ApiModels.FormField;
 import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
+import ru.mtuci.appeals.api.ApiModels.ProductResponse;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.repository.FormSchemaRepository;
 import ru.mtuci.appeals.repository.FormSchemaRepository.Row;
@@ -62,17 +63,21 @@ public class AppealFormPolicy {
      * Проверяет обращение по схеме и возвращает его атрибуты. Поля договора подставляет
      * сервер — клиент не может их подменить; поля, которых нет в схеме типа, отбрасываются.
      */
-    public Map<String, String> details(String category, String type, ContractSnapshot contract,
+    public Map<String, String> details(String category, String type, String productCode, ContractSnapshot contract,
                                        Map<String, String> submitted) {
-        FormAppealType appealType = find(schema(contract.getProductCode()), category, type)
+        FormAppealType appealType = find(schema(productCode), category, type)
                 .orElseThrow(() -> find(schema(null), category, type).isPresent()
                         ? new IllegalArgumentException("Тип обращения недоступен для договора «"
-                                + contract.getProductName() + "»")
+                                + (contract != null ? contract.getProductName() : productLabel(productCode)) + "»")
                         : new IllegalArgumentException("Недопустимый тип обращения для категории " + category));
 
         Map<String, String> details = new LinkedHashMap<>();
         List<String> missing = new ArrayList<>();
         for (FormField field : appealType.fields()) {
+            if (field.contractAttribute() != null && contract == null) {
+                // договор ещё не привязан — поле заполнится при привязке (решение 29)
+                continue;
+            }
             String value = field.contractAttribute() != null
                     ? fromContract(field, contract)
                     : trimmed(submitted.get(field.code()));
@@ -90,6 +95,35 @@ public class AppealFormPolicy {
             throw new IllegalArgumentException("Не заполнены обязательные поля: " + String.join(", ", missing));
         }
         return details;
+    }
+
+    /** Поля договора для типа обращения — когда договор привязывается позже регистрации. */
+    public Map<String, String> contractDetails(String category, String type, ContractSnapshot contract) {
+        Map<String, String> values = new LinkedHashMap<>();
+        find(schema(null), category, type).ifPresent(appealType -> appealType.fields().stream()
+                .filter(field -> field.contractAttribute() != null)
+                .forEach(field -> {
+                    String value = fromContract(field, contract);
+                    if (value != null) {
+                        values.put(field.code(), value);
+                    }
+                }));
+        return values;
+    }
+
+    /** Виды страхования — для выбора, когда договоры клиента загрузить не удалось. */
+    public List<ProductResponse> products() {
+        return repository.products().stream()
+                .map(product -> new ProductResponse(product.code(), product.label()))
+                .toList();
+    }
+
+    public String productLabel(String code) {
+        return repository.products().stream()
+                .filter(product -> product.code().equals(code))
+                .map(FormSchemaRepository.Product::label)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Неизвестный вид страхования: " + code));
     }
 
     private static Optional<FormAppealType> find(FormSchemaResponse schema, String category, String type) {

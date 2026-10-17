@@ -178,7 +178,7 @@ function renderCard(appeal) {
                 <h4>Клиент</h4>
                 <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></p>
                 ${appeal.assignedEmployee ? `<h4>Исполнитель</h4><p>${escapeHtml(appeal.assignedEmployee)}</p>` : ""}
-                ${renderContractSection(appeal)}
+                ${renderContractSection(appeal, canWork)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}
                 ${renderRelatedSection(appeal)}
@@ -305,6 +305,10 @@ $("#card").addEventListener("submit", async event => {
         showToast(error.message, true);
     }
 });
+
+async function afterContractLinked(id) {
+    if (id === ws.openedId) await refreshOpened();
+}
 
 async function refreshOpened() {
     await loadQueue();

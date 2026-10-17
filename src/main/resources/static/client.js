@@ -11,15 +11,19 @@ const CLIENT_STATUS = {
 };
 const INPUT_TYPES = {TEXT: "text", DATE: "date", NUMBER: "number"};
 
-const draft = {contractId: null, category: null, type: null, schema: {categories: []}};
+const draft = {contractId: null, productCode: null, category: null, type: null, schema: {categories: []}};
 let myAppeals = [];
 let openedId = null;
 
 const $ = selector => document.querySelector(selector);
 
 startPage("/client.html", async () => {
-    renderContracts();
-    await selectContract(session.me.contracts[0]?.id);
+    if (session.me.contractsUnavailable) {
+        await renderProducts();
+    } else {
+        renderContracts();
+        await selectContract(session.me.contracts[0]?.id);
+    }
     await loadMyAppeals();
     window.setInterval(refresh, 10000);
 });
@@ -36,11 +40,41 @@ function renderContracts() {
         </button>`).join("") || `<p class="muted">Договоров не найдено</p>`;
 }
 
+/**
+ * Учётная система договоров не ответила — клиенту не отказываем: он выбирает вид страхования,
+ * а договор подсистема подберёт сама, когда система заработает (решение 29).
+ */
+async function renderProducts() {
+    const products = await api("/api/products");
+    $("#contracts").insertAdjacentHTML("beforebegin", `
+        <p class="notice small">Список договоров сейчас не загрузился. Выберите вид страхования — договор мы подберём
+            сами и покажем в обращении.</p>`);
+    $("#contracts").innerHTML = products.map(product => `
+        <button type="button" class="choice" data-product="${product.code}"><strong>${escapeHtml(product.label)}</strong></button>`).join("");
+    $("#contracts").insertAdjacentHTML("afterend", `
+        <label class="policy-field">Номер договора, если под рукой
+            <input name="policyNumber" maxlength="80" placeholder="Например, КАСКО-2026-004821">
+        </label>`);
+    await selectProduct(products[0]?.code);
+}
+
+async function selectProduct(code) {
+    if (!code) return;
+    draft.contractId = null;
+    draft.productCode = code;
+    document.querySelectorAll("[data-product]").forEach(item =>
+        item.classList.toggle("selected", item.dataset.product === code));
+    draft.schema = await api(`/api/form-schema?productCode=${encodeURIComponent(code)}`);
+    selectCategory(draft.schema.categories[0]?.code);
+}
+
 /** Схема формы зависит от продукта договора: по КАСКО не спрашивают про ипотеку. */
 async function selectContract(id) {
     const contract = session.me.contracts.find(item => item.id === id);
     if (!contract) return;
     draft.contractId = id;
+    // вид — на случай, если учётная система откажет в момент отправки
+    draft.productCode = contract.productCode;
     document.querySelectorAll("[data-contract]").forEach(item =>
         item.classList.toggle("selected", item.dataset.contract === id));
     draft.schema = await api(`/api/form-schema?productCode=${encodeURIComponent(contract.productCode)}`);
@@ -73,6 +107,8 @@ function selectType(code) {
 $("#new-appeal").addEventListener("click", event => {
     const contract = event.target.closest("[data-contract]");
     if (contract) selectContract(contract.dataset.contract).catch(error => showToast(error.message, true));
+    const product = event.target.closest("[data-product]");
+    if (product) selectProduct(product.dataset.product).catch(error => showToast(error.message, true));
     const category = event.target.closest("[data-category]");
     if (category) selectCategory(category.dataset.category);
     const type = event.target.closest("[data-type]");
@@ -93,6 +129,8 @@ $("#new-appeal").addEventListener("submit", async event => {
             method: "POST",
             body: JSON.stringify({
                 contractId: draft.contractId,
+                productCode: draft.productCode,
+                policyNumber: form.get("policyNumber") || null,
                 category: draft.category,
                 subcategory: draft.type,
                 details,
@@ -138,7 +176,9 @@ function renderMyAppeals() {
         <button type="button" class="side-item ${appeal.id === openedId ? "selected" : ""} ${appeal.status === "WAITING_CUSTOMER" ? "attention" : ""}"
                 data-appeal="${appeal.id}">
             <strong>${escapeHtml(appeal.subject)}</strong>
-            <span class="side-meta">${statusChip(appeal.status, CLIENT_STATUS)}<small>${formatDateTime(appeal.updatedAt)}</small></span>
+            <span class="side-meta">${["NEEDS_CHOICE", "NOT_FOUND"].includes(appeal.contractLink)
+                ? `<span class="chip status-WAITING_CUSTOMER">уточните договор</span>`
+                : statusChip(appeal.status, CLIENT_STATUS)}<small>${formatDateTime(appeal.updatedAt)}</small></span>
         </button>`).join("") : `<p class="muted">Обращений пока нет</p>`;
 }
 
@@ -166,6 +206,11 @@ async function openAppeal(id) {
             </div>
             <div class="card-badges">${statusChip(appeal.status, CLIENT_STATUS)}</div>
         </div>
+        ${["NEEDS_CHOICE", "NOT_FOUND"].includes(appeal.contractLink) ? `
+        <div class="notice">${appeal.contractLink === "NEEDS_CHOICE"
+            ? "Уточните, по какому договору обращение: подходит несколько."
+            : "Мы не нашли договор указанного вида. Выберите договор, к которому относится обращение."}</div>
+        <div id="client-candidates" class="choose-contract"></div>` : ""}
         ${appeal.status === "WAITING_CUSTOMER" ? `<div class="notice">Сотрудник ждёт вашего ответа — напишите ниже и приложите документы, если их запросили.</div>` : ""}
         <div class="card-body">
             <div class="main-col">
@@ -181,12 +226,23 @@ async function openAppeal(id) {
             </div>
             <aside class="side-col">
                 <h4>Срок ответа</h4>${renderNorm(appeal)}
-                <h4>Договор</h4>${renderContract(appeal.contract)}
+                <h4>Договор</h4>${appeal.contract ? renderContract(appeal.contract) : `
+                    <p class="muted">${appeal.contractLink === "PENDING"
+                        ? "Подбираем договор — он появится здесь автоматически"
+                        : "Нужно уточнить — выберите договор выше"}</p>${requestedContractText(appeal)}`}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}
             </aside>
         </div>`;
+    if (["NEEDS_CHOICE", "NOT_FOUND"].includes(appeal.contractLink)) {
+        loadCandidates(id, $("#client-candidates")).catch(error => showToast(error.message, true));
+    }
     renderMyAppeals();
+}
+
+async function afterContractLinked(id) {
+    await loadMyAppeals();
+    if (id === openedId) await openAppeal(id);
 }
 
 $("#appeal-view").addEventListener("submit", async event => {

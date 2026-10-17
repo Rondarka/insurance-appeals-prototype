@@ -53,7 +53,9 @@ class ContractIntegrationTest extends IntegrationTest {
                         tuple("MORTGAGE", "ACTIVE", null),
                         tuple("CASCO", "ACTIVE", null),
                         tuple("OSAGO", "EXPIRED", null),
-                        tuple("PROPERTY", "TERMINATED", LocalDate.of(2026, 8, 1)));
+                        tuple("PROPERTY", "TERMINATED", LocalDate.of(2026, 8, 1)),
+                        tuple("OSAGO", "ACTIVE", null),
+                        tuple("CASCO", "ACTIVE", null));
     }
 
     @Test
@@ -93,7 +95,7 @@ class ContractIntegrationTest extends IntegrationTest {
 
     private static CreateAppealRequest claimOn(UUID contractId) {
         return new CreateAppealRequest(
-                contractId, "CLAIM", "AUTO",
+                contractId, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "Москва"),
                 "ДТП", "Обращение по договору " + contractId);
     }

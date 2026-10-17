@@ -101,7 +101,7 @@ class SecurityTest extends IntegrationTest {
 
     private static CreateAppealRequest petrClaim() {
         return new CreateAppealRequest(
-                PETR_CASCO_CONTRACT, "CLAIM", "AUTO",
+                PETR_CASCO_CONTRACT, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-20", "incidentPlace", "г. Москва"),
                 "Повреждение на парковке", "Обнаружил вмятину на двери.");
     }

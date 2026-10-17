@@ -6,7 +6,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.web.client.RestTemplateBuilder;
+import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -104,6 +106,7 @@ public abstract class IntegrationTest {
         registry.add("appeals.attachments.path", () -> ATTACHMENTS_DIR);
         // планировщик эскалации в тестах не запускается сам: тесты вызывают проход с нужной датой
         registry.add("appeals.escalation.initial-delay", () -> "PT24H");
+        registry.add("appeals.contract-link.initial-delay", () -> "PT24H");
         registry.add("appeals.contracts.base-url",
                 () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> TestIdentityProvider.ISSUER);
@@ -126,6 +129,31 @@ public abstract class IntegrationTest {
         return new TestRestTemplate(new RestTemplateBuilder()
                 .rootUri("http://localhost:" + port)
                 .defaultHeader(HttpHeaders.AUTHORIZATION, "Bearer " + token));
+    }
+
+    /** Правило заглушки, которым «кладётся» учётная система: важнее всех остальных. */
+    private static final String OUTAGE_MAPPING = "0e7a6e00-0000-4000-8000-000000000503";
+
+    /** Учётная система договоров недоступна: на любой запрос — 503, пока не вызван contractsSourceUp. */
+    protected void contractsSourceDown() {
+        String mapping = """
+                {"id": "%s", "priority": 1,
+                 "request": {"method": "ANY", "urlPattern": "/(clients|contracts)/.*"},
+                 "response": {"status": 503, "jsonBody": {"message": "maintenance"}}}""".formatted(OUTAGE_MAPPING);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ResponseEntity<String> response = contractsStubAdmin().postForEntity(
+                "/__admin/mappings", new HttpEntity<>(mapping, headers), String.class);
+        assertThat(response.getStatusCode().is2xxSuccessful()).as("учётная система положена").isTrue();
+    }
+
+    protected void contractsSourceUp() {
+        contractsStubAdmin().delete("/__admin/mappings/" + OUTAGE_MAPPING);
+    }
+
+    private static TestRestTemplate contractsStubAdmin() {
+        return new TestRestTemplate(new RestTemplateBuilder()
+                .rootUri("http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080)));
     }
 
     protected ResponseEntity<AppealDetailResponse> postAppeal(CreateAppealRequest request) {
@@ -156,7 +184,7 @@ public abstract class IntegrationTest {
     /** Страховой случай по КАСКО: маршрутизируется в урегулирование убытков. */
     protected static CreateAppealRequest cascoClaim() {
         return new CreateAppealRequest(
-                CASCO_CONTRACT, "CLAIM", "AUTO",
+                CASCO_CONTRACT, null, null, "CLAIM", "AUTO",
                 Map.of("incidentDate", "2026-09-10", "incidentPlace", "г. Москва, Ленинградское шоссе, д. 39"),
                 "ДТП на Ленинградском шоссе, повреждено крыло",
                 "Произошло ДТП с участием второго автомобиля, оформлен европротокол.");
@@ -165,7 +193,7 @@ public abstract class IntegrationTest {
     /** Техническая проблема входа: маршрутизируется в техническую поддержку. */
     protected static CreateAppealRequest loginProblem() {
         return new CreateAppealRequest(
-                CASCO_CONTRACT, "TECHNICAL", "LOGIN",
+                CASCO_CONTRACT, null, null, "TECHNICAL", "LOGIN",
                 Map.of("systemSection", "Личный кабинет", "device", "Android, Chrome", "errorText", "Неверный код"),
                 "Не могу войти в личный кабинет",
                 "При входе приходит код, но система сообщает, что он неверный.");

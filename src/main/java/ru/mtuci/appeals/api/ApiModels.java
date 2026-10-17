@@ -9,6 +9,7 @@ import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
+import ru.mtuci.appeals.domain.ContractLink;
 import ru.mtuci.appeals.domain.DeadlineCounting;
 import ru.mtuci.appeals.domain.EscalationLevel;
 import ru.mtuci.appeals.domain.EmployeeRole;
@@ -27,8 +28,16 @@ public final class ApiModels {
     }
 
     /** Кто клиент, подсистема узнаёт из токена, поэтому идентификатора клиента в запросе нет. */
+    /**
+     * contractId — договор из списка. Если список договоров загрузить не удалось, клиент
+     * указывает вид страхования (productCode) и, по желанию, номер договора (решение 29).
+     * productCode передаётся и вместе с договором: на случай, если учётная система
+     * откажет в момент отправки.
+     */
     public record CreateAppealRequest(
-            @NotNull UUID contractId,
+            UUID contractId,
+            @Size(max = 30) String productCode,
+            @Size(max = 80) String policyNumber,
             @NotBlank @Size(max = 50) String category,
             @NotBlank @Size(max = 60) String subcategory,
             @NotNull Map<String, String> details,
@@ -135,8 +144,15 @@ public final class ApiModels {
             List<String> roles,
             UUID counterpartyId,
             DepartmentResponse department,
-            List<ContractResponse> contracts
+            List<ContractResponse> contracts,
+            boolean contractsUnavailable
     ) {
+    }
+
+    public record ProductResponse(String code, String label) {
+    }
+
+    public record ChooseContractRequest(@NotNull UUID contractId) {
     }
 
     public record EmployeeResponse(
@@ -179,6 +195,7 @@ public final class ApiModels {
             Instant deadlineAt,
             LocalDate legalDeadline,
             EscalationLevel escalationLevel,
+            ContractLink contractLink,
             AppealOutcome outcome,
             Instant createdAt,
             Instant updatedAt
@@ -248,6 +265,9 @@ public final class ApiModels {
             int deadlineExtendedDays,
             String deadlineExtensionReason,
             EscalationLevel escalationLevel,
+            ContractLink contractLink,
+            ProductResponse requestedProduct,
+            String requestedPolicyNumber,
             AppealOutcome outcome,
             Instant resolvedAt,
             Instant createdAt,

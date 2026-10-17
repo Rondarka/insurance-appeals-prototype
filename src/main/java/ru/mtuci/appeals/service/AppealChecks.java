@@ -32,6 +32,11 @@ public class AppealChecks {
     public List<CheckResponse> run(Appeal appeal, Map<String, String> details, List<Appeal> clientAppeals) {
         List<CheckResponse> checks = new ArrayList<>();
         ContractSnapshot contract = appeal.getContract();
+        if (contract == null) {
+            checks.add(warning("CONTRACT_NOT_LINKED",
+                    "Договор ещё не привязан — проверки покрытия и статуса появятся после привязки"));
+            return checks;
+        }
 
         String incident = details.get("incidentDate");
         if (incident != null) {
@@ -45,7 +50,8 @@ public class AppealChecks {
 
         List<String> repeats = clientAppeals.stream()
                 .filter(other -> !other.getId().equals(appeal.getId()))
-                .filter(other -> other.getContract().getContractId().equals(contract.getContractId()))
+                .filter(other -> other.getContract() != null
+                        && other.getContract().getContractId().equals(contract.getContractId()))
                 .filter(other -> other.getCategory().equals(appeal.getCategory()))
                 .filter(other -> other.getCreatedAt().isBefore(appeal.getCreatedAt())
                         && other.getCreatedAt().isAfter(appeal.getCreatedAt().minus(REPEAT_WINDOW)))

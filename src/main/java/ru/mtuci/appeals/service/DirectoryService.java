@@ -9,6 +9,7 @@ import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.Employee;
 import ru.mtuci.appeals.integration.ContractsClient;
+import ru.mtuci.appeals.integration.ContractSourceUnavailableException;
 import ru.mtuci.appeals.integration.ExternalContract;
 import ru.mtuci.appeals.repository.DepartmentRepository;
 import ru.mtuci.appeals.security.CurrentUser;
@@ -29,6 +30,16 @@ public class DirectoryService {
 
     /** Профиль по токену: клиенту — его договоры, сотруднику — его подразделение. */
     public MeResponse me(CurrentUser user) {
+        // учётная система лежит — кабинет всё равно открывается, обращение подаётся по виду страхования
+        List<ContractResponse> contracts = List.of();
+        boolean contractsUnavailable = false;
+        if (user.isClient()) {
+            try {
+                contracts = contractsOf(user.requireCounterparty());
+            } catch (ContractSourceUnavailableException exception) {
+                contractsUnavailable = true;
+            }
+        }
         return new MeResponse(
                 user.subject(),
                 user.name(),
@@ -38,7 +49,8 @@ public class DirectoryService {
                 user.isEmployee() && user.departmentCode() != null
                         ? departmentRepository.findByCode(user.departmentCode()).map(this::toDepartment).orElse(null)
                         : null,
-                user.isClient() ? contractsOf(user.requireCounterparty()) : List.of()
+                contracts,
+                contractsUnavailable
         );
     }
 
@@ -51,6 +63,9 @@ public class DirectoryService {
     }
 
     public ContractResponse toContract(ContractSnapshot contract) {
+        if (contract == null) {
+            return null;
+        }
         return new ContractResponse(
                 contract.getContractId(),
                 contract.getPolicyNumber(),

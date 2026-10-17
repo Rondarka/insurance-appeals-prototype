@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AddMessageRequest;
+import ru.mtuci.appeals.api.ApiModels.ProductResponse;
+import ru.mtuci.appeals.api.ApiModels.ChooseContractRequest;
+import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
@@ -38,6 +41,7 @@ import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.AttachmentService;
+import ru.mtuci.appeals.service.ContractLinkService;
 import ru.mtuci.appeals.service.DirectoryService;
 import ru.mtuci.appeals.service.TransferService;
 
@@ -58,17 +62,20 @@ public class AppealController {
     private final DirectoryService directoryService;
     private final TransferService transferService;
     private final AppealFormPolicy formPolicy;
+    private final ContractLinkService contractLinkService;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
                             DirectoryService directoryService,
                             TransferService transferService,
-                            AppealFormPolicy formPolicy) {
+                            AppealFormPolicy formPolicy,
+                            ContractLinkService contractLinkService) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
         this.transferService = transferService;
         this.formPolicy = formPolicy;
+        this.contractLinkService = contractLinkService;
     }
 
     @GetMapping("/me")
@@ -144,6 +151,34 @@ public class AppealController {
             @PathVariable UUID id,
             @Valid @RequestBody ResolveAppealRequest request) {
         return appealService.resolve(user, id, request);
+    }
+
+    /** Виды страхования — когда договоры клиента загрузить не удалось. */
+    @GetMapping("/products")
+    List<ProductResponse> products() {
+        return formPolicy.products();
+    }
+
+    /** Договоры на выбор, если подходит несколько или ни одного (решение 29). */
+    @GetMapping("/appeals/{id}/contract-candidates")
+    List<ContractResponse> contractCandidates(CurrentUser user, @PathVariable UUID id) {
+        return contractLinkService.candidates(user, id);
+    }
+
+    @PostMapping("/appeals/{id}/contract")
+    AppealDetailResponse chooseContract(
+            CurrentUser user,
+            @PathVariable UUID id,
+            @Valid @RequestBody ChooseContractRequest request) {
+        contractLinkService.choose(user, id, request.contractId());
+        return appealService.get(user, id);
+    }
+
+    /** Сотрудник не ждёт фоновой попытки: учётная система уже работает. */
+    @PostMapping("/appeals/{id}/contract/link")
+    AppealDetailResponse linkContractNow(CurrentUser user, @PathVariable UUID id) {
+        contractLinkService.linkNow(user, id);
+        return appealService.get(user, id);
     }
 
     @PostMapping("/appeals/{id}/extend-deadline")

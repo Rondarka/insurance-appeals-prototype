@@ -50,6 +50,8 @@ function renderOverview() {
         ["Срок по закону истекает", count(a => isEscalated(a) && a.escalationLevel === "AT_RISK"),
             count(a => isEscalated(a) && a.escalationLevel === "AT_RISK") ? "soon" : ""],
         ["Просрочено по закону", count(isLegallyOverdue), count(isLegallyOverdue) ? "late" : ""],
+        ["Ждут договора", count(a => a.contractLink && a.contractLink !== "LINKED"),
+            count(a => a.contractLink && a.contractLink !== "LINKED") ? "soon" : ""],
         ["Решено и закрыто", count(a => ["RESOLVED", "CLOSED"].includes(a.status)), ""]
     ];
     $("#metrics").innerHTML = metrics.map(([label, value, tone]) =>
@@ -121,6 +123,10 @@ $("#admin-list").addEventListener("click", event => {
     const item = event.target.closest("[data-appeal]");
     if (item) openCard(item.dataset.appeal).catch(error => showToast(error.message, true));
 });
+
+async function afterContractLinked(id) {
+    await openCard(id);
+}
 
 async function openCard(id) {
     const appeal = await api(`/api/appeals/${id}`);

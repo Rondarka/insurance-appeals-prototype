@@ -251,6 +251,8 @@ label.attach-button { position: relative; display: inline-flex; padding-left: 0;
 .attach-button input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .attach-button:focus-within { outline: 2px solid var(--blue); outline-offset: 2px; }
 .bubble .files { margin-top: 8px; }
+.policy-field { margin-top: 12px; max-width: 360px; }
+.choose-contract { margin-bottom: 16px; }
 .resolve-form { padding: 14px; border: 1px solid var(--blue); border-radius: var(--radius); background: var(--blue-soft); }
 .resolve-form h4 { margin-top: 0; color: var(--ink); }
 .small-text { font-size: 13px; }

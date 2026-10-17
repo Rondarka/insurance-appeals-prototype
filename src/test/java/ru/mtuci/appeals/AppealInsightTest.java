@@ -78,7 +78,7 @@ class AppealInsightTest extends IntegrationTest {
 
     private static CreateAppealRequest propertyClaim(String incidentDate) {
         return new CreateAppealRequest(
-                PROPERTY_CONTRACT, "CLAIM", "PROPERTY",
+                PROPERTY_CONTRACT, null, null, "CLAIM", "PROPERTY",
                 Map.of("incidentDate", incidentDate, "incidentPlace", "д. Берёзки, ул. Садовая, д. 7"),
                 "Протечка кровли", "После ливня протекла крыша над спальней.");
     }

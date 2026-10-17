@@ -340,6 +340,7 @@ function hasDraft(container) {
 }
 
 function renderContract(contract) {
+    if (!contract) return `<p class="muted">Договор ещё не привязан</p>`;
     return `
         <dl class="kv">
             <dt>Договор</dt><dd>${escapeHtml(contract.policyNumber)} · ${escapeHtml(contract.insuranceType)}</dd>
@@ -408,7 +409,71 @@ async function loadTerms(appealId, target) {
 }
 
 /** Блоки «Договор» и «История клиента» — общие для сотрудника и администратора. */
-function renderContractSection(appeal) {
+// ---------- договор, привязанный позже (решение 29) ----------
+
+const CONTRACT_LINK_TEXT = {
+    PENDING: "Учётная система договоров была недоступна — договор подберётся автоматически, когда она заработает.",
+    NEEDS_CHOICE: "Подходит несколько договоров — клиенту предложено выбрать. Можно выбрать за него.",
+    NOT_FOUND: "Договор указанного вида у клиента не найден — выберите из его договоров."
+};
+
+function requestedContractText(appeal) {
+    if (!appeal.requestedProduct) return "";
+    return `<p class="muted small-text">Клиент указал: ${escapeHtml(appeal.requestedProduct.label)}${appeal.requestedPolicyNumber
+        ? `, номер ${escapeHtml(appeal.requestedPolicyNumber)}` : ""}</p>`;
+}
+
+/** Договор ещё не привязан: что происходит и что может сделать сотрудник отдела. */
+function renderPendingContract(appeal, canWork) {
+    const action = !canWork ? ""
+        : appeal.contractLink === "PENDING"
+            ? `<button type="button" class="btn ghost small" data-link-now="${appeal.id}">Привязать сейчас</button>`
+            : `<button type="button" class="btn ghost small" data-load-candidates="${appeal.id}">Выбрать договор</button>`;
+    return `
+        <h4>Договор</h4>
+        <p class="notice small">${CONTRACT_LINK_TEXT[appeal.contractLink] || "Договор не привязан"}</p>
+        ${requestedContractText(appeal)}
+        <div id="candidates-${appeal.id}"></div>
+        ${action}`;
+}
+
+async function loadCandidates(appealId, target) {
+    const contracts = await api(`/api/appeals/${appealId}/contract-candidates`);
+    target.innerHTML = contracts.length ? `<div class="choice-grid compact">${contracts.map(contract => `
+        <button type="button" class="choice" data-choose-contract="${contract.id}" data-for-appeal="${appealId}">
+            <strong>${escapeHtml(contract.insuranceType)} · ${escapeHtml(contract.policyNumber)}</strong>
+            <small>${escapeHtml(contract.insuredObject)}</small>
+            <small>${formatDate(contract.validFrom)} – ${formatDate(contract.validTo)}</small>
+        </button>`).join("")}</div>` : `<p class="muted">В учётной системе у клиента нет договоров</p>`;
+}
+
+// после привязки страница перерисовывает обращение сама — afterContractLinked у каждой своя
+document.addEventListener("click", event => {
+    const linkNow = event.target.closest("[data-link-now]");
+    const load = event.target.closest("[data-load-candidates]");
+    const choose = event.target.closest("[data-choose-contract]");
+    (async () => {
+        if (linkNow) {
+            const appeal = await api(`/api/appeals/${linkNow.dataset.linkNow}/contract/link`, {method: "POST"});
+            showToast(appeal.contract ? `Договор привязан: ${appeal.contract.policyNumber}` : "Подходит несколько договоров — выберите");
+            await afterContractLinked(appeal.id);
+        }
+        if (load) {
+            await loadCandidates(load.dataset.loadCandidates, document.getElementById(`candidates-${load.dataset.loadCandidates}`));
+            load.remove();
+        }
+        if (choose) {
+            const appeal = await api(`/api/appeals/${choose.dataset.forAppeal}/contract`, {
+                method: "POST", body: JSON.stringify({contractId: choose.dataset.chooseContract})
+            });
+            showToast(`Договор привязан: ${appeal.contract.policyNumber}`);
+            await afterContractLinked(appeal.id);
+        }
+    })().catch(error => showToast(error.message, true));
+});
+
+function renderContractSection(appeal, canWork = false) {
+    if (!appeal.contract) return renderPendingContract(appeal, canWork);
     return `
         <h4>Договор</h4>${renderContract(appeal.contract)}
         <div id="terms-${appeal.id}"></div>

@@ -3,6 +3,7 @@ package ru.mtuci.appeals.service;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Component;
 import ru.mtuci.appeals.domain.Appeal;
+import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 import ru.mtuci.appeals.repository.TransferRequestRepository;
 import ru.mtuci.appeals.security.CurrentUser;
@@ -33,6 +34,10 @@ public class AppealAccess {
             return true;
         }
         if (inDepartment(user, appeal)) {
+            return true;
+        }
+        // обращение без отдела ждёт ручной классификации — его видят руководители всех отделов
+        if (user.isSupervisor() && appeal.getStatus() == AppealStatus.NEEDS_CLASSIFICATION) {
             return true;
         }
         return user.isSupervisor() && transferRepository.existsByAppealIdAndTargetDepartmentCodeAndStatus(

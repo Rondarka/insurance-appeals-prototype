@@ -4,6 +4,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.JoinType;
+import jakarta.persistence.criteria.Predicate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
@@ -259,8 +260,12 @@ public class AppealService {
             spec = (root, query, cb) -> cb.equal(root.get("counterpartyId"), counterpartyId);
         } else {
             String ownDepartment = user.requireDepartment();
-            spec = (root, query, cb) ->
-                    cb.equal(root.join("department", JoinType.LEFT).get("code"), ownDepartment);
+            boolean supervisor = user.isSupervisor();
+            spec = (root, query, cb) -> {
+                Predicate own = cb.equal(root.join("department", JoinType.LEFT).get("code"), ownDepartment);
+                // руководителю — ещё и обращения, которые ждут ручной классификации (решение 31)
+                return supervisor ? cb.or(own, cb.equal(root.get("status"), AppealStatus.NEEDS_CLASSIFICATION)) : own;
+            };
         }
         if (status != null) {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));

@@ -9,6 +9,8 @@ import java.util.List;
  */
 public enum AppealStatus {
     PENDING_ROUTING("Ожидает маршрутизации"),
+    /** Правила маршрутизации для типа нет — отдел выбирает руководитель (решение 31). */
+    NEEDS_CLASSIFICATION("Ручная классификация"),
     ROUTED("Назначено отделу"),
     IN_PROGRESS("В работе"),
     WAITING_CUSTOMER("Ждём ответа клиента"),
@@ -27,7 +29,7 @@ public enum AppealStatus {
 
     public List<AppealStatus> next() {
         return switch (this) {
-            case PENDING_ROUTING, CLOSED -> List.of();
+            case PENDING_ROUTING, NEEDS_CLASSIFICATION, CLOSED -> List.of();
             case ROUTED -> List.of(IN_PROGRESS);
             case IN_PROGRESS -> List.of(WAITING_CUSTOMER, RESOLVED);
             // клиент не ответил, но вопрос решён без него — можно закрыть и так

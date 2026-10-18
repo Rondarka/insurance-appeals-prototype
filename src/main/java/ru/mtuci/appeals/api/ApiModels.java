@@ -164,6 +164,13 @@ public final class ApiModels {
     public record ChooseContractRequest(@NotNull UUID contractId) {
     }
 
+    public record ClassifyRequest(@NotBlank String departmentCode) {
+    }
+
+    /** Отдел, куда руководитель направил обращение: само обращение ему теперь может быть не видно. */
+    public record ClassifiedResponse(String departmentCode, String departmentName) {
+    }
+
     public record EmployeeResponse(
             UUID id,
             String fullName,

@@ -19,6 +19,8 @@ import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AddMessageRequest;
 import ru.mtuci.appeals.api.ApiModels.ProductResponse;
 import ru.mtuci.appeals.api.ApiModels.ChooseContractRequest;
+import ru.mtuci.appeals.api.ApiModels.ClassifiedResponse;
+import ru.mtuci.appeals.api.ApiModels.ClassifyRequest;
 import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
@@ -44,6 +46,7 @@ import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.AttachmentService;
+import ru.mtuci.appeals.service.ClassificationService;
 import ru.mtuci.appeals.service.ContractLinkService;
 import ru.mtuci.appeals.service.DirectoryService;
 import ru.mtuci.appeals.service.TransferService;
@@ -69,6 +72,7 @@ public class AppealController {
     private final ContractLinkService contractLinkService;
     private final ContractsClient contractsClient;
     private final OutboxRelay outboxRelay;
+    private final ClassificationService classificationService;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
@@ -77,7 +81,8 @@ public class AppealController {
                             AppealFormPolicy formPolicy,
                             ContractLinkService contractLinkService,
                             ContractsClient contractsClient,
-                            OutboxRelay outboxRelay) {
+                            OutboxRelay outboxRelay,
+                            ClassificationService classificationService) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
@@ -86,6 +91,7 @@ public class AppealController {
         this.contractLinkService = contractLinkService;
         this.contractsClient = contractsClient;
         this.outboxRelay = outboxRelay;
+        this.classificationService = classificationService;
     }
 
     @GetMapping("/me")
@@ -201,6 +207,12 @@ public class AppealController {
     AppealDetailResponse linkContractNow(CurrentUser user, @PathVariable UUID id) {
         contractLinkService.linkNow(user, id);
         return appealService.get(user, id);
+    }
+
+    /** Ручная классификация: отдел выбирает руководитель (решение 31). */
+    @PostMapping("/appeals/{id}/classify")
+    ClassifiedResponse classify(CurrentUser user, @PathVariable UUID id, @Valid @RequestBody ClassifyRequest request) {
+        return classificationService.classify(user, id, request.departmentCode());
     }
 
     @PostMapping("/appeals/{id}/extend-deadline")

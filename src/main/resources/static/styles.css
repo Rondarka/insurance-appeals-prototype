@@ -152,6 +152,7 @@ textarea { resize: vertical; }
 .status-ROUTED { color: var(--blue); background: var(--blue-soft); }
 .status-IN_PROGRESS { color: var(--amber); background: var(--amber-soft); }
 .status-WAITING_CUSTOMER { color: var(--violet); background: var(--violet-soft); }
+.status-NEEDS_CLASSIFICATION { color: var(--red); background: var(--red-soft); }
 .status-RESOLVED, .contract-ACTIVE { color: var(--green); background: var(--green-soft); }
 .contract-TERMINATED, .contract-EXPIRED { color: var(--red); background: var(--red-soft); }
 

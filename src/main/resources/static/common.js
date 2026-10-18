@@ -5,6 +5,7 @@ const session = {me: null, schema: {categories: []}};
 
 const STATUS_LABELS = {
     PENDING_ROUTING: "Маршрутизация",
+    NEEDS_CLASSIFICATION: "Ручная классификация",
     ROUTED: "Новое",
     IN_PROGRESS: "В работе",
     WAITING_CUSTOMER: "Ждём клиента",
@@ -40,6 +41,9 @@ const EVENT_LABELS = {
     APPEAL_TRANSFER_APPROVED: "Передача согласована",
     APPEAL_TRANSFER_REJECTED: "Передача отклонена",
     APPEAL_DEADLINE_EXTENDED: "Срок по закону продлён",
+    APPEAL_CLASSIFICATION_REQUIRED: "Нужна ручная классификация",
+    APPEAL_CONTRACT_LINKED: "Договор привязан",
+    APPEAL_CONTRACT_CHOICE_REQUIRED: "Нужно выбрать договор",
     APPEAL_SLA_BREACHING: "Срок по закону истекает",
     APPEAL_SLA_BREACHED: "Срок по закону нарушен"
 };

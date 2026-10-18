@@ -17,6 +17,7 @@ import ru.mtuci.appeals.repository.RoutingRuleRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 public class RoutingConsumer {
@@ -49,15 +50,33 @@ public class RoutingConsumer {
             return;
         }
 
-        RoutingRule rule = routingRuleRepository
+        Optional<RoutingRule> found = routingRuleRepository
                 .findByCategoryAndSubcategory(appeal.getCategory(), appeal.getSubcategory())
                 .or(() -> routingRuleRepository.findByCategoryAndSubcategory(
-                        appeal.getCategory(), "GENERAL"))
-                .orElseThrow(() -> new IllegalStateException(
-                        "No routing rule for category " + appeal.getCategory()
-                                + " and subcategory " + appeal.getSubcategory()));
-
+                        appeal.getCategory(), "GENERAL"));
         Instant now = Instant.now();
+        if (found.isEmpty()) {
+            // схема формы — данные (решение 24): новый тип мог появиться раньше правила для него.
+            // Повтор не поможет, а в очередь «мёртвых» писем обращение уходить не должно (решение 31)
+            appeal.requireClassification();
+            historyRepository.save(new AppealHistory(
+                    appeal,
+                    "CLASSIFICATION_REQUIRED",
+                    "Нет правила маршрутизации для «" + appeal.getCategory() + " / " + appeal.getSubcategory()
+                            + "» — отдел выберет руководитель",
+                    "Сервис маршрутизации",
+                    now
+            ));
+            eventPublisher.publishEvent(new AppealDomainEvent(
+                    "APPEAL_CLASSIFICATION_REQUIRED",
+                    appeal.getId(),
+                    "appeal.classification.required",
+                    Map.of("category", appeal.getCategory(), "subcategory", appeal.getSubcategory())
+            ));
+            return;
+        }
+        RoutingRule rule = found.get();
+
         Instant deadline = now.plus(rule.getSlaHours(), ChronoUnit.HOURS);
         appeal.routeTo(rule.getDepartment(), rule.getPriority(), deadline, now);
 

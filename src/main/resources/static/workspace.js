@@ -5,7 +5,9 @@ const GROUPS = [
     {key: "new", label: "Новые", statuses: ["ROUTED"]},
     {key: "work", label: "В работе", statuses: ["IN_PROGRESS"]},
     {key: "waiting", label: "Ждут клиента", statuses: ["WAITING_CUSTOMER"]},
-    {key: "done", label: "Решённые", statuses: ["RESOLVED", "CLOSED"]}
+    {key: "done", label: "Решённые", statuses: ["RESOLVED", "CLOSED"]},
+    // правила маршрутизации нет — отдел выбирает руководитель (решение 31)
+    {key: "classify", label: "Классификация", statuses: ["NEEDS_CLASSIFICATION"], supervisorOnly: true}
 ];
 
 const ws = {appeals: [], group: "new", openedId: null, departments: [], transferForm: false, resolveForm: false, extendForm: false};
@@ -52,7 +54,7 @@ function groupOf(status) {
 }
 
 function renderQueue() {
-    $("#status-tabs").innerHTML = GROUPS.map(group => {
+    $("#status-tabs").innerHTML = GROUPS.filter(group => !group.supervisorOnly || isSupervisor()).map(group => {
         const count = ws.appeals.filter(appeal => group.statuses.includes(appeal.status)).length;
         return `<button type="button" class="status-tab ${group.key === ws.group ? "active" : ""}" data-group="${group.key}">
             ${group.label}<span class="count">${count}</span></button>`;
@@ -136,6 +138,18 @@ function renderCard(appeal) {
                     </label>
                     <button class="btn primary" type="submit">Отправить руководителю</button>
                 </form>` : ""}
+        </div>` : appeal.status === "NEEDS_CLASSIFICATION" && isSupervisor() ? `
+        <div class="actions">
+            <h4>Ручная классификация</h4>
+            <p class="notice small">Для типа «${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}» нет правила
+                маршрутизации. Выберите отдел — обращение уйдёт туда с обычным сроком отдела.</p>
+            <form class="transfer-form" data-classify>
+                <label>Отдел
+                    <select name="departmentCode">${ws.departments
+                        .map(item => `<option value="${item.code}">${escapeHtml(item.name)}</option>`).join("")}</select>
+                </label>
+                <button class="btn primary" type="submit">Направить в отдел</button>
+            </form>
         </div>` : `<p class="notice small">Обращение другого отдела — только просмотр.</p>`;
 
     return `
@@ -283,6 +297,19 @@ $("#card").addEventListener("submit", async event => {
             });
             ws.resolveForm = false;
             showToast("Ответ отправлен клиенту, обращение решено");
+        }
+        if (event.target.matches("[data-classify]")) {
+            const result = await api(`/api/appeals/${ws.openedId}/classify`, {
+                method: "POST", body: JSON.stringify({departmentCode: form.get("departmentCode")})
+            });
+            showToast(`Направлено в отдел «${result.departmentName}»`);
+            if (result.departmentCode !== session.me.department?.code) {
+                // обращение ушло в чужой отдел — в своей очереди его больше нет
+                ws.openedId = null;
+                $("#card").innerHTML = `<p class="empty">Выберите обращение в списке слева</p>`;
+                await loadQueue();
+                return;
+            }
         }
         if (event.target.matches("[data-extend]")) {
             const updated = await api(`/api/appeals/${ws.openedId}/extend-deadline`, {

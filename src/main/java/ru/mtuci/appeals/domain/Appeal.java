@@ -258,6 +258,14 @@ public class Appeal {
         return true;
     }
 
+    /** Правила маршрутизации нет: обращение ждёт, пока руководитель выберет отдел. Клиенту это не видно. */
+    public void requireClassification() {
+        if (status != AppealStatus.PENDING_ROUTING) {
+            throw new IllegalStateException("Классификация нужна только обращению, которое ещё не маршрутизировано");
+        }
+        this.status = AppealStatus.NEEDS_CLASSIFICATION;
+    }
+
     public void routeTo(Department department, AppealPriority priority, Instant deadlineAt, Instant now) {
         this.department = department;
         this.priority = priority;

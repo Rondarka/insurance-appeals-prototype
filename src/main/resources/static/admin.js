@@ -65,6 +65,8 @@ function renderOverview() {
         ["Срок по закону истекает", count(a => isEscalated(a) && a.escalationLevel === "AT_RISK"),
             count(a => isEscalated(a) && a.escalationLevel === "AT_RISK") ? "soon" : ""],
         ["Просрочено по закону", count(isLegallyOverdue), count(isLegallyOverdue) ? "late" : ""],
+        ["Ждут классификации", count(a => a.status === "NEEDS_CLASSIFICATION"),
+            count(a => a.status === "NEEDS_CLASSIFICATION") ? "late" : ""],
         ["Ждут договора", count(a => a.contractLink && a.contractLink !== "LINKED"),
             count(a => a.contractLink && a.contractLink !== "LINKED") ? "soon" : ""],
         ["Решено и закрыто", count(a => ["RESOLVED", "CLOSED"].includes(a.status)), ""]

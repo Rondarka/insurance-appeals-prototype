@@ -32,9 +32,12 @@ public class TransferRequest {
     @JoinColumn(name = "target_department_id", nullable = false)
     private Department targetDepartment;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "requested_by_id", nullable = false)
-    private Employee requestedBy;
+    /** Кто запросил передачу: идентификатор сотрудника в IdP и имя на момент запроса. */
+    @Column(name = "requested_by_subject", nullable = false, length = 100)
+    private String requestedBySubject;
+
+    @Column(name = "requested_by_name", nullable = false, length = 160)
+    private String requestedByName;
 
     @Column(nullable = false, length = 500)
     private String reason;
@@ -43,9 +46,11 @@ public class TransferRequest {
     @Column(nullable = false, length = 30)
     private TransferRequestStatus status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewed_by_id")
-    private Employee reviewedBy;
+    @Column(name = "reviewed_by_subject", length = 100)
+    private String reviewedBySubject;
+
+    @Column(name = "reviewed_by_name", length = 160)
+    private String reviewedByName;
 
     @Column(name = "review_comment", length = 500)
     private String reviewComment;
@@ -60,28 +65,31 @@ public class TransferRequest {
     }
 
     public TransferRequest(UUID id, Appeal appeal, Department sourceDepartment,
-                           Department targetDepartment, Employee requestedBy,
+                           Department targetDepartment, String requestedBySubject, String requestedByName,
                            String reason, Instant createdAt) {
         this.id = id;
         this.appeal = appeal;
         this.sourceDepartment = sourceDepartment;
         this.targetDepartment = targetDepartment;
-        this.requestedBy = requestedBy;
+        this.requestedBySubject = requestedBySubject;
+        this.requestedByName = requestedByName;
         this.reason = reason;
         this.status = TransferRequestStatus.PENDING;
         this.createdAt = createdAt;
     }
 
-    public void approve(Employee reviewer, String comment, Instant now) {
+    public void approve(String reviewerSubject, String reviewerName, String comment, Instant now) {
         this.status = TransferRequestStatus.APPROVED;
-        this.reviewedBy = reviewer;
+        this.reviewedBySubject = reviewerSubject;
+        this.reviewedByName = reviewerName;
         this.reviewComment = comment;
         this.reviewedAt = now;
     }
 
-    public void reject(Employee reviewer, String comment, Instant now) {
+    public void reject(String reviewerSubject, String reviewerName, String comment, Instant now) {
         this.status = TransferRequestStatus.REJECTED;
-        this.reviewedBy = reviewer;
+        this.reviewedBySubject = reviewerSubject;
+        this.reviewedByName = reviewerName;
         this.reviewComment = comment;
         this.reviewedAt = now;
     }
@@ -102,8 +110,12 @@ public class TransferRequest {
         return targetDepartment;
     }
 
-    public Employee getRequestedBy() {
-        return requestedBy;
+    public String getRequestedBySubject() {
+        return requestedBySubject;
+    }
+
+    public String getRequestedByName() {
+        return requestedByName;
     }
 
     public String getReason() {
@@ -114,8 +126,12 @@ public class TransferRequest {
         return status;
     }
 
-    public Employee getReviewedBy() {
-        return reviewedBy;
+    public String getReviewedBySubject() {
+        return reviewedBySubject;
+    }
+
+    public String getReviewedByName() {
+        return reviewedByName;
     }
 
     public String getReviewComment() {

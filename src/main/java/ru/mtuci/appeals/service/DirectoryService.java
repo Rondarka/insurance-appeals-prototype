@@ -3,11 +3,9 @@ package ru.mtuci.appeals.service;
 import org.springframework.stereotype.Service;
 import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
-import ru.mtuci.appeals.api.ApiModels.EmployeeResponse;
 import ru.mtuci.appeals.api.ApiModels.MeResponse;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
-import ru.mtuci.appeals.domain.Employee;
 import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.integration.ContractSourceUnavailableException;
 import ru.mtuci.appeals.integration.ExternalContract;
@@ -76,18 +74,6 @@ public class DirectoryService {
                 contract.getValidTo(),
                 contract.getTerminatedOn(),
                 contract.getStatus()
-        );
-    }
-
-    public EmployeeResponse toEmployee(Employee employee) {
-        if (employee == null) {
-            return null;
-        }
-        return new EmployeeResponse(
-                employee.getId(),
-                employee.getFullName(),
-                employee.getRole(),
-                toDepartment(employee.getDepartment())
         );
     }
 

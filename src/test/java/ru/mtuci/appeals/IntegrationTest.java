@@ -61,7 +61,7 @@ public abstract class IntegrationTest {
     protected static final TestUser PETR = TestUser.client(
             "c0a00001-0000-0000-0000-000000000002", "Пётр Иванов", "petr@example.ru", PETR_COUNTERPARTY);
 
-    // сотрудники — идентификаторы IdP совпадают со справочником сотрудников (миграция V4)
+    // сотрудники — только из токена: идентификатор IdP, имя, роль и подразделение (решение 22)
     protected static final TestUser SUPPORT_SPECIALIST = TestUser.employee(
             UUID.fromString("31111111-1111-1111-1111-111111111111"), "Елена Соколова", "SPECIALIST", "SUPPORT");
     protected static final TestUser SUPPORT_SUPERVISOR = TestUser.employee(

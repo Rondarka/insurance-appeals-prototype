@@ -178,9 +178,9 @@ Server: принимает токен из заголовка `Authorization: Be
 | `APPEAL_DEADLINE_EXTENDED` | `appeal.deadline.extended` | руководитель продлил срок по закону | `days`, `legalDeadline` |
 | `APPEAL_CONTRACT_LINKED` | `appeal.contract.linked` | договор привязан после регистрации (решение 29) | `productCode`, `policyNumber` |
 | `APPEAL_CONTRACT_CHOICE_REQUIRED` | `appeal.contract.choice_required` | подходит несколько договоров или ни одного — клиенту нужно выбрать | `reason`: `NEEDS_CHOICE` или `NOT_FOUND` |
-| `APPEAL_TRANSFER_REQUESTED` | `appeal.transfer.requested.<целевой отдел>` | запрошена передача | `fromDepartment`, `toDepartment`, `requestedBy` |
-| `APPEAL_TRANSFER_APPROVED` | `appeal.transfer.approved.<целевой отдел>` | передача согласована | `fromDepartment`, `toDepartment`, `reviewedBy` |
-| `APPEAL_TRANSFER_REJECTED` | `appeal.transfer.rejected.<целевой отдел>` | передача отклонена | `fromDepartment`, `toDepartment`, `reviewedBy` |
+| `APPEAL_TRANSFER_REQUESTED` | `appeal.transfer.requested.<целевой отдел>` | запрошена передача | `fromDepartment`, `toDepartment`, `requestedBy` — идентификатор сотрудника в IdP |
+| `APPEAL_TRANSFER_APPROVED` | `appeal.transfer.approved.<целевой отдел>` | передача согласована | `fromDepartment`, `toDepartment`, `reviewedBy` — идентификатор сотрудника в IdP |
+| `APPEAL_TRANSFER_REJECTED` | `appeal.transfer.rejected.<целевой отдел>` | передача отклонена | `fromDepartment`, `toDepartment`, `reviewedBy` — идентификатор сотрудника в IdP |
 | `APPEAL_SLA_BREACHING` | `appeal.sla.breaching.<отдел>` | до срока по закону 2 рабочих дня или меньше (решение 14) | `departmentCode`, `legalDeadline`, `priority` |
 | `APPEAL_SLA_BREACHED` | `appeal.sla.breached.<отдел>` | срок по закону истёк без ответа по существу | `departmentCode`, `legalDeadline`, `priority` |
 
@@ -253,10 +253,9 @@ date,kind
 
 ## Отклонения текущей реализации от контракта
 
-Контракт описывает целевое состояние. Сейчас прототип расходится с ним в следующем — это
-и есть работа ближайших блоков:
+Отклонений нет. Последние два устранены 18.10.2026:
 
-| Отклонение | Чем устраняется |
-|---|---|
-| События передачи содержат ФИО сотрудника (`requestedBy`, `reviewedBy`) — это персональные данные | заменить идентификатором сотрудника |
-| Сотрудники заведены в справочнике подсистемы, идентификатор в IdP совпадает с идентификатором в справочнике | хранить в передаче идентификатор и имя сотрудника из токена на момент действия, справочник удалить |
+- в событиях передачи вместо ФИО сотрудника — его идентификатор в IdP: персональные данные
+  сотрудников наружу не уходят;
+- справочник сотрудников удалён: кто действовал, подсистема берёт из токена и хранит в передаче
+  идентификатор и имя на момент действия — так же, как имя клиента в обращении.

@@ -6,18 +6,17 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
+import ru.mtuci.appeals.api.ApiModels.StaffResponse;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.Department;
-import ru.mtuci.appeals.domain.Employee;
 import ru.mtuci.appeals.domain.TransferRequest;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 import ru.mtuci.appeals.messaging.AppealDomainEvent;
 import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealRepository;
 import ru.mtuci.appeals.repository.DepartmentRepository;
-import ru.mtuci.appeals.repository.EmployeeRepository;
 import ru.mtuci.appeals.repository.RoutingRuleRepository;
 import ru.mtuci.appeals.repository.TransferRequestRepository;
 import ru.mtuci.appeals.security.CurrentUser;
@@ -26,6 +25,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
@@ -34,7 +34,6 @@ public class TransferService {
     private final TransferRequestRepository transferRepository;
     private final AppealRepository appealRepository;
     private final DepartmentRepository departmentRepository;
-    private final EmployeeRepository employeeRepository;
     private final RoutingRuleRepository routingRuleRepository;
     private final AppealHistoryRepository historyRepository;
     private final ApplicationEventPublisher eventPublisher;
@@ -44,7 +43,6 @@ public class TransferService {
     public TransferService(TransferRequestRepository transferRepository,
                            AppealRepository appealRepository,
                            DepartmentRepository departmentRepository,
-                           EmployeeRepository employeeRepository,
                            RoutingRuleRepository routingRuleRepository,
                            AppealHistoryRepository historyRepository,
                            ApplicationEventPublisher eventPublisher,
@@ -53,7 +51,6 @@ public class TransferService {
         this.transferRepository = transferRepository;
         this.appealRepository = appealRepository;
         this.departmentRepository = departmentRepository;
-        this.employeeRepository = employeeRepository;
         this.routingRuleRepository = routingRuleRepository;
         this.historyRepository = historyRepository;
         this.eventPublisher = eventPublisher;
@@ -66,7 +63,7 @@ public class TransferService {
         Appeal appeal = findAppeal(appealId);
         // передать можно только обращение своего подразделения — подразделение из токена
         access.checkWork(user, appeal);
-        Employee employee = findEmployee(user.employeeId());
+        String employeeName = staffName(user);
         Department source = appeal.getDepartment();
         Department target = departmentRepository.findByCode(request.departmentCode())
                 .orElseThrow(() -> new IllegalArgumentException(
@@ -85,7 +82,8 @@ public class TransferService {
                 appeal,
                 source,
                 target,
-                employee,
+                user.subject(),
+                employeeName,
                 request.reason().trim(),
                 now
         ));
@@ -95,7 +93,7 @@ public class TransferService {
                 "TRANSFER_REQUESTED",
                 "Запрошена передача из отдела «" + source.getName() + "» в отдел «"
                         + target.getName() + "». Причина: " + request.reason().trim(),
-                employee.getFullName(),
+                employeeName,
                 now
         ));
 
@@ -106,7 +104,8 @@ public class TransferService {
                 Map.of(
                         "fromDepartment", source.getCode(),
                         "toDepartment", target.getCode(),
-                        "requestedBy", employee.getFullName()
+                        // в событии — идентификатор сотрудника, а не ФИО: персональные данные наружу не уходят
+                        "requestedBy", user.subject()
                 )
         ));
 
@@ -136,7 +135,7 @@ public class TransferService {
             throw new AccessDeniedException(
                     "Рассматривать передачу может только руководитель принимающего подразделения");
         }
-        Employee reviewer = findEmployee(user.employeeId());
+        String reviewerName = staffName(user);
 
         Appeal appeal = transfer.getAppeal();
         if (!appeal.getDepartment().getId().equals(transfer.getSourceDepartment().getId())) {
@@ -155,27 +154,27 @@ public class TransferService {
                     now.plusSeconds(slaHours * 3600L),
                     now
             );
-            transfer.approve(reviewer, comment, now);
+            transfer.approve(user.subject(), reviewerName, comment, now);
             historyRepository.save(new AppealHistory(
                     appeal,
                     "TRANSFER_APPROVED",
                     "Руководитель отдела «" + transfer.getTargetDepartment().getName()
                             + "» согласовал передачу. Комментарий: " + comment,
-                    reviewer.getFullName(),
+                    reviewerName,
                     now
             ));
-            publishReviewEvent(transfer, reviewer, "APPROVED");
+            publishReviewEvent(transfer, "APPROVED");
         } else {
-            transfer.reject(reviewer, comment, now);
+            transfer.reject(user.subject(), reviewerName, comment, now);
             historyRepository.save(new AppealHistory(
                     appeal,
                     "TRANSFER_REJECTED",
                     "Руководитель отдела «" + transfer.getTargetDepartment().getName()
                             + "» отклонил передачу. Комментарий: " + comment,
-                    reviewer.getFullName(),
+                    reviewerName,
                     now
             ));
-            publishReviewEvent(transfer, reviewer, "REJECTED");
+            publishReviewEvent(transfer, "REJECTED");
         }
 
         return toResponse(transfer);
@@ -189,7 +188,7 @@ public class TransferService {
                 .toList();
     }
 
-    private void publishReviewEvent(TransferRequest transfer, Employee reviewer, String decision) {
+    private void publishReviewEvent(TransferRequest transfer, String decision) {
         String suffix = decision.toLowerCase(Locale.ROOT);
         eventPublisher.publishEvent(new AppealDomainEvent(
                 "APPEAL_TRANSFER_" + decision,
@@ -199,7 +198,7 @@ public class TransferService {
                 Map.of(
                         "fromDepartment", transfer.getSourceDepartment().getCode(),
                         "toDepartment", transfer.getTargetDepartment().getCode(),
-                        "reviewedBy", reviewer.getFullName()
+                        "reviewedBy", transfer.getReviewedBySubject()
                 )
         ));
     }
@@ -209,10 +208,9 @@ public class TransferService {
                 .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
-    private Employee findEmployee(UUID id) {
-        return employeeRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException(
-                        "Сотрудник не найден в справочнике подсистемы: " + id));
+    /** Имя сотрудника — из токена на момент действия, как имя клиента в обращении. */
+    private static String staffName(CurrentUser user) {
+        return Objects.requireNonNullElse(user.name(), user.subject());
     }
 
     private TransferRequestResponse toResponse(TransferRequest transfer) {
@@ -224,10 +222,11 @@ public class TransferService {
                 transfer.getAppeal().getCustomerName(),
                 directoryService.toDepartment(transfer.getSourceDepartment()),
                 directoryService.toDepartment(transfer.getTargetDepartment()),
-                directoryService.toEmployee(transfer.getRequestedBy()),
+                new StaffResponse(transfer.getRequestedBySubject(), transfer.getRequestedByName()),
                 transfer.getReason(),
                 transfer.getStatus(),
-                directoryService.toEmployee(transfer.getReviewedBy()),
+                transfer.getReviewedBySubject() == null ? null
+                        : new StaffResponse(transfer.getReviewedBySubject(), transfer.getReviewedByName()),
                 transfer.getReviewComment(),
                 transfer.getCreatedAt(),
                 transfer.getReviewedAt()

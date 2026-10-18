@@ -12,7 +12,6 @@ import ru.mtuci.appeals.domain.AuthorType;
 import ru.mtuci.appeals.domain.ContractLink;
 import ru.mtuci.appeals.domain.DeadlineCounting;
 import ru.mtuci.appeals.domain.EscalationLevel;
-import ru.mtuci.appeals.domain.EmployeeRole;
 import ru.mtuci.appeals.domain.TransferRequestStatus;
 
 import java.math.BigDecimal;
@@ -171,12 +170,8 @@ public final class ApiModels {
     public record ClassifiedResponse(String departmentCode, String departmentName) {
     }
 
-    public record EmployeeResponse(
-            UUID id,
-            String fullName,
-            EmployeeRole role,
-            DepartmentResponse department
-    ) {
+    /** Сотрудник, совершивший действие: идентификатор в IdP и имя на момент действия. */
+    public record StaffResponse(String id, String fullName) {
     }
 
     public record TransferRequestResponse(
@@ -187,10 +182,10 @@ public final class ApiModels {
             String customerName,
             DepartmentResponse sourceDepartment,
             DepartmentResponse targetDepartment,
-            EmployeeResponse requestedBy,
+            StaffResponse requestedBy,
             String reason,
             TransferRequestStatus status,
-            EmployeeResponse reviewedBy,
+            StaffResponse reviewedBy,
             String reviewComment,
             Instant createdAt,
             Instant reviewedAt

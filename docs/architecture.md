@@ -275,7 +275,7 @@ dead-letter срабатывает на отклонение без возвра
 
 ## Схема базы
 
-Девятнадцать таблиц:
+Восемнадцать таблиц:
 
 ```
 appeal >──── department           (counterparty_id — клиент из токена, своей таблицы нет)
@@ -286,7 +286,6 @@ appeal >──── department           (counterparty_id — клиент из
   └──< transfer_request >──── department (целевой)
 
 routing_rule ──── department      (категория + подтип → отдел, приоритет, срок)
-employee     ──── department
 event_audit                       (журнал событий, связей нет намеренно)
 
 deadline_norm >──── appeal_type_norm   (нормативные сроки по типам, решение 20)

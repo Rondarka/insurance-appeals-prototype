@@ -69,7 +69,4 @@ public record CurrentUser(
     }
 
     /** Сотрудник в справочнике подсистемы заведён под тем же идентификатором, что в IdP. */
-    public UUID employeeId() {
-        return UUID.fromString(subject);
-    }
 }

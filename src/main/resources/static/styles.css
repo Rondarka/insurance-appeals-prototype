@@ -193,7 +193,7 @@ textarea { resize: vertical; }
 
 .master-detail.active {
     display: grid;
-    grid-template-columns: 380px minmax(0, 1fr);
+    grid-template-columns: 400px minmax(0, 1fr);
     height: calc(100vh - 64px);
 }
 .master { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--line); background: var(--surface); }
@@ -218,10 +218,10 @@ textarea { resize: vertical; }
 }
 .queue-item:hover { background: var(--soft); }
 .queue-item.selected { background: var(--blue-soft); box-shadow: inset 3px 0 0 var(--blue); }
-.queue-row { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
+.queue-row { display: flex; gap: 8px; align-items: center; min-width: 0; }
 .queue-item > * { min-width: 0; }
 .master { overflow-x: hidden; }
-.queue-row strong { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.queue-row strong { flex: 1 1 auto; min-width: 0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-row.meta { justify-content: space-between; align-items: center; color: var(--muted); }
 .queue-row.meta small { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .queue-row.meta .pill, .queue-row.meta .chip { flex: none; }
@@ -254,6 +254,39 @@ label.attach-button { position: relative; display: inline-flex; padding-left: 0;
 .bubble .files { margin-top: 8px; }
 .policy-field { margin-top: 12px; max-width: 360px; }
 .integrations { margin-bottom: 12px; }
+
+/* ---------- очередь: фильтры и строка ---------- */
+
+.queue-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 12px 0; }
+.queue-tools .segmented { margin-right: 0; }
+.queue-tools input { flex: 1 1 140px; min-width: 0; padding: 7px 10px; }
+.queue-row.sub small { color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.queue-row .unassigned { color: var(--amber); }
+.badge { display: inline-block; flex: none; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600;
+    white-space: nowrap; color: var(--muted); background: var(--soft); }
+.badge.reply { color: var(--blue); background: var(--blue-soft); }
+.badge.soon { color: var(--amber); background: var(--amber-soft); }
+.badge.late { color: var(--red); background: var(--red-soft); }
+
+/* ---------- сводка «Мой день» ---------- */
+
+.summary-metrics { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.metric.clickable { text-align: left; cursor: pointer; font: inherit; color: inherit; }
+.metric.clickable:hover { border-color: var(--blue); }
+.metric.reply strong { color: var(--blue); }
+.summary-grid { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 16px; align-items: start; }
+.summary-grid h2 { margin: 0 0 12px; font-size: 17px; }
+.task-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.task { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px;
+    border: 0; border-radius: 8px; background: none; text-align: left; font: inherit; color: inherit; cursor: pointer; }
+.task:hover { background: var(--soft); }
+.task-main { display: grid; gap: 2px; min-width: 0; }
+.task-main strong, .task-main small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.stat-list li { display: flex; justify-content: space-between; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
+.summary-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
+.assign-form { display: flex; gap: 8px; margin-top: 6px; }
+.assign-form select { min-width: 0; flex: 1; }
 .integration { display: flex; align-items: center; gap: 8px; margin: 0; }
 .integration .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
 .integration.ok .dot { background: var(--green); }
@@ -465,6 +498,8 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 
 @media (max-width: 900px) {
     .client-layout { grid-template-columns: 1fr; }
+    .summary-grid { grid-template-columns: 1fr; }
+    .summary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .card-body { grid-template-columns: 1fr; }
     .side-col { border-left: 0; padding-left: 0; }
     .fields { grid-template-columns: 1fr; }

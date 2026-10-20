@@ -32,6 +32,7 @@ import ru.mtuci.appeals.api.ApiModels.ContractTermsResponse;
 import ru.mtuci.appeals.api.ApiModels.CoverageResponse;
 import ru.mtuci.appeals.api.ApiModels.RelatedAppealResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
+import ru.mtuci.appeals.api.ApiModels.StaffMemberResponse;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
@@ -62,6 +63,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -90,6 +92,7 @@ public class AppealService {
     private final AppealAccess access;
     private final DeadlineNormService normService;
     private final ProductionCalendar calendar;
+    private final StaffService staffService;
     private final AppealChecks checks;
     private final ZoneId zone;
 
@@ -110,6 +113,7 @@ public class AppealService {
                          AppealAccess access,
                          DeadlineNormService normService,
                          ProductionCalendar calendar,
+                         StaffService staffService,
                          AppealChecks checks,
                          @Value("${appeals.timezone}") String timezone) {
         this.appealRepository = appealRepository;
@@ -129,6 +133,7 @@ public class AppealService {
         this.access = access;
         this.normService = normService;
         this.calendar = calendar;
+        this.staffService = staffService;
         this.checks = checks;
         this.zone = ZoneId.of(timezone);
     }
@@ -271,10 +276,50 @@ public class AppealService {
             spec = spec.and((root, query, cb) -> cb.equal(root.get("status"), status));
         }
 
-        return appealRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"))
-                .stream()
-                .map(this::toSummary)
+        List<Appeal> appeals = appealRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
+        // одним запросом: в каких обращениях последним написал клиент — ход за сотрудником
+        Set<UUID> clientReplied = appeals.isEmpty() ? Set.of()
+                : messageRepository.findWithLastMessageBy(appeals.stream().map(Appeal::getId).toList(), AuthorType.CLIENT);
+        return appeals.stream()
+                .map(appeal -> toSummary(appeal, clientReplied.contains(appeal.getId())))
                 .toList();
+    }
+
+    /**
+     * Назначить исполнителя — руководитель отдела выбирает из сотрудников своего отдела,
+     * которые входили в подсистему (решение 32).
+     */
+    @Transactional
+    public AppealDetailResponse assign(CurrentUser user, UUID id, String subject) {
+        Appeal appeal = findAppeal(id);
+        access.checkWork(user, appeal);
+        if (!user.isSupervisor()) {
+            throw new AccessDeniedException("Назначить исполнителя может руководитель отдела");
+        }
+        if (appeal.getStatus() == AppealStatus.RESOLVED || appeal.getStatus() == AppealStatus.CLOSED) {
+            throw new IllegalStateException("Обращение уже решено");
+        }
+        StaffMemberResponse assignee = staffService.find(subject)
+                .filter(member -> member.departmentCode().equals(appeal.getDepartment().getCode()))
+                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден в отделе «"
+                        + appeal.getDepartment().getName() + "»"));
+        Instant now = Instant.now();
+        appeal.assign(assignee.id(), assignee.fullName(), now);
+        historyRepository.save(new AppealHistory(
+                appeal,
+                "ASSIGNED",
+                "Назначен исполнитель: " + assignee.fullName(),
+                Objects.requireNonNullElse(user.name(), user.subject()),
+                now
+        ));
+        eventPublisher.publishEvent(new AppealDomainEvent(
+                "APPEAL_ASSIGNED",
+                appeal.getId(),
+                "appeal.assigned." + appeal.getDepartment().getCode().toLowerCase(Locale.ROOT),
+                // наружу — идентификатор сотрудника, а не имя (решение 22)
+                Map.of("assignee", assignee.id())
+        ));
+        return toDetail(appeal);
     }
 
     @Transactional(readOnly = true)
@@ -292,7 +337,7 @@ public class AppealService {
 
         Instant now = Instant.now();
         AppealStatus previous = appeal.getStatus();
-        appeal.changeStatus(request.status(), employeeName, now);
+        appeal.changeStatus(request.status(), user.subject(), employeeName, now);
 
         historyRepository.save(new AppealHistory(
                 appeal,
@@ -453,7 +498,7 @@ public class AppealService {
 
         // клиент ответил на запрос — обращение снова в работе, без участия сотрудника
         if (authorType == AuthorType.CLIENT && appeal.getStatus() == AppealStatus.WAITING_CUSTOMER) {
-            appeal.changeStatus(AppealStatus.IN_PROGRESS, null, now);
+            appeal.changeStatus(AppealStatus.IN_PROGRESS, null, null, now);
             historyRepository.save(new AppealHistory(
                     appeal,
                     "STATUS_CHANGED",
@@ -547,7 +592,7 @@ public class AppealService {
                 .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
-    private AppealSummaryResponse toSummary(Appeal appeal) {
+    private AppealSummaryResponse toSummary(Appeal appeal, boolean clientReplied) {
         return new AppealSummaryResponse(
                 appeal.getId(),
                 appeal.getPublicNumber(),
@@ -559,11 +604,13 @@ public class AppealService {
                 appeal.getPriority(),
                 toDepartment(appeal.getDepartment()),
                 appeal.getAssignedEmployee(),
+                appeal.getAssignedSubject(),
                 appeal.getDeadlineAt(),
                 appeal.getLegalDeadline(),
                 appeal.getEscalationLevel(),
                 appeal.getContractLink(),
                 appeal.getOutcome(),
+                clientReplied,
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt()
         );
@@ -617,6 +664,7 @@ public class AppealService {
                 appeal.getPriority(),
                 toDepartment(appeal.getDepartment()),
                 appeal.getAssignedEmployee(),
+                appeal.getAssignedSubject(),
                 appeal.getDeadlineAt(),
                 appeal.getLegalDeadline(),
                 toNorm(appeal.getNorm()),

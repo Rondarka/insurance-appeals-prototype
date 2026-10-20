@@ -10,15 +10,25 @@ const GROUPS = [
     {key: "classify", label: "Классификация", statuses: ["NEEDS_CLASSIFICATION"], supervisorOnly: true}
 ];
 
-const ws = {appeals: [], group: "new", openedId: null, departments: [], transferForm: false, resolveForm: false, extendForm: false};
+const ws = {
+    appeals: [], group: "new", openedId: null, departments: [], staff: [], pendingTransfers: 0,
+    scope: null, search: "", transferForm: false, resolveForm: false, extendForm: false
+};
 const $ = selector => document.querySelector(selector);
 const isSupervisor = () => hasRole("SUPERVISOR");
+const isOpen = appeal => !["RESOLVED", "CLOSED"].includes(appeal.status);
+/** «Моё» — по идентификатору в IdP, а не по имени (решение 32). */
+const isMine = appeal => appeal.assignedSubject === session.me.subject;
 
 startPage("/workspace.html", async () => {
     ws.departments = await api("/api/departments");
+    ws.staff = await api("/api/staff").catch(() => []);
+    // специалисту — свои и новые, руководителю — весь отдел
+    ws.scope = isSupervisor() ? "all" : "mine";
     document.querySelector('[data-tab="transfers"]').hidden = !isSupervisor();
     await loadQueue();
     if (isSupervisor()) await loadTransfers();
+    renderSummary();
     window.setInterval(refresh, 10000);
 });
 
@@ -35,6 +45,7 @@ function showTab(name) {
     if (name === "events") loadEvents($("#events")).catch(error => showToast(error.message, true));
     if (name === "transfers") loadTransfers().catch(error => showToast(error.message, true));
     if (name === "calendar") loadCalendar().catch(error => showToast(error.message, true));
+    if (name === "summary") renderSummary();
 }
 
 $("#refresh-events").addEventListener("click", () => loadEvents($("#events")).catch(error => showToast(error.message, true)));
@@ -53,9 +64,27 @@ function groupOf(status) {
     return GROUPS.find(group => group.statuses.includes(status));
 }
 
+/** Что видно в очереди: «Мои» — назначенные мне и новые без исполнителя; поиск — по номеру, теме, клиенту. */
+function visibleAppeals() {
+    const text = ws.search.trim().toLowerCase();
+    return ws.appeals
+        .filter(appeal => ws.scope !== "mine" || isMine(appeal) || !appeal.assignedSubject)
+        .filter(appeal => !text || `${appeal.publicNumber} ${appeal.subject} ${appeal.customerName}`.toLowerCase().includes(text));
+}
+
+function assigneeLabel(appeal) {
+    if (isMine(appeal)) return "вы";
+    if (!appeal.assignedEmployee) return "без исполнителя";
+    const [last, first] = appeal.assignedEmployee.split(" ").reverse();
+    return first ? `${first[0]}. ${last}` : appeal.assignedEmployee;
+}
+
 function renderQueue() {
+    document.querySelectorAll("[data-queue-scope]").forEach(item =>
+        item.classList.toggle("active", item.dataset.queueScope === ws.scope));
+    const visible = visibleAppeals();
     $("#status-tabs").innerHTML = GROUPS.filter(group => !group.supervisorOnly || isSupervisor()).map(group => {
-        const count = ws.appeals.filter(appeal => group.statuses.includes(appeal.status)).length;
+        const count = visible.filter(appeal => group.statuses.includes(appeal.status)).length;
         return `<button type="button" class="status-tab ${group.key === ws.group ? "active" : ""}" data-group="${group.key}">
             ${group.label}<span class="count">${count}</span></button>`;
     }).join("");
@@ -63,7 +92,7 @@ function renderQueue() {
     const group = GROUPS.find(item => item.key === ws.group);
     // сверху то, что сгорит первым: сначала эскалации по сроку закона; решённые — свежие сверху
     const urgency = appeal => ({BREACHED: 0, AT_RISK: 1}[appeal.escalationLevel] ?? 2);
-    const items = ws.appeals
+    const items = visible
         .filter(appeal => group.statuses.includes(appeal.status))
         .sort((a, b) => group.key === "done"
             ? new Date(b.updatedAt) - new Date(a.updatedAt)
@@ -71,10 +100,168 @@ function renderQueue() {
 
     $("#queue").innerHTML = items.length ? items.map(appeal => `
         <button type="button" class="queue-item ${appeal.id === ws.openedId ? "selected" : ""}" data-appeal="${appeal.id}">
-            <span class="queue-row">${priorityMark(appeal.priority)}<strong>${escapeHtml(appeal.subject)}</strong></span>
-            <span class="queue-row meta"><small>${escapeHtml(appeal.customerName)} · ${escapeHtml(appeal.publicNumber)}</small>${isEscalated(appeal) ? escalationPill(appeal) : deadlinePill(appeal)}</span>
-        </button>`).join("") : `<p class="empty">Здесь пусто</p>`;
+            <span class="queue-row">${priorityMark(appeal.priority)}<strong>${escapeHtml(appeal.subject)}</strong>
+                ${appeal.clientReplied && isOpen(appeal) ? `<span class="badge reply">клиент ответил</span>` : ""}</span>
+            <span class="queue-row sub"><small>${escapeHtml(appeal.publicNumber)} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}</small></span>
+            <span class="queue-row meta"><small>${escapeHtml(appeal.customerName)} · <span class="${appeal.assignedSubject ? "" : "unassigned"}">${escapeHtml(assigneeLabel(appeal))}</span></small>${isEscalated(appeal) ? escalationPill(appeal) : deadlinePill(appeal)}</span>
+        </button>`).join("") : `<p class="empty">${ws.search ? "Ничего не найдено" : "Здесь пусто"}</p>`;
 }
+
+$("#queue-scope").addEventListener("click", event => {
+    const button = event.target.closest("[data-queue-scope]");
+    if (!button) return;
+    ws.scope = button.dataset.queueScope;
+    renderQueue();
+});
+
+$("#queue-search").addEventListener("input", event => {
+    ws.search = event.target.value;
+    renderQueue();
+});
+
+/** Перейти в очередь к нужной группе — из сводки. */
+async function jumpToQueue(group, scope, appealId) {
+    ws.group = group;
+    if (scope) ws.scope = scope;
+    ws.search = "";
+    $("#queue-search").value = "";
+    showTab("queue");
+    renderQueue();
+    if (appealId) await openCard(appealId);
+}
+
+// ---------- сводка «Мой день» ----------
+
+/** Почему обращение требует внимания сейчас — по убыванию срочности. */
+function attentionReason(appeal) {
+    if (appeal.status === "NEEDS_CLASSIFICATION") return {rank: 0, tone: "late", text: "нужно выбрать отдел"};
+    if (appeal.escalationLevel === "BREACHED" || isLegallyOverdue(appeal)) return {rank: 1, tone: "late", text: "нарушен срок по закону"};
+    if (appeal.escalationLevel === "AT_RISK") return {rank: 2, tone: "soon", text: `по закону до ${formatDate(appeal.legalDeadline)}`};
+    if (appeal.clientReplied) return {rank: 3, tone: "reply", text: "клиент ответил"};
+    if (appeal.status !== "WAITING_CUSTOMER" && appeal.deadlineAt && new Date(appeal.deadlineAt) < new Date()) {
+        return {rank: 4, tone: "soon", text: "просрочен срок отдела"};
+    }
+    if (appeal.status === "ROUTED" && !appeal.assignedSubject) return {rank: 5, tone: "", text: "новое, без исполнителя"};
+    return null;
+}
+
+function greeting() {
+    const hour = new Date().getHours();
+    return hour < 12 ? "Доброе утро" : hour < 18 ? "Добрый день" : "Добрый вечер";
+}
+
+function renderSummary() {
+    const box = $("#summary");
+    if (!box || !session.me) return;
+    const open = ws.appeals.filter(isOpen);
+    // специалисту — свои и ничьи, руководителю — весь отдел
+    const scoped = isSupervisor() ? open : open.filter(appeal => isMine(appeal) || !appeal.assignedSubject);
+    const legallyLate = appeal => appeal.escalationLevel === "BREACHED" || isLegallyOverdue(appeal);
+    const tiles = [
+        ["Мои в работе", open.filter(a => isMine(a) && ["IN_PROGRESS", "WAITING_CUSTOMER"].includes(a.status)).length, "", "work", "mine"],
+        ["Клиент ответил", scoped.filter(a => a.clientReplied).length, "reply", "work", isSupervisor() ? "all" : "mine"],
+        ["Новые без исполнителя", open.filter(a => a.status === "ROUTED" && !a.assignedSubject).length, "", "new", "all"],
+        ["Срок по закону истекает", scoped.filter(a => a.escalationLevel === "AT_RISK").length, "soon", "work", "all"],
+        ["Нарушен срок по закону", scoped.filter(legallyLate).length, "late", "work", "all"]
+    ];
+    const tasks = scoped
+        .map(appeal => ({appeal, reason: attentionReason(appeal)}))
+        .filter(task => task.reason)
+        .sort((a, b) => a.reason.rank - b.reason.rank
+            || new Date(a.appeal.deadlineAt || 8.64e15) - new Date(b.appeal.deadlineAt || 8.64e15));
+    const firstName = (session.me.name || "").split(" ")[0];
+    const today = new Date().toLocaleDateString("ru-RU", {weekday: "long", day: "numeric", month: "long"});
+
+    box.innerHTML = `
+        <div class="view-head">
+            <div>
+                <h1>${greeting()}${firstName ? `, ${escapeHtml(firstName)}` : ""}</h1>
+                <p class="muted">${escapeHtml(today)} · ${escapeHtml(session.me.department?.name || "")}</p>
+            </div>
+            <button class="btn" type="button" data-jump-group="new" data-jump-scope="${ws.scope}">Открыть очередь</button>
+        </div>
+        <div class="metrics summary-metrics">${tiles.map(([label, value, tone, group, scope]) => `
+            <button type="button" class="metric clickable ${value && tone ? tone : ""}" data-jump-group="${group}" data-jump-scope="${scope}">
+                <small>${label}</small><strong>${value}</strong></button>`).join("")}</div>
+        <div class="summary-grid">
+            <section class="panel">
+                <h2>Что сделать сейчас</h2>
+                ${tasks.length ? `<ul class="task-list">${tasks.slice(0, 8).map(({appeal, reason}) => `
+                    <li><button type="button" class="task" data-jump-appeal="${appeal.id}">
+                        <span class="task-main"><strong>${escapeHtml(appeal.subject)}</strong>
+                            <small class="muted">${escapeHtml(appeal.publicNumber)} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))} · ${escapeHtml(assigneeLabel(appeal))}</small></span>
+                        <span class="badge ${reason.tone}">${escapeHtml(reason.text)}</span>
+                    </button></li>`).join("")}</ul>
+                    ${tasks.length > 8 ? `<p class="muted small-text">И ещё ${tasks.length - 8} — в очереди.</p>` : ""}`
+                    : `<p class="muted">Срочного нет. Можно разобрать новые обращения.</p>`}
+            </section>
+            ${isSupervisor() ? renderDepartmentLoad(open) : renderMyStats()}
+        </div>`;
+}
+
+/** Руководителю — кто чем занят и что ждёт его решения. */
+function renderDepartmentLoad(open) {
+    const rows = new Map();
+    ws.staff.forEach(member => rows.set(member.id, {name: member.fullName, items: []}));
+    const unassigned = {name: "Без исполнителя", items: []};
+    open.filter(appeal => appeal.department?.code === session.me.department?.code).forEach(appeal => {
+        if (!appeal.assignedSubject) return unassigned.items.push(appeal);
+        if (!rows.has(appeal.assignedSubject)) rows.set(appeal.assignedSubject, {name: appeal.assignedEmployee, items: []});
+        rows.get(appeal.assignedSubject).items.push(appeal);
+    });
+    const count = (items, predicate) => items.filter(predicate).length || "";
+    const atRisk = appeal => isEscalated(appeal) || isLegallyOverdue(appeal);
+    const line = ({name, items}) => `
+        <tr><td>${escapeHtml(name)}</td>
+            <td>${count(items, a => a.status === "ROUTED")}</td>
+            <td>${count(items, a => a.status === "IN_PROGRESS")}</td>
+            <td>${count(items, a => a.status === "WAITING_CUSTOMER")}</td>
+            <td>${count(items, a => a.clientReplied)}</td>
+            <td class="${items.some(atRisk) ? "late-text" : ""}">${count(items, atRisk)}</td></tr>`;
+    const classification = open.filter(appeal => appeal.status === "NEEDS_CLASSIFICATION").length;
+    return `
+        <section class="panel">
+            <h2>Отдел</h2>
+            <table class="table">
+                <thead><tr><th>Сотрудник</th><th>Новые</th><th>В работе</th><th>Ждут клиента</th><th>Клиент ответил</th><th>Срок по закону</th></tr></thead>
+                <tbody>${[...rows.values()].map(line).join("")}${unassigned.items.length ? line(unassigned) : ""}</tbody>
+            </table>
+            <div class="summary-links">
+                <button type="button" class="link" data-tab-link="transfers">Входящие передачи: ${ws.pendingTransfers}</button>
+                ${classification ? `<button type="button" class="link late-text" data-jump-group="classify" data-jump-scope="all">Ждут классификации: ${classification}</button>` : ""}
+            </div>
+        </section>`;
+}
+
+/** Специалисту — его обращения. */
+function renderMyStats() {
+    const mine = ws.appeals.filter(isMine);
+    const stat = (label, value) => `<li><span>${label}</span><strong>${value}</strong></li>`;
+    return `
+        <section class="panel">
+            <h2>Мои обращения</h2>
+            <ul class="stat-list">
+                ${stat("В работе", mine.filter(a => a.status === "IN_PROGRESS").length)}
+                ${stat("Ждут ответа клиента", mine.filter(a => a.status === "WAITING_CUSTOMER").length)}
+                ${stat("Клиент ответил", mine.filter(a => isOpen(a) && a.clientReplied).length)}
+                ${stat("Решено", mine.filter(a => !isOpen(a)).length)}
+            </ul>
+        </section>`;
+}
+
+$("#summary").addEventListener("click", event => {
+    const jump = event.target.closest("[data-jump-group]");
+    const task = event.target.closest("[data-jump-appeal]");
+    const tab = event.target.closest("[data-tab-link]");
+    if (tab) showTab(tab.dataset.tabLink);
+    if (jump) jumpToQueue(jump.dataset.jumpGroup, jump.dataset.jumpScope).catch(error => showToast(error.message, true));
+    if (task) {
+        const appeal = ws.appeals.find(item => item.id === task.dataset.jumpAppeal);
+        // в очереди обращение должно быть видно: включаем «Все», если оно чужое
+        const scope = appeal && (isMine(appeal) || !appeal.assignedSubject) ? ws.scope : "all";
+        jumpToQueue(groupOf(appeal.status).key, scope, appeal.id).catch(error => showToast(error.message, true));
+    }
+});
 
 $("#status-tabs").addEventListener("click", event => {
     const tab = event.target.closest("[data-group]");
@@ -191,7 +378,7 @@ function renderCard(appeal) {
                 <h4>Срок по закону</h4>${renderNorm(appeal)}${renderExtension(appeal, canWork)}
                 <h4>Клиент</h4>
                 <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></p>
-                ${appeal.assignedEmployee ? `<h4>Исполнитель</h4><p>${escapeHtml(appeal.assignedEmployee)}</p>` : ""}
+                <h4>Исполнитель</h4>${renderAssignee(appeal, canWork)}
                 ${renderContractSection(appeal, canWork)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}
@@ -234,6 +421,21 @@ function renderExtension(appeal, canWork) {
                 <button class="btn" type="button" data-toggle-extend>Отмена</button>
                 <button class="btn primary" type="submit">Продлить и уведомить</button>
             </div>
+        </form>`;
+}
+
+/** Кто ведёт обращение; руководитель отдела назначает исполнителя (решение 32). */
+function renderAssignee(appeal, canWork) {
+    const current = appeal.assignedEmployee
+        ? `<p>${escapeHtml(appeal.assignedEmployee)}${appeal.assignedSubject === session.me.subject ? " <small class=\"muted\">(вы)</small>" : ""}</p>`
+        : `<p class="muted">Не назначен</p>`;
+    if (!canWork || !isSupervisor() || !isOpen(appeal) || !ws.staff.length) return current;
+    return `${current}
+        <form class="assign-form" data-assign>
+            <select name="subject" aria-label="Исполнитель">${ws.staff.map(member => `
+                <option value="${escapeHtml(member.id)}" ${member.id === appeal.assignedSubject ? "selected" : ""}>
+                    ${escapeHtml(member.fullName)}${member.supervisor ? " — руководитель" : ""}</option>`).join("")}</select>
+            <button class="btn" type="submit">Назначить</button>
         </form>`;
 }
 
@@ -297,6 +499,12 @@ $("#card").addEventListener("submit", async event => {
             });
             ws.resolveForm = false;
             showToast("Ответ отправлен клиенту, обращение решено");
+        }
+        if (event.target.matches("[data-assign]")) {
+            const updated = await api(`/api/appeals/${ws.openedId}/assign`, {
+                method: "POST", body: JSON.stringify({subject: form.get("subject")})
+            });
+            showToast(`Исполнитель: ${updated.assignedEmployee}`);
         }
         if (event.target.matches("[data-classify]")) {
             const result = await api(`/api/appeals/${ws.openedId}/classify`, {
@@ -383,7 +591,7 @@ async function loadCalendar() {
 function renderCalendar(days) {
     const today = isoDay(new Date());
     const open = ws.appeals.filter(appeal => !["RESOLVED", "CLOSED"].includes(appeal.status) && dueDay(appeal));
-    const scoped = cal.scope === "mine" ? open.filter(appeal => appeal.assignedEmployee === session.me.name) : open;
+    const scoped = cal.scope === "mine" ? open.filter(isMine) : open;
     const byDay = {};
     scoped.forEach(appeal => (byDay[dueDay(appeal)] ||= []).push(appeal));
 
@@ -440,6 +648,7 @@ $("#calendar-view").addEventListener("click", event => {
 
 async function loadTransfers() {
     const transfers = await api("/api/transfer-requests");
+    ws.pendingTransfers = transfers.length;
     $("#transfer-count").textContent = transfers.length || "";
     $("#transfers").innerHTML = transfers.length ? transfers.map(item => `
         <article class="panel transfer">
@@ -501,7 +710,10 @@ $("#transfers").addEventListener("submit", async event => {
 async function refresh() {
     const before = JSON.stringify(ws.appeals);
     ws.appeals = await api("/api/appeals").catch(() => ws.appeals);
-    if (JSON.stringify(ws.appeals) !== before) renderQueue();
+    if (JSON.stringify(ws.appeals) !== before) {
+        renderQueue();
+        if ($("#summary-view").classList.contains("active")) renderSummary();
+    }
     // открытую вкладку передач не перерисовываем: там может быть начатый комментарий
     if (isSupervisor() && !$("#transfers-view").classList.contains("active")) {
         await loadTransfers().catch(() => {});

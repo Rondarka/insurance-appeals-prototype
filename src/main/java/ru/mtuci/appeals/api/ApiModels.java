@@ -174,6 +174,13 @@ public final class ApiModels {
     public record StaffResponse(String id, String fullName) {
     }
 
+    /** Сотрудник отдела, которого можно назначить исполнителем (решение 32). */
+    public record StaffMemberResponse(String id, String fullName, boolean supervisor, String departmentCode) {
+    }
+
+    public record AssignRequest(@NotBlank String subject) {
+    }
+
     public record TransferRequestResponse(
             UUID id,
             UUID appealId,
@@ -203,11 +210,14 @@ public final class ApiModels {
             AppealPriority priority,
             DepartmentResponse department,
             String assignedEmployee,
+            String assignedSubject,
             Instant deadlineAt,
             LocalDate legalDeadline,
             EscalationLevel escalationLevel,
             ContractLink contractLink,
             AppealOutcome outcome,
+            // последнее сообщение в переписке — от клиента: ход за сотрудником
+            boolean clientReplied,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -270,6 +280,7 @@ public final class ApiModels {
             AppealPriority priority,
             DepartmentResponse department,
             String assignedEmployee,
+            String assignedSubject,
             Instant deadlineAt,
             LocalDate legalDeadline,
             NormResponse norm,

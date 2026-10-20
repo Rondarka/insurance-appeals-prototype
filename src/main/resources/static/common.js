@@ -162,7 +162,9 @@ function deadlineInfo(appeal) {
     const left = new Date(appeal.deadlineAt).getTime() - Date.now();
     const hours = Math.floor(Math.abs(left) / 3600000);
     const minutes = Math.floor((Math.abs(left) % 3600000) / 60000);
-    const span = hours >= 24 ? `${Math.floor(hours / 24)} д ${hours % 24} ч` : hours ? `${hours} ч ${minutes} мин` : `${minutes} мин`;
+    // через три дня часы уже не важны: «просрочено на 130 д», а не «на 130 д 2 ч»
+    const days = Math.floor(hours / 24);
+    const span = days >= 3 ? `${days} д` : hours >= 24 ? `${days} д ${hours % 24} ч` : hours ? `${hours} ч ${minutes} мин` : `${minutes} мин`;
     if (left < 0) return {text: `просрочено на ${span}`, tone: "late"};
     return {text: `осталось ${span}`, tone: left < 4 * 3600000 ? "soon" : "ok"};
 }

@@ -69,6 +69,13 @@ public class Appeal {
     @Column(name = "assigned_employee", length = 160)
     private String assignedEmployee;
 
+    /** Идентификатор исполнителя в IdP: «мои обращения» не зависят от совпадения имён. */
+    @Column(name = "assigned_subject", length = 100)
+    private String assignedSubject;
+
+    @Column(name = "assigned_at")
+    private Instant assignedAt;
+
     /** Целевой срок отдела — из правила маршрутизации, его ставит себе компания. */
     @Column(name = "deadline_at")
     private Instant deadlineAt;
@@ -270,7 +277,7 @@ public class Appeal {
         this.department = department;
         this.priority = priority;
         this.deadlineAt = deadlineAt;
-        this.assignedEmployee = null;
+        unassign();
         this.status = AppealStatus.ROUTED;
         this.updatedAt = now;
     }
@@ -278,13 +285,13 @@ public class Appeal {
     public void transferTo(Department department, Instant deadlineAt, Instant now) {
         this.department = department;
         this.deadlineAt = deadlineAt;
-        this.assignedEmployee = null;
+        unassign();
         this.status = AppealStatus.ROUTED;
         this.updatedAt = now;
     }
 
     /** Сотрудник меняет статус только по разрешённым переходам — см. {@link AppealStatus#next()}. */
-    public void changeStatus(AppealStatus status, String employee, Instant now) {
+    public void changeStatus(AppealStatus status, String employeeSubject, String employeeName, Instant now) {
         if (status == AppealStatus.RESOLVED) {
             throw new IllegalStateException("Решить обращение можно только ответом клиенту по существу");
         }
@@ -295,10 +302,24 @@ public class Appeal {
             this.resolvedAt = null;
         }
         this.status = status;
-        if (status == AppealStatus.IN_PROGRESS && employee != null && !employee.isBlank()) {
-            this.assignedEmployee = employee;
+        // взял в работу — стал исполнителем
+        if (status == AppealStatus.IN_PROGRESS && employeeSubject != null) {
+            assign(employeeSubject, employeeName, now);
         }
         this.updatedAt = now;
+    }
+
+    /** Назначить исполнителя: руководитель или сам сотрудник, взявший обращение в работу. */
+    public void assign(String subject, String name, Instant now) {
+        this.assignedSubject = subject;
+        this.assignedEmployee = name;
+        this.assignedAt = now;
+    }
+
+    private void unassign() {
+        this.assignedSubject = null;
+        this.assignedEmployee = null;
+        this.assignedAt = null;
     }
 
     /** Решение — это ответ клиенту по существу с итогом; ответ сохраняет сервис. */
@@ -375,6 +396,10 @@ public class Appeal {
 
     public String getAssignedEmployee() {
         return assignedEmployee;
+    }
+
+    public String getAssignedSubject() {
+        return assignedSubject;
     }
 
     public Instant getDeadlineAt() {

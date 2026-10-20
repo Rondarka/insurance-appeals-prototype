@@ -171,6 +171,7 @@ Server: принимает токен из заголовка `Authorization: Be
 |---|---|---|---|
 | `APPEAL_CREATED` | `appeal.created.<категория>.<тип>` | обращение зарегистрировано | `category`, `subcategory`, `publicNumber` |
 | `APPEAL_ROUTED` | `appeal.routed.<отдел>` | назначен отдел и срок — автоматически или руководителем | `departmentCode`, `subcategory`, `priority`, `slaHours`; `manual` — при ручной классификации |
+| `APPEAL_ASSIGNED` | `appeal.assigned.<отдел>` | руководитель назначил исполнителя (решение 32) | `assignee` — идентификатор сотрудника в IdP |
 | `APPEAL_CLASSIFICATION_REQUIRED` | `appeal.classification.required` | нет правила маршрутизации — отдел выберет руководитель (решение 31) | `category`, `subcategory` |
 | `APPEAL_STATUS_CHANGED` | `appeal.status.<статус>` | сменился статус | `fromStatus`, `toStatus` |
 | `APPEAL_MESSAGE_ADDED` | `appeal.message.<автор>` | новое сообщение в переписке | `authorType`, `attachments` (число файлов) |

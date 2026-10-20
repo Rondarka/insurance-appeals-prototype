@@ -19,15 +19,19 @@ import java.util.UUID;
 public class DirectoryService {
 
     private final ContractsClient contractsClient;
+    private final StaffService staffService;
     private final DepartmentRepository departmentRepository;
 
-    public DirectoryService(ContractsClient contractsClient, DepartmentRepository departmentRepository) {
+    public DirectoryService(ContractsClient contractsClient, DepartmentRepository departmentRepository, StaffService staffService) {
         this.contractsClient = contractsClient;
+        this.staffService = staffService;
         this.departmentRepository = departmentRepository;
     }
 
     /** Профиль по токену: клиенту — его договоры, сотруднику — его подразделение. */
     public MeResponse me(CurrentUser user) {
+        // рабочее место открывается с /api/me — тут сотрудник и попадает в список своего отдела
+        staffService.remember(user);
         // учётная система лежит — кабинет всё равно открывается, обращение подаётся по виду страхования
         List<ContractResponse> contracts = List.of();
         boolean contractsUnavailable = false;

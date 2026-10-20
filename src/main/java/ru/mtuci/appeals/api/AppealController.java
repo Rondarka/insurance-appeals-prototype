@@ -25,6 +25,7 @@ import ru.mtuci.appeals.api.ApiModels.ContractResponse;
 import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
+import ru.mtuci.appeals.api.ApiModels.AssignRequest;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
 import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
 import ru.mtuci.appeals.api.ApiModels.ContractTermsResponse;
@@ -37,6 +38,7 @@ import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
 import ru.mtuci.appeals.api.ApiModels.IntegrationStatusResponse;
 import ru.mtuci.appeals.api.ApiModels.MeResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
+import ru.mtuci.appeals.api.ApiModels.StaffMemberResponse;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
@@ -47,6 +49,7 @@ import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.AttachmentService;
 import ru.mtuci.appeals.service.ClassificationService;
+import ru.mtuci.appeals.service.StaffService;
 import ru.mtuci.appeals.service.ContractLinkService;
 import ru.mtuci.appeals.service.DirectoryService;
 import ru.mtuci.appeals.service.TransferService;
@@ -73,6 +76,7 @@ public class AppealController {
     private final ContractsClient contractsClient;
     private final OutboxRelay outboxRelay;
     private final ClassificationService classificationService;
+    private final StaffService staffService;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
@@ -82,7 +86,8 @@ public class AppealController {
                             ContractLinkService contractLinkService,
                             ContractsClient contractsClient,
                             OutboxRelay outboxRelay,
-                            ClassificationService classificationService) {
+                            ClassificationService classificationService,
+                            StaffService staffService) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
@@ -92,6 +97,7 @@ public class AppealController {
         this.contractsClient = contractsClient;
         this.outboxRelay = outboxRelay;
         this.classificationService = classificationService;
+        this.staffService = staffService;
     }
 
     @GetMapping("/me")
@@ -207,6 +213,17 @@ public class AppealController {
     AppealDetailResponse linkContractNow(CurrentUser user, @PathVariable UUID id) {
         contractLinkService.linkNow(user, id);
         return appealService.get(user, id);
+    }
+
+    /** Сотрудники своего отдела — для назначения исполнителя (решение 32). */
+    @GetMapping("/staff")
+    List<StaffMemberResponse> staff(CurrentUser user) {
+        return staffService.department(user.requireDepartment());
+    }
+
+    @PostMapping("/appeals/{id}/assign")
+    AppealDetailResponse assign(CurrentUser user, @PathVariable UUID id, @Valid @RequestBody AssignRequest request) {
+        return appealService.assign(user, id, request.subject());
     }
 
     /** Ручная классификация: отдел выбирает руководитель (решение 31). */

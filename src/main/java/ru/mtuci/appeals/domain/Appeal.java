@@ -122,6 +122,13 @@ public class Appeal {
     @Column(name = "contract_link_next_at")
     private Instant contractLinkNextAt;
 
+    /** Итоговый тип: сотрудник подтверждает или уточняет его при ответе по существу (решение 23). */
+    @Column(name = "final_category", length = 50)
+    private String finalCategory;
+
+    @Column(name = "final_subcategory", length = 60)
+    private String finalSubcategory;
+
     /** Демонстрационное обращение из генератора стенда (решение 33). */
     @Column(nullable = false)
     private boolean demo;
@@ -319,6 +326,8 @@ public class Appeal {
             // при закрытии итог остаётся: это и есть результат рассмотрения
             this.outcome = null;
             this.resolvedAt = null;
+            this.finalCategory = null;
+            this.finalSubcategory = null;
         }
         this.status = status;
         // взял в работу — стал исполнителем
@@ -343,11 +352,26 @@ public class Appeal {
 
     /** Решение — это ответ клиенту по существу с итогом; ответ сохраняет сервис. */
     public void resolve(AppealOutcome outcome, Instant now) {
+        resolve(outcome, category, subcategory, now);
+    }
+
+    /** Ответ по существу с итоговым типом: клиент мог выбрать не тот тип, сотрудник его исправляет. */
+    public void resolve(AppealOutcome outcome, String finalCategory, String finalSubcategory, Instant now) {
         checkTransition(AppealStatus.RESOLVED);
         this.status = AppealStatus.RESOLVED;
         this.outcome = outcome;
+        this.finalCategory = finalCategory;
+        this.finalSubcategory = finalSubcategory;
         this.resolvedAt = now;
         this.updatedAt = now;
+    }
+
+    public String getFinalCategory() {
+        return finalCategory;
+    }
+
+    public String getFinalSubcategory() {
+        return finalSubcategory;
     }
 
     private void checkTransition(AppealStatus target) {

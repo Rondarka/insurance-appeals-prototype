@@ -12,12 +12,14 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.mtuci.appeals.api.ApiModels.AnalyticsResponse;
 import ru.mtuci.appeals.api.ApiModels.NewNormVersionRequest;
 import ru.mtuci.appeals.api.ApiModels.NormVersionResponse;
 import ru.mtuci.appeals.api.ApiModels.RoutingSettingsResponse;
 import ru.mtuci.appeals.api.ApiModels.SaveRoutingRuleRequest;
 import ru.mtuci.appeals.api.ApiModels.SettingsAuditResponse;
 import ru.mtuci.appeals.security.CurrentUser;
+import ru.mtuci.appeals.service.AnalyticsService;
 import ru.mtuci.appeals.service.SettingsService;
 
 import java.util.List;
@@ -28,9 +30,11 @@ import java.util.List;
 public class AdminController {
 
     private final SettingsService settings;
+    private final AnalyticsService analytics;
 
-    public AdminController(SettingsService settings) {
+    public AdminController(SettingsService settings, AnalyticsService analytics) {
         this.settings = settings;
+        this.analytics = analytics;
     }
 
     @GetMapping("/routing-rules")
@@ -66,5 +70,12 @@ public class AdminController {
     @GetMapping("/settings-audit")
     List<SettingsAuditResponse> audit() {
         return settings.auditLog();
+    }
+
+    /** Показатели обращений за период (решение 23); product — вид страхования, пусто — все. */
+    @GetMapping("/analytics")
+    AnalyticsResponse analytics(@RequestParam(defaultValue = "180") int days,
+                                @RequestParam(required = false) String product) {
+        return analytics.analytics(days, product);
     }
 }

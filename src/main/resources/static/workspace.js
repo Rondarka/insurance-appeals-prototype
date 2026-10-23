@@ -291,6 +291,20 @@ async function openCard(id) {
     renderQueue();
 }
 
+/** Итоговый тип (решение 23): все типы по категориям, текущий выбран. */
+function finalTypeOptions(appeal) {
+    return session.schema.categories.map(category => `<optgroup label="${escapeHtml(category.label)}">${category.types
+        .map(type => {
+            const value = `${category.code}/${type.code}`;
+            const selected = category.code === appeal.category && type.code === appeal.subcategory ? " selected" : "";
+            return `<option value="${value}"${selected}>${escapeHtml(type.label)}</option>`;
+        }).join("")}</optgroup>`).join("");
+}
+
+function typeCorrected(appeal) {
+    return appeal.finalCategory && (appeal.finalCategory !== appeal.category || appeal.finalSubcategory !== appeal.subcategory);
+}
+
 function actionLabel(target, current) {
     if (target === "IN_PROGRESS") return current === "ROUTED" ? "Взять в работу" : "Вернуть в работу";
     if (target === "RESOLVED") return "Решено — ответить по существу";
@@ -345,7 +359,9 @@ function renderCard(appeal) {
             <div class="main-col">
                 ${renderChecks(appeal)}
                 ${renderThread(appeal, "EMPLOYEE")}
-                ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}</p>` : ""}
+                ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}${typeCorrected(appeal)
+                    ? ` · тип уточнён: ${escapeHtml(categoryLabel(appeal.finalCategory))} — ${escapeHtml(typeLabel(appeal.finalCategory, appeal.finalSubcategory))}`
+                    : ""}</p>` : ""}
                 ${canWork && ws.resolveForm && appeal.nextStatuses.includes("RESOLVED") ? `
                 <form class="reply resolve-form" data-resolve>
                     <h4>Ответ клиенту по существу</h4>
@@ -355,6 +371,10 @@ function renderCard(appeal) {
                     <label>Итог
                         <select name="outcome">${Object.entries(OUTCOME_LABELS)
                             .map(([code, label]) => `<option value="${code}">${label}</option>`).join("")}</select>
+                    </label>
+                    <label>Тип обращения по итогам рассмотрения
+                        <select name="finalType">${finalTypeOptions(appeal)}</select>
+                        <small class="muted">Измените, если клиент выбрал не тот тип: по итоговому типу строится аналитика.</small>
                     </label>
                     <textarea name="answer" rows="5" minlength="20" maxlength="5000" required
                               placeholder="Например: ущерб признан страховым случаем, выплата 85 000 ₽ направлена на ваш счёт 20.10.2026"></textarea>
@@ -495,7 +515,8 @@ $("#card").addEventListener("submit", async event => {
         if (event.target.matches("[data-resolve]")) {
             await api(`/api/appeals/${ws.openedId}/resolve`, {
                 method: "POST",
-                body: JSON.stringify({outcome: form.get("outcome"), answer: form.get("answer")})
+                body: JSON.stringify({outcome: form.get("outcome"), answer: form.get("answer"),
+                    finalCategory: form.get("finalType").split("/")[0], finalSubcategory: form.get("finalType").split("/")[1]})
             });
             ws.resolveForm = false;
             showToast("Ответ отправлен клиенту, обращение решено");

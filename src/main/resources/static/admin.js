@@ -27,6 +27,7 @@ function showTab(name) {
     document.querySelectorAll(".view").forEach(item => item.classList.toggle("active", item.id === `${name}-view`));
     if (name === "events") loadEvents($("#events")).catch(error => showToast(error.message, true));
     if (name === "rules") loadSettings().catch(error => showToast(error.message, true));
+    if (name === "analytics") loadAnalytics().catch(error => showToast(error.message, true));
 }
 
 const INTEGRATION_STATE = {

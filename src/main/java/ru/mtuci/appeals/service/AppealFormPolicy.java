@@ -111,6 +111,10 @@ public class AppealFormPolicy {
         return values;
     }
 
+    public boolean typeExists(String category, String type) {
+        return find(schema(null), category, type).isPresent();
+    }
+
     /** Виды страхования — для выбора, когда договоры клиента загрузить не удалось. */
     public List<ProductResponse> products() {
         return repository.products().stream()

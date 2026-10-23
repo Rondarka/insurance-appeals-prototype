@@ -131,7 +131,7 @@ class AppealLifecycleTest extends IntegrationTest {
 
     private <T> ResponseEntity<T> resolve(UUID appeal, AppealOutcome outcome, String answer, Class<T> type) {
         return as(CLAIMS_SPECIALIST).postForEntity("/api/appeals/{id}/resolve",
-                new ResolveAppealRequest(outcome, answer), type, appeal);
+                new ResolveAppealRequest(outcome, answer, null, null), type, appeal);
     }
 
     private <T> ResponseEntity<T> changeStatus(UUID appeal, AppealStatus status, Class<T> type) {

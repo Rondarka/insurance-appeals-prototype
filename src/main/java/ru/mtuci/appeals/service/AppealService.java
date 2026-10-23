@@ -371,7 +371,12 @@ public class AppealService {
         String employeeName = Objects.requireNonNullElse(user.name(), user.subject());
         Instant now = Instant.now();
         AppealStatus previous = appeal.getStatus();
-        appeal.resolve(request.outcome(), now);
+        String finalCategory = blank(request.finalCategory()) ? appeal.getCategory() : request.finalCategory();
+        String finalSubcategory = blank(request.finalSubcategory()) ? appeal.getSubcategory() : request.finalSubcategory();
+        if (!formPolicy.typeExists(finalCategory, finalSubcategory)) {
+            throw new IllegalArgumentException("Неизвестный тип обращения: " + finalCategory + "/" + finalSubcategory);
+        }
+        appeal.resolve(request.outcome(), finalCategory, finalSubcategory, now);
 
         messageRepository.save(new AppealMessage(appeal, AuthorType.EMPLOYEE, employeeName, request.answer().trim(), now));
         historyRepository.save(new AppealHistory(
@@ -677,6 +682,8 @@ public class AppealService {
                                 formPolicy.productLabel(appeal.getRequestedProductCode())),
                 appeal.getRequestedPolicyNumber(),
                 appeal.getOutcome(),
+                appeal.getFinalCategory(),
+                appeal.getFinalSubcategory(),
                 appeal.getResolvedAt(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt(),

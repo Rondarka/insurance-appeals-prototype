@@ -73,7 +73,7 @@ class EscalationTest extends IntegrationTest {
                 new ChangeStatusRequest(AppealStatus.IN_PROGRESS), String.class, appeal).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
         assertThat(as(SUPPORT_SPECIALIST).postForEntity("/api/appeals/{id}/resolve",
-                new ResolveAppealRequest(AppealOutcome.EXPLAINED, "Код приходит с задержкой до 5 минут, объяснили порядок входа."),
+                new ResolveAppealRequest(AppealOutcome.EXPLAINED, "Код приходит с задержкой до 5 минут, объяснили порядок входа.", null, null),
                 String.class, appeal).getStatusCode()).isEqualTo(HttpStatus.OK);
 
         escalation.scan(deadline.plusDays(1));

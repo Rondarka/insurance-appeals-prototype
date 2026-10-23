@@ -68,9 +68,12 @@ public final class ApiModels {
     ) {
     }
 
+    /** finalCategory и finalSubcategory — итоговый тип, если клиент выбрал не тот; пусто — тип подтверждён. */
     public record ResolveAppealRequest(
             @NotNull AppealOutcome outcome,
-            @NotBlank @Size(min = 20, max = 5000) String answer
+            @NotBlank @Size(min = 20, max = 5000) String answer,
+            @Size(max = 50) String finalCategory,
+            @Size(max = 60) String finalSubcategory
     ) {
     }
 
@@ -337,6 +340,8 @@ public final class ApiModels {
             ProductResponse requestedProduct,
             String requestedPolicyNumber,
             AppealOutcome outcome,
+            String finalCategory,
+            String finalSubcategory,
             Instant resolvedAt,
             Instant createdAt,
             Instant updatedAt,
@@ -382,6 +387,46 @@ public final class ApiModels {
             boolean required,
             String contractAttribute
     ) {
+    }
+
+    // ---------- аналитика (решение 23) ----------
+
+    /** Доля в процентах с одним знаком; база — от чего она посчитана, чтобы 100 % из 2 не путать со 100 % из 200. */
+    public record Rate(long count, long of, Double percent) {
+
+        public static Rate of(long count, long base) {
+            return new Rate(count, base, base == 0 ? null : Math.round(count * 1000.0 / base) / 10.0);
+        }
+    }
+
+    public record AnalyticsSummary(long received, long demo, long resolved, Rate resolvedOnTime,
+                                   Double averageResolutionDays, long overdueOpen, Rate satisfied,
+                                   Rate transferred, Rate repeated, Rate manuallyClassified,
+                                   Rate acceptedWithoutContract, Rate typeCorrected, long pretensions,
+                                   Rate pretensionsOnTime, long pretensionsOverdue) {
+    }
+
+    public record ShareItem(String code, String label, Rate rate) {
+    }
+
+    public record WeekSeries(String code, String label, long[] counts) {
+    }
+
+    public record DepartmentOnTime(String code, String name, Rate onTime, long open, long overdueOpen) {
+    }
+
+    public record TransferFlow(String from, String to, long count) {
+    }
+
+    public record TypeCorrection(String initial, String finalType, long count) {
+    }
+
+    /** from выровнен на понедельник; product — выбранный вид страхования или null — все. */
+    public record AnalyticsResponse(LocalDate from, LocalDate to, String product, AnalyticsSummary summary,
+                                    List<ShareItem> products, List<ShareItem> types, List<LocalDate> weeks,
+                                    List<WeekSeries> weekly, List<DepartmentOnTime> departments,
+                                    List<TransferFlow> transfers, List<TypeCorrection> corrections,
+                                    List<ShareItem> outcomes) {
     }
 
     public record ErrorResponse(String message, Instant timestamp) {

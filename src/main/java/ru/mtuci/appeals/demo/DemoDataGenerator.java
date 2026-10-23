@@ -112,6 +112,14 @@ public class DemoDataGenerator {
                     new Staff("demo-quality-2", "Максим Ильин", false),
                     new Staff("38888888-8888-8888-8888-888888888888", "Дмитрий Фомин", true)));
 
+    /** Типичные ошибки выбора типа клиентом: что выбрал → что на самом деле. */
+    private static final Map<String, String> CORRECTIONS = Map.of(
+            "COMPLAINT/SERVICE_QUALITY", "COMPLAINT/PRETENSION",
+            "TECHNICAL/PERSONAL_ACCOUNT", "PAYMENT/PAYMENT_STATUS",
+            "OTHER/GENERAL", "POLICY/DATA_CHANGE",
+            "POLICY/DATA_CHANGE", "POLICY/TERMINATION",
+            "PAYMENT/INCORRECT_AMOUNT", "COMPLAINT/PRETENSION");
+
     /** Типичные ошибки маршрутизации: откуда и куда передают и почему. */
     private static final Map<String, List<String>> TRANSFERS = Map.of(
             "SUPPORT", List.of("PAYMENTS", "Клиент спрашивает о возврате платежа — компетенция отдела расчётов"),
@@ -304,7 +312,10 @@ public class DemoDataGenerator {
                 : (random.nextBoolean() ? AppealOutcome.EXPLAINED : AppealOutcome.REJECTED);
         String answer = pick(random, DemoTexts.ANSWERS.get(outcome))
                 .replace("{amount}", money(5_000 + random.nextInt(120) * 1_000));
-        appeal.resolve(outcome, time.at);
+        // клиент иногда выбирает не тот тип — сотрудник исправляет его при ответе (решение 23)
+        String[] finalType = CORRECTIONS.containsKey(typeKey) && random.nextDouble() < 0.25
+                ? CORRECTIONS.get(typeKey).split("/") : new String[]{category, type};
+        appeal.resolve(outcome, finalType[0], finalType[1], time.at);
         message(appeal, AuthorType.EMPLOYEE, worker.name, answer, time.at);
         note(appeal, "RESOLVED", "Клиенту направлен ответ по существу. Итог: " + outcome.label().toLowerCase(Locale.ROOT),
                 worker.name, time.at);

@@ -38,6 +38,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "/api/appeals/*/assign")
                         .hasRole("SUPERVISOR")
                         .requestMatchers("/api/staff").hasAnyRole("SPECIALIST", "SUPERVISOR")
+                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/departments", "/api/events", "/api/integrations").hasAnyRole("SPECIALIST", "SUPERVISOR", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         // интерфейс и его настройки входа открыты: без них не войти

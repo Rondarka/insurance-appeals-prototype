@@ -287,6 +287,22 @@ label.attach-button { position: relative; display: inline-flex; padding-left: 0;
 .summary-links { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 12px; }
 .assign-form { display: flex; gap: 8px; margin-top: 6px; }
 .assign-form select { min-width: 0; flex: 1; }
+
+/* ---------- правила администрирования ---------- */
+
+.reason-field { max-width: 640px; margin-bottom: 16px; }
+.settings-block { margin-bottom: 16px; }
+.settings-block h2 { margin: 0 0 12px; font-size: 17px; }
+.table-scroll { overflow-x: auto; }
+.settings-table select, .settings-table input { padding: 5px 8px; }
+.settings-table input[type="number"] { width: 90px; }
+.settings-table .row-actions { white-space: nowrap; }
+.small-btn { padding: 5px 10px; font-size: 13px; }
+.muted-row td { color: var(--muted); }
+.settings-add { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; margin-top: 12px; padding-top: 12px;
+    border-top: 1px solid var(--line); }
+.settings-add label { flex: 0 1 180px; }
+.settings-add label.wide { flex: 1 1 320px; }
 .integration { display: flex; align-items: center; gap: 8px; margin: 0; }
 .integration .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
 .integration.ok .dot { background: var(--green); }

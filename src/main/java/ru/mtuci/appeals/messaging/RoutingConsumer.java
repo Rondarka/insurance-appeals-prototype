@@ -3,6 +3,7 @@ package ru.mtuci.appeals.messaging;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +16,7 @@ import ru.mtuci.appeals.repository.AppealRepository;
 import ru.mtuci.appeals.repository.RoutingRuleRepository;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
 import java.util.Optional;
@@ -28,15 +30,18 @@ public class RoutingConsumer {
     private final RoutingRuleRepository routingRuleRepository;
     private final AppealHistoryRepository historyRepository;
     private final ApplicationEventPublisher eventPublisher;
+    private final ZoneId zone;
 
     public RoutingConsumer(AppealRepository appealRepository,
                            RoutingRuleRepository routingRuleRepository,
                            AppealHistoryRepository historyRepository,
-                           ApplicationEventPublisher eventPublisher) {
+                           ApplicationEventPublisher eventPublisher,
+                           @Value("${appeals.timezone}") String timezone) {
         this.appealRepository = appealRepository;
         this.routingRuleRepository = routingRuleRepository;
         this.historyRepository = historyRepository;
         this.eventPublisher = eventPublisher;
+        this.zone = ZoneId.of(timezone);
     }
 
     @RabbitListener(queues = RabbitTopology.ROUTING_QUEUE)
@@ -77,7 +82,7 @@ public class RoutingConsumer {
         }
         RoutingRule rule = found.get();
 
-        Instant deadline = now.plus(rule.getSlaHours(), ChronoUnit.HOURS);
+        Instant deadline = appeal.withinLegalDeadline(now.plus(rule.getSlaHours(), ChronoUnit.HOURS), zone);
         appeal.routeTo(rule.getDepartment(), rule.getPriority(), deadline, now);
 
         historyRepository.save(new AppealHistory(

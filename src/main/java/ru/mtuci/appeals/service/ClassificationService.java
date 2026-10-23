@@ -1,5 +1,6 @@
 package ru.mtuci.appeals.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -18,6 +19,7 @@ import ru.mtuci.appeals.repository.RoutingRuleRepository;
 import ru.mtuci.appeals.security.CurrentUser;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 import java.util.Locale;
 import java.util.Map;
@@ -40,19 +42,22 @@ public class ClassificationService {
     private final AppealHistoryRepository historyRepository;
     private final ApplicationEventPublisher eventPublisher;
     private final AppealAccess access;
+    private final ZoneId zone;
 
     public ClassificationService(AppealRepository appealRepository,
                                  DepartmentRepository departmentRepository,
                                  RoutingRuleRepository routingRuleRepository,
                                  AppealHistoryRepository historyRepository,
                                  ApplicationEventPublisher eventPublisher,
-                                 AppealAccess access) {
+                                 AppealAccess access,
+                                 @Value("${appeals.timezone}") String timezone) {
         this.appealRepository = appealRepository;
         this.departmentRepository = departmentRepository;
         this.routingRuleRepository = routingRuleRepository;
         this.historyRepository = historyRepository;
         this.eventPublisher = eventPublisher;
         this.access = access;
+        this.zone = ZoneId.of(timezone);
     }
 
     @Transactional
@@ -74,7 +79,8 @@ public class ClassificationService {
                 .map(rule -> rule.getSlaHours())
                 .orElse(DEFAULT_SLA_HOURS);
         Instant now = Instant.now();
-        appeal.routeTo(department, AppealPriority.NORMAL, now.plus(slaHours, ChronoUnit.HOURS), now);
+        appeal.routeTo(department, AppealPriority.NORMAL,
+                appeal.withinLegalDeadline(now.plus(slaHours, ChronoUnit.HOURS), zone), now);
 
         String supervisor = Objects.requireNonNullElse(user.name(), user.subject());
         historyRepository.save(new AppealHistory(

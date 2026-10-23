@@ -14,6 +14,7 @@ import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.UUID;
 
 @Entity
@@ -275,6 +276,19 @@ public class Appeal {
             throw new IllegalStateException("Классификация нужна только обращению, которое ещё не маршрутизировано");
         }
         this.status = AppealStatus.NEEDS_CLASSIFICATION;
+    }
+
+    /**
+     * Срок отдела не позже конца дня срока по закону (решение 34): правило маршрутизации
+     * проверяется при сохранении, а здесь — страховка на случай продления, передачи и
+     * обращений, зарегистрированных до изменения правил.
+     */
+    public Instant withinLegalDeadline(Instant departmentDeadline, ZoneId zone) {
+        if (legalDeadline == null) {
+            return departmentDeadline;
+        }
+        Instant legalEnd = legalDeadline.plusDays(1).atStartOfDay(zone).toInstant();
+        return departmentDeadline.isAfter(legalEnd) ? legalEnd : departmentDeadline;
     }
 
     public void routeTo(Department department, AppealPriority priority, Instant deadlineAt, Instant now) {

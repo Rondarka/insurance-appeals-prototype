@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Администрирование — обработка обращений</title>
-    <link rel="stylesheet" href="/styles.css?v=20261020-3">
+    <link rel="stylesheet" href="/styles.css?v=20261023-1">
 </head>
 <body class="app-page">
 <header class="topbar admin-topbar">
@@ -15,6 +15,7 @@
     <nav class="tabs">
         <button class="tab active" type="button" data-tab="overview">Обзор</button>
         <button class="tab" type="button" data-tab="appeals">Обращения</button>
+        <button class="tab" type="button" data-tab="rules">Правила</button>
         <button class="tab" type="button" data-tab="events">Журнал событий</button>
     </nav>
     <div id="user-box" class="user-box"></div>
@@ -46,6 +47,55 @@
         <article id="admin-card" class="detail"><p class="empty">Выберите обращение в списке слева</p></article>
     </section>
 
+    <section id="rules-view" class="view page wide-page">
+        <div class="view-head">
+            <div>
+                <h1>Правила</h1>
+                <p class="muted">Куда направлять обращения и за сколько отвечать. Срок отдела не может быть длиннее срока
+                    по закону: подсистема оставляет запас на согласование и отправку ответа. Каждое изменение — с причиной
+                    и в журнале.</p>
+            </div>
+        </div>
+        <label class="reason-field">Причина изменения — попадёт в журнал
+            <input id="settings-reason" maxlength="500" placeholder="Например: отдел убытков перегружен, ускоряем первичный разбор">
+        </label>
+
+        <section class="panel settings-block">
+            <h2>Маршрутизация</h2>
+            <div id="routing-uncovered"></div>
+            <div class="table-scroll"><table id="routing-rules" class="table settings-table"></table></div>
+            <form id="routing-add" class="settings-add">
+                <label>Свой срок для типа<select name="type"></select></label>
+                <label>Отдел<select name="departmentCode"></select></label>
+                <label>Приоритет<select name="priority"></select></label>
+                <label>Срок отдела, ч<input name="slaHours" type="number" min="1" required></label>
+                <button class="btn" type="submit">Добавить правило</button>
+            </form>
+        </section>
+
+        <section class="panel settings-block">
+            <h2>Нормативы сроков</h2>
+            <p class="muted small-text">Срок по закону меняется только новой версией — со ссылкой на акт и с будущей даты.
+                Обращения, зарегистрированные раньше, сохраняют свой срок.</p>
+            <div class="table-scroll"><table id="norms" class="table settings-table"></table></div>
+            <form id="norm-add" class="settings-add">
+                <label>Норматив<select name="code"></select></label>
+                <label>Срок<input name="termDays" type="number" min="1" max="365" required></label>
+                <label>Как считать<select name="counting"></select></label>
+                <label>Продление, раб. дн.<input name="maxExtensionDays" type="number" min="0" max="30" value="0" required></label>
+                <label class="wide">Основание — акт и статья<input name="legalBasis" maxlength="300" required
+                       placeholder="Федеральный закон от … № …-ФЗ, ст. …"></label>
+                <label>Действует с<input name="validFrom" type="date" required></label>
+                <button class="btn" type="submit">Добавить версию</button>
+            </form>
+        </section>
+
+        <section class="panel settings-block">
+            <h2>Журнал изменений</h2>
+            <div id="settings-audit"></div>
+        </section>
+    </section>
+
     <section id="events-view" class="view page">
         <div class="view-head">
             <div>
@@ -59,8 +109,8 @@
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="/auth.js?v=20261020-3"></script>
-<script src="/common.js?v=20261020-3"></script>
-<script src="/admin.js?v=20261020-3"></script>
+<script src="/auth.js?v=20261023-1"></script>
+<script src="/common.js?v=20261023-1"></script>
+<script src="/admin.js?v=20261023-1"></script>
 </body>
 </html>

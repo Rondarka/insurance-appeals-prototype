@@ -26,6 +26,7 @@ function showTab(name) {
     document.querySelectorAll(".tab").forEach(item => item.classList.toggle("active", item.dataset.tab === name));
     document.querySelectorAll(".view").forEach(item => item.classList.toggle("active", item.id === `${name}-view`));
     if (name === "events") loadEvents($("#events")).catch(error => showToast(error.message, true));
+    if (name === "rules") loadSettings().catch(error => showToast(error.message, true));
 }
 
 const INTEGRATION_STATE = {
@@ -179,3 +180,153 @@ async function openCard(id) {
     loadRelated(id, $(`#related-${id}`));
     renderList();
 }
+
+// ---------- правила: маршрутизация, нормативы, журнал (решение 34) ----------
+
+const ACTION_LABELS = {CREATED: "добавлено", UPDATED: "изменено", DELETED: "удалено"};
+
+function settingsReason() {
+    const reason = $("#settings-reason").value.trim();
+    if (reason.length < 5) {
+        $("#settings-reason").focus();
+        throw new Error("Укажите причину изменения — она попадёт в журнал");
+    }
+    return reason;
+}
+
+const options = (items, selected) => items.map(([value, label]) =>
+    `<option value="${escapeHtml(value)}" ${value === selected ? "selected" : ""}>${escapeHtml(label)}</option>`).join("");
+
+async function loadSettings() {
+    const [routing, norms, audit] = await Promise.all([
+        api("/api/admin/routing-rules"), api("/api/admin/norms"), api("/api/admin/settings-audit")]);
+    renderRouting(routing);
+    renderNorms(norms);
+    renderAudit(audit);
+}
+
+function renderRouting(routing) {
+    const departments = adm.departments.map(item => [item.code, item.name]);
+    const priorities = Object.entries(PRIORITY_LABELS);
+    $("#routing-uncovered").innerHTML = routing.uncovered.length ? `
+        <p class="notice small">Нет правила — обращения уйдут на ручную классификацию:
+            ${routing.uncovered.map(item => escapeHtml(`${item.categoryLabel} / ${item.typeLabel}`)).join(", ")}</p>` : "";
+    $("#routing-rules").innerHTML = `
+        <thead><tr><th>Вид обращения</th><th>Отдел</th><th>Приоритет</th><th>Срок отдела, ч</th><th>Предел по закону</th><th></th></tr></thead>
+        <tbody>${routing.rules.map(rule => `
+            <tr data-rule="${rule.category}/${rule.subcategory}">
+                <td><strong>${escapeHtml(rule.categoryLabel)}</strong><br>
+                    <small class="muted">${rule.subcategory === "GENERAL" ? "все типы категории" : escapeHtml(rule.typeLabel)}</small></td>
+                <td><select name="departmentCode">${options(departments, rule.departmentCode)}</select></td>
+                <td><select name="priority">${options(priorities, rule.priority)}</select></td>
+                <td><input name="slaHours" type="number" min="1" max="${rule.maxSlaHours}" value="${rule.slaHours}"></td>
+                <td><small title="${escapeHtml(rule.legalLimit)}">≤ ${rule.maxSlaHours} ч</small></td>
+                <td class="row-actions">
+                    <button type="button" class="btn small-btn" data-save-rule>Сохранить</button>
+                    ${rule.subcategory === "GENERAL" ? "" : `<button type="button" class="btn ghost small-btn" data-delete-rule>Удалить</button>`}
+                </td>
+            </tr>`).join("")}</tbody>`;
+    // свой срок можно задать типу, у которого нет своего правила
+    const own = new Set(routing.rules.filter(rule => rule.subcategory !== "GENERAL").map(rule => `${rule.category}/${rule.subcategory}`));
+    const types = session.schema.categories.flatMap(category => category.types
+        .filter(type => !own.has(`${category.code}/${type.code}`))
+        .map(type => [`${category.code}/${type.code}`, `${category.label} / ${type.label}`]));
+    const form = $("#routing-add");
+    form.type.innerHTML = options(types);
+    form.departmentCode.innerHTML = options(departments);
+    form.priority.innerHTML = options(priorities, "NORMAL");
+}
+
+async function saveRule(rule) {
+    await api("/api/admin/routing-rules", {method: "PUT", body: JSON.stringify({...rule, reason: settingsReason()})});
+    showToast("Правило сохранено");
+    await loadSettings();
+}
+
+$("#routing-rules").addEventListener("click", event => {
+    const row = event.target.closest("[data-rule]");
+    if (!row) return;
+    const [category, subcategory] = row.dataset.rule.split("/");
+    (async () => {
+        if (event.target.closest("[data-save-rule]")) {
+            await saveRule({
+                category, subcategory,
+                departmentCode: row.querySelector('[name="departmentCode"]').value,
+                priority: row.querySelector('[name="priority"]').value,
+                slaHours: Number(row.querySelector('[name="slaHours"]').value)
+            });
+        }
+        if (event.target.closest("[data-delete-rule]")) {
+            const reason = settingsReason();
+            if (!confirm("Удалить правило? Обращения этого типа пойдут по правилу категории.")) return;
+            await api(`/api/admin/routing-rules/${category}/${subcategory}?reason=${encodeURIComponent(reason)}`, {method: "DELETE"});
+            showToast("Правило удалено");
+            await loadSettings();
+        }
+    })().catch(error => showToast(error.message, true));
+});
+
+$("#routing-add").addEventListener("submit", event => {
+    event.preventDefault();
+    const form = event.target;
+    const [category, subcategory] = form.type.value.split("/");
+    saveRule({category, subcategory, departmentCode: form.departmentCode.value, priority: form.priority.value,
+        slaHours: Number(form.slaHours.value)}).catch(error => showToast(error.message, true));
+});
+
+function renderNorms(norms) {
+    const today = new Date().toISOString().slice(0, 10);
+    $("#norms").innerHTML = `
+        <thead><tr><th>Норматив</th><th>Срок</th><th>Продление</th><th>Основание</th><th>Действует</th></tr></thead>
+        <tbody>${norms.map(norm => {
+            const current = norm.validFrom <= today && (!norm.validTo || norm.validTo >= today);
+            return `<tr class="${current ? "" : "muted-row"}">
+                <td><strong>${escapeHtml(norm.title)}</strong><br><small class="muted">${escapeHtml(norm.code)}</small></td>
+                <td>${norm.termDays} ${escapeHtml(COUNTING_LABELS[norm.counting] || norm.counting)}</td>
+                <td>${norm.maxExtensionDays ? `до ${norm.maxExtensionDays} раб. дн.` : "нет"}</td>
+                <td>${escapeHtml(norm.legalBasis)}</td>
+                <td>${formatDate(norm.validFrom)} – ${norm.validTo ? formatDate(norm.validTo) : "…"}${current ? "" : norm.validFrom > today ? "<br><small>будущая версия</small>" : ""}</td>
+            </tr>`;
+        }).join("")}</tbody>`;
+    const form = $("#norm-add");
+    const codes = [...new Map(norms.map(norm => [norm.code, norm.title])).entries()];
+    form.code.innerHTML = options(codes);
+    form.counting.innerHTML = options(Object.entries(COUNTING_LABELS));
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    form.validFrom.min = tomorrow;
+}
+
+$("#norm-add").addEventListener("submit", event => {
+    event.preventDefault();
+    const form = event.target;
+    (async () => {
+        await api("/api/admin/norms", {method: "POST", body: JSON.stringify({
+            code: form.code.value, termDays: Number(form.termDays.value), counting: form.counting.value,
+            maxExtensionDays: Number(form.maxExtensionDays.value), legalBasis: form.legalBasis.value,
+            validFrom: form.validFrom.value, reason: settingsReason()
+        })});
+        showToast("Новая версия норматива добавлена");
+        form.reset();
+        await loadSettings();
+    })().catch(error => showToast(error.message, true));
+});
+
+function describeChange(entry) {
+    const show = text => text ? Object.entries(JSON.parse(text)).map(([key, value]) => `${key}: ${value}`).join(", ") : "—";
+    return entry.action === "UPDATED" ? `${show(entry.before)} → ${show(entry.after)}`
+        : entry.action === "DELETED" ? `было: ${show(entry.before)}` : show(entry.after);
+}
+
+function renderAudit(entries) {
+    $("#settings-audit").innerHTML = entries.length ? `
+        <div class="table-scroll"><table class="table settings-table">
+            <thead><tr><th>Когда</th><th>Кто</th><th>Что</th><th>Изменение</th><th>Причина</th></tr></thead>
+            <tbody>${entries.map(entry => `<tr>
+                <td>${formatDateTime(entry.changedAt)}</td>
+                <td>${escapeHtml(entry.actorName)}</td>
+                <td>${escapeHtml(entry.entityKey)}<br><small class="muted">${ACTION_LABELS[entry.action] || entry.action}</small></td>
+                <td><small>${escapeHtml(describeChange(entry))}</small></td>
+                <td>${escapeHtml(entry.reason)}</td>
+            </tr>`).join("")}</tbody></table></div>` : `<p class="muted">Изменений пока не было</p>`;
+}
+

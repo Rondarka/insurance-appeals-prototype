@@ -166,6 +166,52 @@ public final class ApiModels {
     public record ClassifyRequest(@NotBlank String departmentCode) {
     }
 
+    // ---------- настройки администратора (решение 34) ----------
+
+    /** Правило маршрутизации и предел срока отдела по закону. subcategory GENERAL — все типы категории. */
+    public record RoutingRuleResponse(String category, String categoryLabel, String subcategory, String typeLabel,
+                                      String departmentCode, String departmentName, String priority, int slaHours,
+                                      int maxSlaHours, String legalLimit) {
+    }
+
+    /** Тип обращения, для которого нет ни своего правила, ни правила категории: уйдёт на ручную классификацию. */
+    public record UncoveredTypeResponse(String category, String categoryLabel, String type, String typeLabel) {
+    }
+
+    public record RoutingSettingsResponse(List<RoutingRuleResponse> rules, List<UncoveredTypeResponse> uncovered) {
+    }
+
+    public record SaveRoutingRuleRequest(
+            @NotBlank String category,
+            @NotBlank String subcategory,
+            @NotBlank String departmentCode,
+            @NotNull AppealPriority priority,
+            @Min(1) @Max(2000) int slaHours,
+            @NotBlank @Size(min = 5, max = 500) String reason
+    ) {
+    }
+
+    public record NormVersionResponse(Long id, String code, String title, int termDays, String counting,
+                                      int maxExtensionDays, String condition, String legalBasis,
+                                      LocalDate validFrom, LocalDate validTo) {
+    }
+
+    /** Новая версия норматива — со ссылкой на акт и датой начала действия. */
+    public record NewNormVersionRequest(
+            @NotBlank String code,
+            @Min(1) @Max(365) int termDays,
+            @NotNull DeadlineCounting counting,
+            @Min(0) @Max(30) int maxExtensionDays,
+            @NotBlank @Size(max = 300) String legalBasis,
+            @NotNull LocalDate validFrom,
+            @NotBlank @Size(min = 5, max = 500) String reason
+    ) {
+    }
+
+    public record SettingsAuditResponse(Long id, Instant changedAt, String actorName, String entity, String entityKey,
+                                        String action, String before, String after, String reason) {
+    }
+
     /** Отдел, куда руководитель направил обращение: само обращение ему теперь может быть не видно. */
     public record ClassifiedResponse(String departmentCode, String departmentName) {
     }

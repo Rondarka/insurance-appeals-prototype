@@ -1,5 +1,6 @@
 package ru.mtuci.appeals.service;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import ru.mtuci.appeals.repository.TransferRequestRepository;
 import ru.mtuci.appeals.security.CurrentUser;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -39,6 +41,7 @@ public class TransferService {
     private final ApplicationEventPublisher eventPublisher;
     private final DirectoryService directoryService;
     private final AppealAccess access;
+    private final ZoneId zone;
 
     public TransferService(TransferRequestRepository transferRepository,
                            AppealRepository appealRepository,
@@ -47,7 +50,8 @@ public class TransferService {
                            AppealHistoryRepository historyRepository,
                            ApplicationEventPublisher eventPublisher,
                            DirectoryService directoryService,
-                           AppealAccess access) {
+                           AppealAccess access,
+                           @Value("${appeals.timezone}") String timezone) {
         this.transferRepository = transferRepository;
         this.appealRepository = appealRepository;
         this.departmentRepository = departmentRepository;
@@ -56,6 +60,7 @@ public class TransferService {
         this.eventPublisher = eventPublisher;
         this.directoryService = directoryService;
         this.access = access;
+        this.zone = ZoneId.of(timezone);
     }
 
     @Transactional
@@ -151,7 +156,7 @@ public class TransferService {
                     .orElse(24);
             appeal.transferTo(
                     transfer.getTargetDepartment(),
-                    now.plusSeconds(slaHours * 3600L),
+                    appeal.withinLegalDeadline(now.plusSeconds(slaHours * 3600L), zone),
                     now
             );
             transfer.approve(user.subject(), reviewerName, comment, now);

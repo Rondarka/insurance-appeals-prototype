@@ -62,6 +62,26 @@ class AppealLifecycleTest extends IntegrationTest {
     }
 
     @Test
+    void closingKeepsOutcomeAndReopeningDropsIt() {
+        UUID closed = routedClaim();
+        changeStatus(closed, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
+        resolve(closed, AppealOutcome.SATISFIED, "Выплата 40 000 ₽ направлена на ваш счёт по условиям договора.", AppealDetailResponse.class);
+        changeStatus(closed, AppealStatus.CLOSED, AppealDetailResponse.class);
+
+        // закрытие — не пересмотр: итог остаётся результатом рассмотрения
+        assertThat(getAppeal(closed).outcome()).isEqualTo(AppealOutcome.SATISFIED);
+        assertThat(getAppeal(closed).resolvedAt()).isNotNull();
+
+        UUID reopened = routedClaim();
+        changeStatus(reopened, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
+        resolve(reopened, AppealOutcome.REJECTED, "Событие не является страховым случаем по условиям договора.", AppealDetailResponse.class);
+        changeStatus(reopened, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
+
+        // клиент не согласен — прежний итог больше не действует
+        assertThat(getAppeal(reopened).outcome()).isNull();
+    }
+
+    @Test
     void appealIsResolvedOnlyByAnswerToClient() {
         UUID appeal = routedClaim();
         changeStatus(appeal, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);

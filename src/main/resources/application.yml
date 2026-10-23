@@ -66,6 +66,12 @@ appeals:
   calendar:
     # каталог с файлами утверждённого производственного календаря
     path: ${CALENDAR_PATH:calendar}
+  demo:
+    # демонстрационные обращения для стенда и скриншотов (решение 33); на стенде включается в compose
+    enabled: false
+    count: 300
+    days: 180
+    seed: 2027
   outbox:
     # доставка событий из outbox в RabbitMQ (решение 3)
     initial-delay: PT1S

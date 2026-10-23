@@ -121,6 +121,10 @@ public class Appeal {
     @Column(name = "contract_link_next_at")
     private Instant contractLinkNextAt;
 
+    /** Демонстрационное обращение из генератора стенда (решение 33). */
+    @Column(nullable = false)
+    private boolean demo;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 30)
     private AppealOutcome outcome;
@@ -296,8 +300,9 @@ public class Appeal {
             throw new IllegalStateException("Решить обращение можно только ответом клиенту по существу");
         }
         checkTransition(status);
-        if (this.status == AppealStatus.RESOLVED) {
-            // клиент не согласен с решением — прежний итог больше не действует
+        if (this.status == AppealStatus.RESOLVED && status == AppealStatus.IN_PROGRESS) {
+            // клиент не согласен с решением — прежний итог больше не действует;
+            // при закрытии итог остаётся: это и есть результат рассмотрения
             this.outcome = null;
             this.resolvedAt = null;
         }
@@ -428,6 +433,14 @@ public class Appeal {
 
     public String getDeadlineExtensionReason() {
         return deadlineExtensionReason;
+    }
+
+    public void markDemo() {
+        this.demo = true;
+    }
+
+    public boolean isDemo() {
+        return demo;
     }
 
     public ContractLink getContractLink() {

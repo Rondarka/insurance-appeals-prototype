@@ -617,6 +617,9 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .draft-preview { display: grid; gap: 6px; padding: 10px 12px; border: 1px dashed var(--blue); border-radius: 8px;
     background: var(--surface); }
 .draft-preview pre { margin: 0; white-space: pre-wrap; font: 13px/1.5 "Segoe UI", Roboto, Arial, sans-serif; }
+.access-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
+.access-log li { display: grid; gap: 1px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
+.access-log li:last-child { border-bottom: 0; }
 .engine-choice { display: flex; flex-wrap: wrap; align-items: stretch; gap: 12px; margin-bottom: 10px; }
 .engine-option { flex: 1 1 260px; display: flex; gap: 10px; align-items: flex-start; padding: 10px 12px;
     border: 1px solid var(--line); border-radius: 8px; cursor: pointer; }

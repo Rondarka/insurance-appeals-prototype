@@ -49,6 +49,7 @@ import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.messaging.OutboxRelay;
 import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
+import ru.mtuci.appeals.service.AccessLog;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.AttachmentService;
 import ru.mtuci.appeals.service.ClassificationService;
@@ -82,6 +83,7 @@ public class AppealController {
     private final ClassificationService classificationService;
     private final StaffService staffService;
     private final AssistantService assistantService;
+    private final AccessLog accessLog;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
@@ -93,7 +95,8 @@ public class AppealController {
                             OutboxRelay outboxRelay,
                             ClassificationService classificationService,
                             StaffService staffService,
-                            AssistantService assistantService) {
+                            AssistantService assistantService,
+                            AccessLog accessLog) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
@@ -105,6 +108,7 @@ public class AppealController {
         this.classificationService = classificationService;
         this.staffService = staffService;
         this.assistantService = assistantService;
+        this.accessLog = accessLog;
     }
 
     @GetMapping("/me")
@@ -128,7 +132,10 @@ public class AppealController {
 
     @GetMapping("/appeals/{id}")
     AppealDetailResponse get(CurrentUser user, @PathVariable UUID id) {
-        return appealService.get(user, id);
+        AppealDetailResponse appeal = appealService.get(user, id);
+        // в журнал доступа пишется, только если обращение действительно показано
+        accessLog.viewed(user, id);
+        return appeal;
     }
 
     /** Условия договора обращения — из учётной системы, на момент запроса. */
@@ -285,6 +292,7 @@ public class AppealController {
     @GetMapping("/attachments/{id}")
     ResponseEntity<Resource> downloadAttachment(CurrentUser user, @PathVariable UUID id) {
         AttachmentService.AttachmentDownload download = attachmentService.download(user, id);
+        accessLog.fileOpened(user, download.attachment().getAppeal().getId(), id);
         MediaType mediaType;
         try {
             mediaType = MediaType.parseMediaType(download.attachment().getContentType());

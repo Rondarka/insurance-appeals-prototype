@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.mtuci.appeals.api.ApiModels.AccessLogResponse;
 import ru.mtuci.appeals.api.ApiModels.AnalyticsResponse;
 import ru.mtuci.appeals.api.ApiModels.AssistantSettingsRequest;
 import ru.mtuci.appeals.api.ApiModels.AssistantSettingsResponse;
@@ -22,10 +23,12 @@ import ru.mtuci.appeals.api.ApiModels.SaveRoutingRuleRequest;
 import ru.mtuci.appeals.api.ApiModels.SettingsAuditResponse;
 import ru.mtuci.appeals.assistant.AssistantService;
 import ru.mtuci.appeals.security.CurrentUser;
+import ru.mtuci.appeals.service.AccessLog;
 import ru.mtuci.appeals.service.AnalyticsService;
 import ru.mtuci.appeals.service.SettingsService;
 
 import java.util.List;
+import java.util.UUID;
 
 /** Настройки подсистемы — только администратору (решение 34). Доступ закрыт в SecurityConfig. */
 @RestController
@@ -35,11 +38,20 @@ public class AdminController {
     private final SettingsService settings;
     private final AnalyticsService analytics;
     private final AssistantService assistant;
+    private final AccessLog accessLog;
 
-    public AdminController(SettingsService settings, AnalyticsService analytics, AssistantService assistant) {
+    public AdminController(SettingsService settings, AnalyticsService analytics, AssistantService assistant,
+                           AccessLog accessLog) {
         this.settings = settings;
         this.analytics = analytics;
         this.assistant = assistant;
+        this.accessLog = accessLog;
+    }
+
+    /** Кто из сотрудников открывал обращение и его файлы (решение 40). */
+    @GetMapping("/appeals/{id}/access-log")
+    List<AccessLogResponse> accessLog(@PathVariable UUID id) {
+        return accessLog.of(id);
     }
 
     @GetMapping("/routing-rules")

@@ -166,7 +166,9 @@ async function openCard(id) {
             </div>
             <aside class="side-col">
                 <dl class="kv">
-                    <dt>Клиент</dt><dd>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></dd>
+                    <dt>Клиент</dt><dd>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small>
+                        ${appeal.channel && appeal.channel !== "CABINET" ? `<br><small class="muted">принято ${CHANNEL_LABELS[appeal.channel]},
+                            оператор ${escapeHtml(appeal.registeredBy || "")}</small>` : ""}</dd>
                     <dt>Отдел</dt><dd>${escapeHtml(appeal.department?.name || "ожидает маршрутизации")}</dd>
                     <dt>Исполнитель</dt><dd>${escapeHtml(appeal.assignedEmployee || "не назначен")}</dd>
                     <dt>Приоритет</dt><dd>${escapeHtml(PRIORITY_LABELS[appeal.priority])}</dd>
@@ -179,10 +181,27 @@ async function openCard(id) {
                 <h4>Данные обращения</h4>${renderDetails(appeal)}
                 <h4>Файлы</h4>${renderAttachments(appeal)}
                 ${renderRelatedSection(appeal)}
+                <h4>Кто открывал обращение</h4>
+                <div id="access-${id}"><p class="muted small-text">Загрузка…</p></div>
             </aside>
         </div>`;
     loadRelated(id, $(`#related-${id}`));
+    loadAccessLog(id).catch(error => showToast(error.message, true));
     renderList();
+}
+
+/** Журнал доступа (решение 40): кто из сотрудников открывал карточку и файлы. */
+async function loadAccessLog(id) {
+    const entries = await api(`/api/admin/appeals/${id}/access-log`);
+    const box = $(`#access-${id}`);
+    if (!box) return;
+    box.innerHTML = entries.length ? `<ul class="access-log">${entries.map(entry => `
+        <li><span>${escapeHtml(entry.viewerName)}<small class="muted"> · ${escapeHtml(ROLE_LABELS[entry.viewerRole] || entry.viewerRole)}${
+            entry.department ? `, ${escapeHtml(entry.department)}` : ""}</small></span>
+            <small class="muted">${entry.action === "FILE_OPENED" ? `открыл файл «${escapeHtml(entry.file || "")}»` : "открыл карточку"},
+                ${formatDateTime(entry.accessedAt)}</small></li>`).join("")}</ul>
+        <p class="muted small-text">Повторный просмотр в течение 30 минут отдельно не записывается.</p>`
+        : `<p class="muted small-text">Сотрудники обращение ещё не открывали.</p>`;
 }
 
 // ---------- правила: маршрутизация, нормативы, журнал (решение 34) ----------

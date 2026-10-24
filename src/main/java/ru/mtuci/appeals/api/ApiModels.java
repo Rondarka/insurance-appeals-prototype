@@ -396,6 +396,13 @@ public final class ApiModels {
     ) {
     }
 
+    // ---------- журнал доступа (решение 40) ----------
+
+    /** action: VIEWED (открыл карточку) или FILE_OPENED (открыл файл file). */
+    public record AccessLogResponse(String action, String viewerName, String viewerRole, String department,
+                                    Instant accessedAt, String file) {
+    }
+
     // ---------- оператор контакт-центра (решение 38) ----------
 
     /** Обращение со слов клиента: канал, как к нему обращаться, и та же форма, что в кабинете. */

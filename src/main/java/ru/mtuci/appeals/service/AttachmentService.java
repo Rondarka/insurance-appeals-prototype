@@ -20,6 +20,7 @@ import ru.mtuci.appeals.messaging.AppealDomainEvent;
 import ru.mtuci.appeals.repository.AppealAttachmentRepository;
 import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealRepository;
+import ru.mtuci.appeals.integration.AntivirusClient;
 import ru.mtuci.appeals.security.CurrentUser;
 
 import java.io.IOException;
@@ -31,21 +32,24 @@ import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
+import java.util.Optional;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class AttachmentService {
 
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
-    private static final Set<String> ALLOWED_TYPES = Set.of(
-            "application/pdf",
-            "image/jpeg",
-            "image/png"
-    );
+    /** Тип файла определяется по первым байтам, а не по имени и не по слову браузера (решение 39). */
+    private static final Map<String, byte[]> SIGNATURES = Map.of(
+            "application/pdf", "%PDF-".getBytes(StandardCharsets.US_ASCII),
+            "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF},
+            "image/png", new byte[]{(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'});
+    private static final Map<String, String> EXTENSIONS = Map.of(
+            "application/pdf", ".pdf", "image/jpeg", ".jpg", "image/png", ".png");
 
     private final AppealRepository appealRepository;
     private final AppealAttachmentRepository attachmentRepository;
@@ -55,6 +59,7 @@ public class AttachmentService {
     private final int maxCount;
     private final int maxPerAppeal;
     private final AppealAccess access;
+    private final AntivirusClient antivirus;
 
     public AttachmentService(AppealRepository appealRepository,
                              AppealAttachmentRepository attachmentRepository,
@@ -63,7 +68,8 @@ public class AttachmentService {
                              @Value("${appeals.attachments.path}") String storagePath,
                              @Value("${appeals.attachments.max-count}") int maxCount,
                              @Value("${appeals.attachments.max-per-appeal}") int maxPerAppeal,
-                             AppealAccess access) {
+                             AppealAccess access,
+                             AntivirusClient antivirus) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
         this.historyRepository = historyRepository;
@@ -72,6 +78,7 @@ public class AttachmentService {
         this.maxCount = maxCount;
         this.maxPerAppeal = maxPerAppeal;
         this.access = access;
+        this.antivirus = antivirus;
     }
 
     @PostConstruct
@@ -94,7 +101,7 @@ public class AttachmentService {
         if (appeal.getStatus() == AppealStatus.CLOSED) {
             throw new IllegalStateException("Обращение закрыто — создайте новое");
         }
-        List<MultipartFile> accepted = accepted(appeal, files);
+        List<CheckedFile> accepted = accepted(appeal, files);
         if (accepted.isEmpty()) {
             throw new IllegalArgumentException("Не выбраны файлы для загрузки");
         }
@@ -105,9 +112,10 @@ public class AttachmentService {
 
     /**
      * Проверяет файлы до того, как что-либо сохранено: сколько за раз и всего у обращения,
-     * размер и тип. Возвращает выбранные файлы без пустых полей формы.
+     * размер, тип по содержимому и антивирусом. Возвращает выбранные файлы без пустых полей
+     * формы вместе с настоящим типом.
      */
-    public List<MultipartFile> accepted(Appeal appeal, List<MultipartFile> files) {
+    public List<CheckedFile> accepted(Appeal appeal, List<MultipartFile> files) {
         List<MultipartFile> actualFiles = files == null
                 ? List.of()
                 : files.stream().filter(file -> !file.isEmpty()).toList();
@@ -117,15 +125,18 @@ public class AttachmentService {
         if (attachmentRepository.countByAppeal_Id(appeal.getId()) + actualFiles.size() > maxPerAppeal) {
             throw new IllegalArgumentException("К обращению можно приложить не более " + maxPerAppeal + " файлов");
         }
-        actualFiles.forEach(this::validateFile);
-        return actualFiles;
+        return actualFiles.stream().map(this::check).toList();
+    }
+
+    /** Файл и его тип, определённый по содержимому. */
+    public record CheckedFile(MultipartFile file, String contentType) {
     }
 
     /**
      * Сохраняет проверенные файлы обращения или его сообщения (messageId). Если транзакция
      * откатится — например, не сохранилось само сообщение, — файлы удаляются и с диска.
      */
-    public List<AppealAttachment> attach(Appeal appeal, Long messageId, List<MultipartFile> files, String actor) {
+    public List<AppealAttachment> attach(Appeal appeal, Long messageId, List<CheckedFile> files, String actor) {
         if (files.isEmpty()) {
             return List.of();
         }
@@ -134,10 +145,12 @@ public class AttachmentService {
         deleteOnRollback(written);
         List<AppealAttachment> stored = new ArrayList<>();
         try {
-            for (MultipartFile file : files) {
+            for (CheckedFile checked : files) {
+                MultipartFile file = checked.file();
                 UUID id = UUID.randomUUID();
                 String originalName = cleanOriginalName(file.getOriginalFilename());
-                String storageName = id + extension(originalName);
+                // расширение в хранилище берётся по настоящему типу, а не из имени, которое прислал клиент
+                String storageName = id + EXTENSIONS.get(checked.contentType());
                 Path target = resolveStoragePath(storageName);
 
                 written.add(storageName);
@@ -151,7 +164,7 @@ public class AttachmentService {
                         messageId,
                         originalName,
                         storageName,
-                        file.getContentType(),
+                        checked.contentType(),
                         file.getSize(),
                         now
                 )));
@@ -215,16 +228,41 @@ public class AttachmentService {
         );
     }
 
-    private void validateFile(MultipartFile file) {
+    private CheckedFile check(MultipartFile file) {
+        String name = cleanOriginalName(file.getOriginalFilename());
         if (file.getSize() > MAX_FILE_SIZE) {
-            throw new IllegalArgumentException("Файл превышает допустимый размер 10 МБ: "
-                    + cleanOriginalName(file.getOriginalFilename()));
+            throw new IllegalArgumentException("Файл превышает допустимый размер 10 МБ: " + name);
         }
-        String contentType = file.getContentType();
-        if (contentType == null || !ALLOWED_TYPES.contains(contentType.toLowerCase(Locale.ROOT))) {
-            throw new IllegalArgumentException("Разрешены только PDF, JPG и PNG: "
-                    + cleanOriginalName(file.getOriginalFilename()));
+        String contentType = detectType(file)
+                .orElseThrow(() -> new IllegalArgumentException("Разрешены только PDF, JPG и PNG: " + name));
+        if (antivirus.enabled()) {
+            try (InputStream content = file.getInputStream()) {
+                antivirus.scan(content).ifPresent(threat -> {
+                    throw new IllegalArgumentException("Файл не прошёл антивирусную проверку: " + name);
+                });
+            } catch (IOException exception) {
+                throw new IllegalStateException("Не удалось прочитать вложение " + name, exception);
+            }
         }
+        return new CheckedFile(file, contentType);
+    }
+
+    /** PDF, JPG или PNG по первым байтам; переименованный файл другого вида не пройдёт. */
+    private static Optional<String> detectType(MultipartFile file) {
+        byte[] head;
+        try (InputStream content = file.getInputStream()) {
+            head = content.readNBytes(8);
+        } catch (IOException exception) {
+            return Optional.empty();
+        }
+        return SIGNATURES.entrySet().stream()
+                .filter(signature -> startsWith(head, signature.getValue()))
+                .map(Map.Entry::getKey)
+                .findFirst();
+    }
+
+    private static boolean startsWith(byte[] head, byte[] signature) {
+        return head.length >= signature.length && Arrays.equals(head, 0, signature.length, signature, 0, signature.length);
     }
 
     private String cleanOriginalName(String name) {
@@ -232,11 +270,6 @@ public class AttachmentService {
             return "attachment";
         }
         return Path.of(name).getFileName().toString().replaceAll("[\\r\\n]", "");
-    }
-
-    private String extension(String name) {
-        int dot = name.lastIndexOf('.');
-        return dot >= 0 ? name.substring(dot).toLowerCase(Locale.ROOT) : "";
     }
 
     private Path resolveStoragePath(String storageName) {

@@ -95,6 +95,11 @@ appeals:
     # за один раз (форма обращения или сообщение) и всего у обращения
     max-count: 5
     max-per-appeal: 30
+    # антивирус ClamAV (решение 39); адрес не задан, значит проверка выключена
+    antivirus:
+      host: ${ANTIVIRUS_HOST:}
+      port: 3310
+      timeout: PT10S
   auth:
     # публичный клиент OAuth, через который входит интерфейс (код авторизации + PKCE)
     ui-client-id: appeals-ui

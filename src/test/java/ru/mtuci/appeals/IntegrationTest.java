@@ -116,6 +116,9 @@ public abstract class IntegrationTest {
                 () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
         // локальная модель помощника — поддельная, как поставщик идентификации (решение 35)
         registry.add("appeals.assistant.model.base-url", TestLocalModel::baseUrl);
+        registry.add("appeals.attachments.antivirus.host", () -> "localhost");
+        registry.add("appeals.attachments.antivirus.port", TestAntivirus::port);
+        registry.add("appeals.attachments.antivirus.timeout", () -> "PT2S");
         registry.add("appeals.assistant.model.timeout", () -> "2s");
         registry.add("appeals.assistant.model.open-duration", () -> "PT1S");
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> TestIdentityProvider.ISSUER);

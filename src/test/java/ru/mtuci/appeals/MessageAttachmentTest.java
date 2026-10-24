@@ -58,7 +58,7 @@ class MessageAttachmentTest extends IntegrationTest {
         UUID appeal = waitingForClient();
 
         AppealDetailResponse answered = as(ANNA).postForObject("/api/appeals/{id}/messages",
-                message(null, "foto-povrezhdeniy.jpg", "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, 1, 2}),
+                message(null, "foto-povrezhdeniy.jpg", "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF, (byte) 0xE0, 0, 16}),
                 AppealDetailResponse.class, appeal);
 
         assertThat(last(answered).body()).isEmpty();

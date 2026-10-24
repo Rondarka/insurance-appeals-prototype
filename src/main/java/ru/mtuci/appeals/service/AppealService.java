@@ -518,7 +518,7 @@ public class AppealService {
             throw new IllegalStateException("Обращение закрыто — создайте новое");
         }
         String text = body == null ? "" : body.trim();
-        List<MultipartFile> accepted = attachmentService.accepted(appeal, files);
+        List<AttachmentService.CheckedFile> accepted = attachmentService.accepted(appeal, files);
         if (text.isEmpty() && accepted.isEmpty()) {
             throw new IllegalArgumentException("Напишите сообщение или приложите файл");
         }

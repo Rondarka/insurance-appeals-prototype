@@ -8,6 +8,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
+import ru.mtuci.appeals.integration.AntivirusUnavailableException;
 import ru.mtuci.appeals.integration.ContractSourceUnavailableException;
 import ru.mtuci.appeals.service.AppealNotFoundException;
 
@@ -30,6 +31,13 @@ public class ApiExceptionHandler {
     ResponseEntity<ErrorResponse> handleContractSourceUnavailable(ContractSourceUnavailableException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
                 .body(new ErrorResponse("Учётная система договоров недоступна, попробуйте позже", Instant.now()));
+    }
+
+    /** Непроверенный файл не принимаем, но это сбой проверки, а не ошибка клиента. */
+    @ExceptionHandler(AntivirusUnavailableException.class)
+    ResponseEntity<ErrorResponse> handleAntivirusUnavailable(AntivirusUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(new ErrorResponse("Проверка файлов временно недоступна, попробуйте позже", Instant.now()));
     }
 
     /** И отсутствующее, и чужое обращение — 404: не раскрываем, что оно существует. */

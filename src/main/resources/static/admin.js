@@ -336,18 +336,36 @@ function renderAssistantSettings(settings) {
                     <input type="radio" name="engine" value="${code}" ${settings.engine === code ? "checked" : ""}>
                     <span><strong>${label}</strong><small class="muted">${note}</small></span>
                 </label>`).join("")}
-            <button class="btn" type="submit">Сохранить выбор</button>
+            <div class="engine-save">
+                <label>Причина изменения, попадёт в журнал
+                    <input name="reason" maxlength="500" value="${escapeHtml($("#settings-reason").value)}"
+                           placeholder="Например: пилот локальной модели в отделе убытков">
+                </label>
+                <button class="btn" type="submit">Сохранить выбор</button>
+            </div>
         </form>
         <p class="muted small-text">Модель: <code>${escapeHtml(settings.modelName)}</code> по адресу <code>${escapeHtml(settings.modelUrl)}</code>${
             settings.engine === "LOCAL_MODEL" ? ` · ${MODEL_STATE[settings.modelState] || settings.modelState}` : ""}.
             Адрес и модель задаются при развёртывании (ASSISTANT_MODEL_URL, ASSISTANT_MODEL).</p>`;
 }
 
+// рамка у отмеченного варианта, а не у сохранённого
+$("#assistant-settings").addEventListener("change", event => {
+    if (event.target.name !== "engine") return;
+    document.querySelectorAll(".engine-option").forEach(option =>
+        option.classList.toggle("selected", option.contains(event.target)));
+});
+
 $("#assistant-settings").addEventListener("submit", async event => {
     event.preventDefault();
     try {
-        const reason = settingsReason();
-        const engine = new FormData(event.target).get("engine");
+        const form = new FormData(event.target);
+        const reason = form.get("reason").trim();
+        if (reason.length < 5) {
+            event.target.elements.reason.focus();
+            throw new Error("Укажите причину изменения: она попадёт в журнал");
+        }
+        const engine = form.get("engine");
         renderAssistantSettings(await api("/api/admin/assistant", {method: "PUT", body: JSON.stringify({engine, reason})}));
         showToast(`Подсказки даёт: ${ASSISTANT_ENGINES[engine][0].toLowerCase()}`);
         await loadSettings();

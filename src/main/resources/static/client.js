@@ -16,6 +16,15 @@ const INPUT_TYPES = {TEXT: "text", DATE: "date", NUMBER: "number"};
 const draft = {contractId: null, productCode: null, category: null, type: null, schema: {categories: []}};
 let myAppeals = [];
 let openedId = null;
+// на телефоне список обращений короткий, иначе до формы не долистать
+let showAllAppeals = false;
+const PHONE_LIST = 3;
+const isPhone = () => window.matchMedia("(max-width: 900px)").matches;
+
+/** На телефоне колонки идут одна под другой: после выбора показываем то, что выбрали. */
+function revealOnPhone(element) {
+    if (isPhone()) element.scrollIntoView({behavior: "smooth", block: "start"});
+}
 
 const $ = selector => document.querySelector(selector);
 
@@ -164,6 +173,7 @@ $("#new-appeal-button").addEventListener("click", () => {
     $("#appeal-view").hidden = true;
     $("#new-appeal").hidden = false;
     renderMyAppeals();
+    revealOnPhone($("#new-appeal"));
 });
 
 // ---------- мои обращения ----------
@@ -174,19 +184,31 @@ async function loadMyAppeals() {
 }
 
 function renderMyAppeals() {
-    $("#my-appeals").innerHTML = myAppeals.length ? myAppeals.map(appeal => `
+    const shortList = isPhone() && !showAllAppeals && myAppeals.length > PHONE_LIST;
+    const shown = shortList ? myAppeals.slice(0, PHONE_LIST) : myAppeals;
+    $("#my-appeals").innerHTML = (myAppeals.length ? shown.map(appeal => `
         <button type="button" class="side-item ${appeal.id === openedId ? "selected" : ""} ${appeal.status === "WAITING_CUSTOMER" ? "attention" : ""}"
                 data-appeal="${appeal.id}">
             <strong>${escapeHtml(appeal.subject)}</strong>
             <span class="side-meta">${["NEEDS_CHOICE", "NOT_FOUND"].includes(appeal.contractLink)
                 ? `<span class="chip status-WAITING_CUSTOMER">уточните договор</span>`
                 : statusChip(appeal.status, CLIENT_STATUS)}<small>${formatDateTime(appeal.updatedAt)}</small></span>
-        </button>`).join("") : `<p class="muted">Обращений пока нет</p>`;
+        </button>`).join("") : `<p class="muted">Обращений пока нет</p>`)
+        + (shortList ? `<button type="button" class="btn ghost wide" data-all-appeals>Все обращения · ${myAppeals.length}</button>` : "");
 }
 
 $("#my-appeals").addEventListener("click", event => {
+    if (event.target.closest("[data-all-appeals]")) {
+        showAllAppeals = true;
+        renderMyAppeals();
+        return;
+    }
     const item = event.target.closest("[data-appeal]");
-    if (item) openAppeal(item.dataset.appeal).catch(error => showToast(error.message, true));
+    if (item) {
+        openAppeal(item.dataset.appeal)
+            .then(() => revealOnPhone($("#appeal-view")))
+            .catch(error => showToast(error.message, true));
+    }
 });
 
 async function openAppeal(id) {

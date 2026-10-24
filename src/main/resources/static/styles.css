@@ -664,3 +664,20 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
     .analytics-grid { grid-template-columns: 1fr; }
     .analytics-kpi { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
+
+/* телефон: кабинет клиента должен помещаться в 375 px */
+@media (max-width: 600px) {
+    .topbar { gap: 12px; padding: 0 12px; }
+    .brand { gap: 8px; min-width: 0; flex: 0 1 auto; font-size: 14px; }
+    .brand small, .user-text small, .avatar { display: none; }
+    .user-box { gap: 8px; flex: 0 0 auto; }
+    .user-text strong { display: block; max-width: 96px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .btn.on-dark { padding: 6px 10px; }
+    .client-layout { padding: 12px; gap: 16px; }
+    .client-layout .panel { padding: 14px; }
+    .choice-grid, .choice-grid.compact { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+    .choice { padding: 10px; }
+    .card-head { flex-wrap: wrap; }
+    .reply-actions, .form-actions { justify-content: stretch; }
+    .reply-actions .btn, .form-actions .btn { flex: 1 1 auto; }
+}

@@ -18,7 +18,7 @@
 
 1. `messaging/RabbitTopology.java` — имена обменников и очередей, 10 строк
 2. `messaging/RabbitConfig.java` — как они связаны биндингами
-3. `service/AppealService.java`, метод `create()` — рождение обращения
+3. `service/AppealRegistrationService.java`, метод `create()`: рождение обращения
 4. `messaging/OutboxWriter.java` и `messaging/OutboxRelay.java` — как событие уходит наружу
 5. `messaging/RoutingConsumer.java` — как оно возвращается и что делает
 
@@ -69,7 +69,7 @@ ru.mtuci.appeals
 (`security/SecurityConfig`). Идентификаторов клиента и сотрудника в телах запросов
 нет. Какое обращение кому доступно, решает `service/AppealAccess`.
 
-### 3. AppealService.create() — сердце сценария
+### 3. AppealRegistrationService.create(): сердце сценария
 
 Порядок действий важен, он же определяет, что где ломается:
 
@@ -121,7 +121,7 @@ ru.mtuci.appeals
 
 ### 4. Событие уходит наружу — через outbox
 
-`AppealService` не публикует в RabbitMQ напрямую. Он вызывает
+`AppealRegistrationService` не публикует в RabbitMQ напрямую. Он вызывает
 `eventPublisher.publishEvent(...)` — это событие Spring внутри приложения.
 
 Слушает его `OutboxWriter` и записывает событие в таблицу `outbox_event` **в той же
@@ -274,6 +274,16 @@ dead-letter срабатывает на отклонение без возвра
 | `domain` | правила самой сущности (`routeTo`, `changeStatus`) | ходить в базу |
 | `repository` | доступ к данным | принимать решения |
 | `messaging` | доставка событий | содержать бизнес-логику |
+
+Сервисы обращения разделены по сценариям, а не по слоям данных:
+
+| Сервис | Сценарий |
+|---|---|
+| `AppealRegistrationService` | регистрация клиентом и оператором (решение 38) |
+| `AppealWorkflowService` | работа в отделе: исполнитель, статус, ответ по существу, продление |
+| `CorrespondenceService` | переписка и файлы к сообщениям |
+| `AppealService` | чтение: очередь, карточка, история клиента, условия договора |
+| `AppealViews` | одно место, где обращение превращается в ответ API |
 
 Смена статуса живёт в `Appeal.changeStatus()`, а не в сервисе. Сущность сама
 следит за своей целостностью — это и есть смысл «богатой» доменной модели.

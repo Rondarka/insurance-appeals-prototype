@@ -15,6 +15,7 @@ import ru.mtuci.appeals.api.ApiModels.OperatorClientResponse;
 import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.integration.ExternalContract;
 import ru.mtuci.appeals.security.CurrentUser;
+import ru.mtuci.appeals.service.AppealRegistrationService;
 import ru.mtuci.appeals.service.AppealService;
 import ru.mtuci.appeals.service.DirectoryService;
 
@@ -31,12 +32,14 @@ public class OperatorController {
     private final ContractsClient contractsClient;
     private final DirectoryService directoryService;
     private final AppealService appealService;
+    private final AppealRegistrationService registration;
 
     public OperatorController(ContractsClient contractsClient, DirectoryService directoryService,
-                              AppealService appealService) {
+                              AppealService appealService, AppealRegistrationService registration) {
         this.contractsClient = contractsClient;
         this.directoryService = directoryService;
         this.appealService = appealService;
+        this.registration = registration;
     }
 
     /**
@@ -55,6 +58,6 @@ public class OperatorController {
     @PostMapping("/appeals")
     @ResponseStatus(HttpStatus.CREATED)
     AppealDetailResponse register(CurrentUser operator, @Valid @RequestBody OperatorAppealRequest request) {
-        return appealService.createByOperator(operator, request);
+        return registration.createByOperator(operator, request);
     }
 }

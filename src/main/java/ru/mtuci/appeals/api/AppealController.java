@@ -50,7 +50,10 @@ import ru.mtuci.appeals.messaging.OutboxRelay;
 import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AppealFormPolicy;
 import ru.mtuci.appeals.service.AccessLog;
+import ru.mtuci.appeals.service.AppealRegistrationService;
 import ru.mtuci.appeals.service.AppealService;
+import ru.mtuci.appeals.service.AppealWorkflowService;
+import ru.mtuci.appeals.service.CorrespondenceService;
 import ru.mtuci.appeals.service.AttachmentService;
 import ru.mtuci.appeals.service.ClassificationService;
 import ru.mtuci.appeals.service.StaffService;
@@ -73,6 +76,9 @@ import java.util.UUID;
 public class AppealController {
 
     private final AppealService appealService;
+    private final AppealRegistrationService registration;
+    private final AppealWorkflowService workflow;
+    private final CorrespondenceService correspondence;
     private final AttachmentService attachmentService;
     private final DirectoryService directoryService;
     private final TransferService transferService;
@@ -86,6 +92,9 @@ public class AppealController {
     private final AccessLog accessLog;
 
     public AppealController(AppealService appealService,
+                            AppealRegistrationService registration,
+                            AppealWorkflowService workflow,
+                            CorrespondenceService correspondence,
                             AttachmentService attachmentService,
                             DirectoryService directoryService,
                             TransferService transferService,
@@ -98,6 +107,9 @@ public class AppealController {
                             AssistantService assistantService,
                             AccessLog accessLog) {
         this.appealService = appealService;
+        this.registration = registration;
+        this.workflow = workflow;
+        this.correspondence = correspondence;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
         this.transferService = transferService;
@@ -119,7 +131,7 @@ public class AppealController {
     @PostMapping("/appeals")
     @ResponseStatus(HttpStatus.CREATED)
     AppealDetailResponse create(CurrentUser user, @Valid @RequestBody CreateAppealRequest request) {
-        return appealService.create(user, request);
+        return registration.create(user, request);
     }
 
     /** departmentCode учитывается только у администратора: остальным очередь задаёт токен. */
@@ -178,7 +190,7 @@ public class AppealController {
             CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody ChangeStatusRequest request) {
-        return appealService.changeStatus(user, id, request);
+        return workflow.changeStatus(user, id, request);
     }
 
     @PostMapping("/appeals/{id}/resolve")
@@ -186,7 +198,7 @@ public class AppealController {
             CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody ResolveAppealRequest request) {
-        return appealService.resolve(user, id, request);
+        return workflow.resolve(user, id, request);
     }
 
     @GetMapping("/integrations")
@@ -243,7 +255,7 @@ public class AppealController {
 
     @PostMapping("/appeals/{id}/assign")
     AppealDetailResponse assign(CurrentUser user, @PathVariable UUID id, @Valid @RequestBody AssignRequest request) {
-        return appealService.assign(user, id, request.subject());
+        return workflow.assign(user, id, request.subject());
     }
 
     /** Ручная классификация: отдел выбирает руководитель (решение 31). */
@@ -257,7 +269,7 @@ public class AppealController {
             CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody ExtendDeadlineRequest request) {
-        return appealService.extendDeadline(user, id, request);
+        return workflow.extendDeadline(user, id, request);
     }
 
     @PostMapping(value = "/appeals/{id}/messages", consumes = MediaType.APPLICATION_JSON_VALUE)
@@ -265,7 +277,7 @@ public class AppealController {
             CurrentUser user,
             @PathVariable UUID id,
             @Valid @RequestBody AddMessageRequest request) {
-        return appealService.addMessage(user, id, request.body(), List.of());
+        return correspondence.addMessage(user, id, request.body(), List.of());
     }
 
     /** То же сообщение, но с файлами: текст можно не писать, если приложен файл. */
@@ -275,7 +287,7 @@ public class AppealController {
             @PathVariable UUID id,
             @RequestParam(value = "body", required = false) String body,
             @RequestParam(value = "files", required = false) List<MultipartFile> files) {
-        return appealService.addMessage(user, id, body, files);
+        return correspondence.addMessage(user, id, body, files);
     }
 
     @PostMapping(

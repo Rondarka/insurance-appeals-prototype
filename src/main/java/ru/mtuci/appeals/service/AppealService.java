@@ -1,293 +1,75 @@
 package ru.mtuci.appeals.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
-import ru.mtuci.appeals.api.ApiModels.OperatorAppealRequest;
-import ru.mtuci.appeals.api.ApiModels.SignalBadge;
-import ru.mtuci.appeals.assistant.SignalDetector;
-import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
-import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
-import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
-import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
-import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
-import ru.mtuci.appeals.api.ApiModels.ExtendDeadlineRequest;
-import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
-import ru.mtuci.appeals.api.ApiModels.MessageResponse;
-import ru.mtuci.appeals.api.ApiModels.NormResponse;
-import ru.mtuci.appeals.api.ApiModels.ProductResponse;
 import ru.mtuci.appeals.api.ApiModels.ContractTermsResponse;
 import ru.mtuci.appeals.api.ApiModels.CoverageResponse;
+import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
+import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.RelatedAppealResponse;
-import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
-import ru.mtuci.appeals.api.ApiModels.StaffMemberResponse;
+import ru.mtuci.appeals.api.ApiModels.SignalBadge;
+import ru.mtuci.appeals.assistant.SignalDetector;
 import ru.mtuci.appeals.domain.Appeal;
-import ru.mtuci.appeals.domain.AppealChannel;
-import ru.mtuci.appeals.domain.AppealHistory;
-import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
-import ru.mtuci.appeals.domain.ContractSnapshot;
-import ru.mtuci.appeals.domain.DeadlineNorm;
-import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.domain.EventAudit;
 import ru.mtuci.appeals.integration.ContractsClient;
-import ru.mtuci.appeals.integration.ContractSourceUnavailableException;
-import ru.mtuci.appeals.messaging.AppealDomainEvent;
-import ru.mtuci.appeals.repository.AppealHistoryRepository;
 import ru.mtuci.appeals.repository.AppealMessageRepository;
 import ru.mtuci.appeals.repository.AppealRepository;
-import ru.mtuci.appeals.repository.AppealAttachmentRepository;
 import ru.mtuci.appeals.repository.DepartmentRepository;
 import ru.mtuci.appeals.repository.EventAuditRepository;
 import ru.mtuci.appeals.security.CurrentUser;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
+/**
+ * Чтение обращений: очередь и карточка с учётом прав, обращения клиента, условия договора,
+ * история клиента, справочник отделов и журнал событий. Изменения обращения живут в
+ * отдельных сценариях: регистрация, работа в отделе, переписка.
+ */
 @Service
 public class AppealService {
 
-    private static final DateTimeFormatter NUMBER_DATE =
-            DateTimeFormatter.ofPattern("yyyyMMdd").withZone(ZoneOffset.UTC);
-    private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final int MAX_MESSAGE_LENGTH = 5000;
-
     private final AppealRepository appealRepository;
-    private final AppealAttachmentRepository attachmentRepository;
+    private final AppealMessageRepository messageRepository;
+    private final DepartmentRepository departmentRepository;
+    private final EventAuditRepository eventAuditRepository;
     private final ContractsClient contractsClient;
     private final TransactionTemplate transactionTemplate;
-    private final DepartmentRepository departmentRepository;
-    private final AppealHistoryRepository historyRepository;
-    private final AppealMessageRepository messageRepository;
-    private final EventAuditRepository eventAuditRepository;
-    private final ApplicationEventPublisher eventPublisher;
-    private final AppealFormPolicy formPolicy;
-    private final AttachmentService attachmentService;
     private final DirectoryService directoryService;
-    private final TransferService transferService;
-    private final ObjectMapper objectMapper;
     private final AppealAccess access;
-    private final DeadlineNormService normService;
-    private final ProductionCalendar calendar;
-    private final StaffService staffService;
-    private final AppealChecks checks;
     private final SignalDetector signals;
-    private final ZoneId zone;
+    private final AppealViews views;
 
-    public AppealService(AppealRepository appealRepository,
-                         AppealAttachmentRepository attachmentRepository,
-                         ContractsClient contractsClient,
-                         PlatformTransactionManager transactionManager,
-                         DepartmentRepository departmentRepository,
-                         AppealHistoryRepository historyRepository,
-                         AppealMessageRepository messageRepository,
-                         EventAuditRepository eventAuditRepository,
-                         ApplicationEventPublisher eventPublisher,
-                         AppealFormPolicy formPolicy,
-                         AttachmentService attachmentService,
-                         DirectoryService directoryService,
-                         TransferService transferService,
-                         ObjectMapper objectMapper,
-                         AppealAccess access,
-                         DeadlineNormService normService,
-                         ProductionCalendar calendar,
-                         StaffService staffService,
-                         AppealChecks checks,
-                         SignalDetector signals,
-                         @Value("${appeals.timezone}") String timezone) {
+    public AppealService(AppealRepository appealRepository, AppealMessageRepository messageRepository,
+                         DepartmentRepository departmentRepository, EventAuditRepository eventAuditRepository,
+                         ContractsClient contractsClient, PlatformTransactionManager transactionManager,
+                         DirectoryService directoryService, AppealAccess access, SignalDetector signals,
+                         AppealViews views) {
         this.appealRepository = appealRepository;
-        this.attachmentRepository = attachmentRepository;
+        this.messageRepository = messageRepository;
+        this.departmentRepository = departmentRepository;
+        this.eventAuditRepository = eventAuditRepository;
         this.contractsClient = contractsClient;
         this.transactionTemplate = new TransactionTemplate(transactionManager);
-        this.departmentRepository = departmentRepository;
-        this.historyRepository = historyRepository;
-        this.messageRepository = messageRepository;
-        this.eventAuditRepository = eventAuditRepository;
-        this.eventPublisher = eventPublisher;
-        this.formPolicy = formPolicy;
-        this.attachmentService = attachmentService;
         this.directoryService = directoryService;
-        this.transferService = transferService;
-        this.objectMapper = objectMapper;
         this.access = access;
-        this.normService = normService;
-        this.calendar = calendar;
-        this.staffService = staffService;
-        this.checks = checks;
         this.signals = signals;
-        this.zone = ZoneId.of(timezone);
-    }
-
-    /**
-     * Регистрация обращения. Договор запрашивается у учётной системы до начала транзакции:
-     * сетевой вызов не должен держать соединение с базой. Транзакция охватывает только запись.
-     */
-    public AppealDetailResponse create(CurrentUser user, CreateAppealRequest request) {
-        // имя и почта берутся из токена на момент регистрации, как и снимок договора
-        return create(new Applicant(user.requireCounterparty(), Objects.requireNonNullElse(user.name(), "Клиент"),
-                Objects.requireNonNullElse(user.email(), ""), AppealChannel.CABINET, null), request);
-    }
-
-    /**
-     * Оператор контакт-центра регистрирует обращение со слов клиента, по телефону или в офисе
-     * (решение 38). Дальше всё как у обращения из кабинета: договор сверяется с клиентом,
-     * срок по закону, маршрутизация, уведомление клиенту.
-     */
-    public AppealDetailResponse createByOperator(CurrentUser operator, OperatorAppealRequest request) {
-        if (request.channel() == AppealChannel.CABINET) {
-            throw new IllegalArgumentException("Оператор принимает обращения по телефону или в офисе");
-        }
-        return create(new Applicant(request.counterpartyId(), request.customerName().trim(), "", request.channel(),
-                Objects.requireNonNullElse(operator.name(), operator.subject())), request.appeal());
-    }
-
-    /** Кто подаёт обращение: клиент сам или оператор с его слов. */
-    private record Applicant(UUID counterpartyId, String name, String email, AppealChannel channel, String operator) {
-    }
-
-    private AppealDetailResponse create(Applicant applicant, CreateAppealRequest request) {
-        UUID counterpartyId = applicant.counterpartyId();
-        ContractSnapshot found = null;
-        if (request.contractId() != null) {
-            try {
-                // «не найден» и «чужой» неразличимы для клиента: не раскрываем, существует ли договор
-                found = contractsClient.contract(request.contractId())
-                        .filter(contract -> contract.belongsTo(counterpartyId))
-                        .orElseThrow(() -> new IllegalArgumentException(
-                                "Договор не найден или не принадлежит выбранному клиенту"))
-                        .toSnapshot();
-            } catch (ContractSourceUnavailableException exception) {
-                // клиенту не отказываем: договор привяжем, когда учётная система вернётся (решение 29)
-                if (blank(request.productCode())) {
-                    throw exception;
-                }
-            }
-        } else if (blank(request.productCode())) {
-            throw new IllegalArgumentException("Выберите договор или вид страхования");
-        }
-        ContractSnapshot contract = found;
-        String productCode = contract != null ? contract.getProductCode() : request.productCode().trim();
-        Map<String, String> details = formPolicy.details(
-                request.category(), request.subcategory(), productCode, contract, request.details());
-
-        return transactionTemplate.execute(transaction -> register(applicant, request, contract, productCode, details));
-    }
-
-    private static boolean blank(String value) {
-        return value == null || value.isBlank();
-    }
-
-    private AppealDetailResponse register(Applicant applicant, CreateAppealRequest request, ContractSnapshot contract,
-                                          String productCode, Map<String, String> details) {
-        String customerName = applicant.name();
-        String customerEmail = applicant.email();
-        Instant now = Instant.now();
-        UUID id = UUID.randomUUID();
-        String publicNumber = "APP-" + NUMBER_DATE.format(now) + "-"
-                + id.toString().substring(0, 6).toUpperCase(Locale.ROOT);
-
-        Appeal appeal = new Appeal(
-                id,
-                publicNumber,
-                applicant.counterpartyId(),
-                customerName,
-                customerEmail,
-                contract,
-                request.category(),
-                request.subcategory(),
-                writeDetails(details),
-                request.subject().trim(),
-                request.description().trim(),
-                now
-        );
-        if (applicant.operator() != null) {
-            appeal.registeredBy(applicant.channel(), applicant.operator());
-        }
-        if (contract == null) {
-            appeal.awaitContract(request.contractId(), productCode,
-                    blank(request.policyNumber()) ? null : request.policyNumber().trim(), now);
-        }
-        // срок по закону считается со дня регистрации по норме, действующей на этот день
-        LocalDate registeredOn = LocalDate.ofInstant(now, zone);
-        DeadlineNorm norm = normService.choose(request.category(), request.subcategory(),
-                productCode, details, registeredOn);
-        LocalDate legalDeadline = calendar.deadline(registeredOn, norm.getTermDays(), norm.getCounting());
-        appeal.applyNorm(norm, legalDeadline);
-        appealRepository.save(appeal);
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "CREATED",
-                applicant.operator() == null
-                        ? "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация."
-                        : "Оператор принял обращение со слов клиента " + applicant.channel().label()
-                        + ". Ожидается автоматическая маршрутизация.",
-                applicant.operator() == null ? customerName : applicant.operator(),
-                now
-        ));
-        if (contract == null) {
-            historyRepository.save(new AppealHistory(
-                    appeal,
-                    "CONTRACT_PENDING",
-                    "Учётная система договоров недоступна — договор «" + formPolicy.productLabel(productCode)
-                            + "» будет подобран автоматически, когда она заработает",
-                    "Подсистема",
-                    now
-            ));
-        }
-        // сигналы ссылаются на обращение — оно должно уже быть в базе
-        appealRepository.flush();
-        signals.record(appeal.getId(), appeal.getSubject() + "\n" + appeal.getDescription(), now);
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "DEADLINE_SET",
-                "Срок ответа по закону — до " + legalDeadline.format(DAY) + ": " + norm.getTitle().toLowerCase(Locale.ROOT)
-                        + " (" + norm.getLegalBasis() + ")",
-                "Подсистема",
-                now
-        ));
-
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_CREATED",
-                appeal.getId(),
-                "appeal.created."
-                        + request.category().toLowerCase(Locale.ROOT)
-                        + "."
-                        + request.subcategory().toLowerCase(Locale.ROOT),
-                Map.of(
-                        "category", request.category(),
-                        "subcategory", request.subcategory(),
-                        "publicNumber", publicNumber
-                )
-        ));
-
-        return toDetail(appeal);
+        this.views = views;
     }
 
     @Transactional(readOnly = true)
@@ -322,7 +104,7 @@ public class AppealService {
         Map<UUID, List<SignalBadge>> badges = user.isClient() || appeals.isEmpty() ? Map.of()
                 : signals.badges(appeals.stream().map(Appeal::getId).toList());
         return appeals.stream()
-                .map(appeal -> toSummary(appeal, clientReplied.contains(appeal.getId()),
+                .map(appeal -> views.toSummary(appeal, clientReplied.contains(appeal.getId()),
                         badges.getOrDefault(appeal.getId(), List.of())))
                 .toList();
     }
@@ -332,249 +114,15 @@ public class AppealService {
     public List<AppealSummaryResponse> ofClient(UUID counterpartyId) {
         return appealRepository.findAll((root, query, cb) -> cb.equal(root.get("counterpartyId"), counterpartyId),
                         Sort.by(Sort.Direction.DESC, "createdAt")).stream()
-                .map(appeal -> toSummary(appeal, false, List.of()))
+                .map(appeal -> views.toSummary(appeal, false, List.of()))
                 .toList();
-    }
-
-    /**
-     * Назначить исполнителя — руководитель отдела выбирает из сотрудников своего отдела,
-     * которые входили в подсистему (решение 32).
-     */
-    @Transactional
-    public AppealDetailResponse assign(CurrentUser user, UUID id, String subject) {
-        Appeal appeal = findAppeal(id);
-        access.checkWork(user, appeal);
-        if (!user.isSupervisor()) {
-            throw new AccessDeniedException("Назначить исполнителя может руководитель отдела");
-        }
-        if (appeal.getStatus() == AppealStatus.RESOLVED || appeal.getStatus() == AppealStatus.CLOSED) {
-            throw new IllegalStateException("Обращение уже решено");
-        }
-        StaffMemberResponse assignee = staffService.find(subject)
-                .filter(member -> member.departmentCode().equals(appeal.getDepartment().getCode()))
-                .orElseThrow(() -> new IllegalArgumentException("Сотрудник не найден в отделе «"
-                        + appeal.getDepartment().getName() + "»"));
-        Instant now = Instant.now();
-        appeal.assign(assignee.id(), assignee.fullName(), now);
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "ASSIGNED",
-                "Назначен исполнитель: " + assignee.fullName(),
-                Objects.requireNonNullElse(user.name(), user.subject()),
-                now
-        ));
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_ASSIGNED",
-                appeal.getId(),
-                "appeal.assigned." + appeal.getDepartment().getCode().toLowerCase(Locale.ROOT),
-                // наружу — идентификатор сотрудника, а не имя (решение 22)
-                Map.of("assignee", assignee.id())
-        ));
-        return toDetail(appeal);
     }
 
     @Transactional(readOnly = true)
     public AppealDetailResponse get(CurrentUser user, UUID id) {
         Appeal appeal = findAppeal(id);
         access.checkView(user, appeal);
-        return toDetail(appeal);
-    }
-
-    @Transactional
-    public AppealDetailResponse changeStatus(CurrentUser user, UUID id, ChangeStatusRequest request) {
-        Appeal appeal = findAppeal(id);
-        access.checkWork(user, appeal);
-        String employeeName = Objects.requireNonNullElse(user.name(), user.subject());
-
-        Instant now = Instant.now();
-        AppealStatus previous = appeal.getStatus();
-        appeal.changeStatus(request.status(), user.subject(), employeeName, now);
-
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "STATUS_CHANGED",
-                "Статус изменён: «" + previous.label() + "» → «" + request.status().label() + "»",
-                employeeName,
-                now
-        ));
-
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_STATUS_CHANGED",
-                appeal.getId(),
-                "appeal.status." + request.status().name().toLowerCase(Locale.ROOT),
-                Map.of(
-                        "fromStatus", previous.name(),
-                        "toStatus", request.status().name()
-                )
-        ));
-
-        return toDetail(appeal);
-    }
-
-    /**
-     * Решить обращение — значит ответить клиенту по существу: результат и обоснование уходят
-     * в переписку, у обращения появляется итог. Без ответа решить нельзя (4015-1, ст. 6.2).
-     */
-    @Transactional
-    public AppealDetailResponse resolve(CurrentUser user, UUID id, ResolveAppealRequest request) {
-        Appeal appeal = findAppeal(id);
-        access.checkWork(user, appeal);
-        String employeeName = Objects.requireNonNullElse(user.name(), user.subject());
-        Instant now = Instant.now();
-        AppealStatus previous = appeal.getStatus();
-        String finalCategory = blank(request.finalCategory()) ? appeal.getCategory() : request.finalCategory();
-        String finalSubcategory = blank(request.finalSubcategory()) ? appeal.getSubcategory() : request.finalSubcategory();
-        if (!formPolicy.typeExists(finalCategory, finalSubcategory)) {
-            throw new IllegalArgumentException("Неизвестный тип обращения: " + finalCategory + "/" + finalSubcategory);
-        }
-        appeal.resolve(request.outcome(), finalCategory, finalSubcategory, now);
-
-        messageRepository.save(new AppealMessage(appeal, AuthorType.EMPLOYEE, employeeName, request.answer().trim(), now));
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "RESOLVED",
-                "Клиенту направлен ответ по существу. Итог: " + request.outcome().label().toLowerCase(Locale.ROOT),
-                employeeName,
-                now
-        ));
-
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_MESSAGE_ADDED",
-                appeal.getId(),
-                "appeal.message.employee",
-                Map.of("authorType", AuthorType.EMPLOYEE.name())
-        ));
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_STATUS_CHANGED",
-                appeal.getId(),
-                "appeal.status.resolved",
-                Map.of(
-                        "fromStatus", previous.name(),
-                        "toStatus", AppealStatus.RESOLVED.name(),
-                        "outcome", request.outcome().name()
-                )
-        ));
-        return toDetail(appeal);
-    }
-
-    /**
-     * Продление срока по закону — решение руководителя отдела (Закон № 4015-1, ст. 6.2 п. 5).
-     * Новый срок отсчитывается рабочими днями от прежнего, клиент получает уведомление
-     * с обоснованием в переписке.
-     */
-    @Transactional
-    public AppealDetailResponse extendDeadline(CurrentUser user, UUID id, ExtendDeadlineRequest request) {
-        Appeal appeal = findAppeal(id);
-        access.checkWork(user, appeal);
-        if (!user.isSupervisor()) {
-            throw new AccessDeniedException("Продлить срок может руководитель отдела");
-        }
-        String supervisorName = Objects.requireNonNullElse(user.name(), user.subject());
-        Instant now = Instant.now();
-        String reason = request.reason().trim();
-        LocalDate newDeadline = appeal.getLegalDeadline() == null
-                ? null
-                : calendar.addWorkingDays(appeal.getLegalDeadline(), request.days());
-        appeal.extendLegalDeadline(request.days(), newDeadline, reason, LocalDate.now(zone), now);
-
-        messageRepository.save(new AppealMessage(appeal, AuthorType.EMPLOYEE, supervisorName,
-                "Срок рассмотрения вашего обращения продлён на " + request.days() + " раб. дн. — до "
-                        + DAY.format(newDeadline) + ".\nПричина: " + reason,
-                now));
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "DEADLINE_EXTENDED",
-                "Срок по закону продлён на " + request.days() + " раб. дн., до " + DAY.format(newDeadline)
-                        + ". Причина: " + reason,
-                supervisorName,
-                now
-        ));
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_DEADLINE_EXTENDED",
-                appeal.getId(),
-                "appeal.deadline.extended",
-                Map.of("days", Integer.toString(request.days()), "legalDeadline", newDeadline.toString())
-        ));
-        return toDetail(appeal);
-    }
-
-    /**
-     * Сообщение в переписке, при необходимости с файлами: клиент досылает запрошенный документ,
-     * сотрудник прикладывает расчёт или письмо. Сообщение может состоять из одних файлов.
-     */
-    @Transactional
-    public AppealDetailResponse addMessage(CurrentUser user, UUID id, String body, List<MultipartFile> files) {
-        Appeal appeal = findAppeal(id);
-        // клиент пишет в своё обращение, сотрудник — в обращение своего подразделения
-        AuthorType authorType;
-        if (user.isClient()) {
-            access.checkView(user, appeal);
-            authorType = AuthorType.CLIENT;
-        } else {
-            access.checkWork(user, appeal);
-            authorType = AuthorType.EMPLOYEE;
-        }
-        if (appeal.getStatus() == AppealStatus.CLOSED) {
-            throw new IllegalStateException("Обращение закрыто — создайте новое");
-        }
-        String text = body == null ? "" : body.trim();
-        List<AttachmentService.CheckedFile> accepted = attachmentService.accepted(appeal, files);
-        if (text.isEmpty() && accepted.isEmpty()) {
-            throw new IllegalArgumentException("Напишите сообщение или приложите файл");
-        }
-        if (text.length() > MAX_MESSAGE_LENGTH) {
-            throw new IllegalArgumentException("Сообщение длиннее " + MAX_MESSAGE_LENGTH + " символов");
-        }
-        String authorName = Objects.requireNonNullElse(user.name(), user.subject());
-        Instant now = Instant.now();
-
-        AppealMessage message = messageRepository.save(new AppealMessage(
-                appeal,
-                authorType,
-                authorName,
-                text,
-                now
-        ));
-        attachmentService.attach(appeal, message.getId(), accepted, authorName);
-        if (authorType == AuthorType.CLIENT) {
-            signals.record(appeal.getId(), text, now);
-        }
-
-        historyRepository.save(new AppealHistory(
-                appeal,
-                "MESSAGE_ADDED",
-                "Добавлено сообщение от: " + authorName,
-                authorName,
-                now
-        ));
-
-        eventPublisher.publishEvent(new AppealDomainEvent(
-                "APPEAL_MESSAGE_ADDED",
-                appeal.getId(),
-                "appeal.message." + authorType.name().toLowerCase(Locale.ROOT),
-                Map.of("authorType", authorType.name(), "attachments", Integer.toString(accepted.size()))
-        ));
-
-        // клиент ответил на запрос — обращение снова в работе, без участия сотрудника
-        if (authorType == AuthorType.CLIENT && appeal.getStatus() == AppealStatus.WAITING_CUSTOMER) {
-            appeal.changeStatus(AppealStatus.IN_PROGRESS, null, null, now);
-            historyRepository.save(new AppealHistory(
-                    appeal,
-                    "STATUS_CHANGED",
-                    "Клиент ответил — обращение снова в работе",
-                    "Подсистема",
-                    now
-            ));
-            eventPublisher.publishEvent(new AppealDomainEvent(
-                    "APPEAL_STATUS_CHANGED",
-                    appeal.getId(),
-                    "appeal.status.in_progress",
-                    Map.of("fromStatus", AppealStatus.WAITING_CUSTOMER.name(),
-                            "toStatus", AppealStatus.IN_PROGRESS.name())
-            ));
-        }
-
-        return toDetail(appeal);
+        return views.toDetail(appeal);
     }
 
     /**
@@ -630,7 +178,7 @@ public class AppealService {
     public List<DepartmentResponse> departments() {
         return departmentRepository.findAll(Sort.by("name"))
                 .stream()
-                .map(this::toDepartment)
+                .map(views::toDepartment)
                 .toList();
     }
 
@@ -651,129 +199,6 @@ public class AppealService {
                 .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
-    private AppealSummaryResponse toSummary(Appeal appeal, boolean clientReplied, List<SignalBadge> signals) {
-        return new AppealSummaryResponse(
-                appeal.getId(),
-                appeal.getPublicNumber(),
-                appeal.getCustomerName(),
-                appeal.getCategory(),
-                appeal.getSubcategory(),
-                appeal.getSubject(),
-                appeal.getStatus(),
-                appeal.getPriority(),
-                toDepartment(appeal.getDepartment()),
-                appeal.getAssignedEmployee(),
-                appeal.getAssignedSubject(),
-                appeal.getDeadlineAt(),
-                appeal.getLegalDeadline(),
-                appeal.getEscalationLevel(),
-                appeal.getContractLink(),
-                appeal.getOutcome(),
-                clientReplied,
-                signals,
-                appeal.getCreatedAt(),
-                appeal.getUpdatedAt()
-        );
-    }
-
-    private AppealDetailResponse toDetail(Appeal appeal) {
-        List<HistoryResponse> history = historyRepository.findByAppealIdOrderByCreatedAtAsc(appeal.getId())
-                .stream()
-                .map(item -> new HistoryResponse(
-                        item.getId(),
-                        item.getAction(),
-                        item.getDescription(),
-                        item.getActor(),
-                        item.getCreatedAt()
-                ))
-                .toList();
-
-        List<AttachmentResponse> attachments = attachmentRepository
-                .findByAppeal_IdOrderByUploadedAtAsc(appeal.getId())
-                .stream()
-                .map(attachmentService::toResponse)
-                .toList();
-        Map<Long, List<AttachmentResponse>> byMessage = attachments.stream()
-                .filter(file -> file.messageId() != null)
-                .collect(Collectors.groupingBy(AttachmentResponse::messageId));
-
-        List<MessageResponse> messages = messageRepository.findByAppealIdOrderByCreatedAtAsc(appeal.getId())
-                .stream()
-                .map(item -> new MessageResponse(
-                        item.getId(),
-                        item.getAuthorType(),
-                        item.getAuthorName(),
-                        item.getBody(),
-                        item.getCreatedAt(),
-                        byMessage.getOrDefault(item.getId(), List.of())
-                ))
-                .toList();
-
-        return new AppealDetailResponse(
-                appeal.getId(),
-                appeal.getPublicNumber(),
-                appeal.getCustomerName(),
-                appeal.getCustomerEmail(),
-                directoryService.toContract(appeal.getContract()),
-                appeal.getCategory(),
-                appeal.getSubcategory(),
-                readDetails(appeal.getDetailsJson()),
-                appeal.getSubject(),
-                appeal.getDescription(),
-                appeal.getStatus(),
-                appeal.getPriority(),
-                toDepartment(appeal.getDepartment()),
-                appeal.getAssignedEmployee(),
-                appeal.getAssignedSubject(),
-                appeal.getDeadlineAt(),
-                appeal.getLegalDeadline(),
-                toNorm(appeal.getNorm()),
-                appeal.getDeadlineExtendedDays(),
-                appeal.getDeadlineExtensionReason(),
-                appeal.getEscalationLevel(),
-                appeal.getContractLink(),
-                appeal.getRequestedProductCode() == null ? null
-                        : new ProductResponse(appeal.getRequestedProductCode(),
-                                formPolicy.productLabel(appeal.getRequestedProductCode())),
-                appeal.getRequestedPolicyNumber(),
-                appeal.getOutcome(),
-                appeal.getFinalCategory(),
-                appeal.getFinalSubcategory(),
-                appeal.getChannel(),
-                appeal.getRegisteredBy(),
-                appeal.getResolvedAt(),
-                appeal.getCreatedAt(),
-                appeal.getUpdatedAt(),
-                history,
-                messages,
-                attachments,
-                transferService.forAppeal(appeal.getId()),
-                appeal.getStatus().next(),
-                checks.run(appeal, readDetails(appeal.getDetailsJson()),
-                        appealRepository.findByCounterpartyIdOrderByCreatedAtDesc(appeal.getCounterpartyId()))
-        );
-    }
-
-    private NormResponse toNorm(DeadlineNorm norm) {
-        if (norm == null) {
-            return null;
-        }
-        return new NormResponse(norm.getCode(), norm.getTitle(), norm.getTermDays(), norm.getCounting(),
-                norm.getMaxExtensionDays(), norm.getLegalBasis());
-    }
-
-    private DepartmentResponse toDepartment(Department department) {
-        if (department == null) {
-            return null;
-        }
-        return new DepartmentResponse(
-                department.getId(),
-                department.getCode(),
-                department.getName(),
-                department.getDescription()
-        );
-    }
-
     private EventAuditResponse toEvent(EventAudit event, String appealNumber) {
         return new EventAuditResponse(
                 event.getId(),
@@ -784,22 +209,5 @@ public class AppealService {
                 event.getRoutingKey(),
                 event.getReceivedAt()
         );
-    }
-
-    private String writeDetails(Map<String, String> details) {
-        try {
-            return objectMapper.writeValueAsString(details);
-        } catch (JsonProcessingException exception) {
-            throw new IllegalArgumentException("Не удалось обработать дополнительные поля", exception);
-        }
-    }
-
-    private Map<String, String> readDetails(String detailsJson) {
-        try {
-            return objectMapper.readValue(detailsJson, new TypeReference<>() {
-            });
-        } catch (JsonProcessingException exception) {
-            throw new IllegalStateException("Не удалось прочитать дополнительные поля", exception);
-        }
     }
 }

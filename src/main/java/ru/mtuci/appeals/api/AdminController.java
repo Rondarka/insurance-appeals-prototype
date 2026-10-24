@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.mtuci.appeals.api.ApiModels.AccessLogResponse;
 import ru.mtuci.appeals.api.ApiModels.AnalyticsResponse;
+import ru.mtuci.appeals.api.ApiModels.RetentionRequest;
+import ru.mtuci.appeals.api.ApiModels.RetentionResponse;
 import ru.mtuci.appeals.api.ApiModels.AssistantSettingsRequest;
 import ru.mtuci.appeals.api.ApiModels.AssistantSettingsResponse;
 import ru.mtuci.appeals.api.ApiModels.NewNormVersionRequest;
@@ -25,6 +27,7 @@ import ru.mtuci.appeals.assistant.AssistantService;
 import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AccessLog;
 import ru.mtuci.appeals.service.AnalyticsService;
+import ru.mtuci.appeals.service.RetentionService;
 import ru.mtuci.appeals.service.SettingsService;
 
 import java.util.List;
@@ -39,13 +42,27 @@ public class AdminController {
     private final AnalyticsService analytics;
     private final AssistantService assistant;
     private final AccessLog accessLog;
+    private final RetentionService retention;
 
     public AdminController(SettingsService settings, AnalyticsService analytics, AssistantService assistant,
-                           AccessLog accessLog) {
+                           AccessLog accessLog, RetentionService retention) {
         this.settings = settings;
         this.analytics = analytics;
         this.assistant = assistant;
         this.accessLog = accessLog;
+        this.retention = retention;
+    }
+
+    /** Сколько лет хранить персональные данные после ответа и сколько обращений уже обезличено (решение 41). */
+    @GetMapping("/retention")
+    RetentionResponse retention() {
+        return retention.status();
+    }
+
+    @PutMapping("/retention")
+    RetentionResponse saveRetention(CurrentUser user, @Valid @RequestBody RetentionRequest request) {
+        settings.setRetentionYears(user, request.years(), request.reason());
+        return retention.status();
     }
 
     /** Кто из сотрудников открывал обращение и его файлы (решение 40). */

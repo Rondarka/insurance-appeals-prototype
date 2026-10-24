@@ -396,6 +396,15 @@ public final class ApiModels {
     ) {
     }
 
+    // ---------- сроки хранения (решение 41) ----------
+
+    /** years: через сколько лет после ответа стираются персональные данные; due: сколько ждёт обезличивания. */
+    public record RetentionResponse(int years, long anonymized, long due) {
+    }
+
+    public record RetentionRequest(@Min(1) @Max(75) int years, @NotBlank @Size(max = 500) String reason) {
+    }
+
     // ---------- журнал доступа (решение 40) ----------
 
     /** action: VIEWED (открыл карточку) или FILE_OPENED (открыл файл file). */

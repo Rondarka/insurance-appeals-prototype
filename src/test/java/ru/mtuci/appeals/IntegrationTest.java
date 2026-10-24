@@ -110,6 +110,7 @@ public abstract class IntegrationTest {
         // планировщик эскалации в тестах не запускается сам: тесты вызывают проход с нужной датой
         registry.add("appeals.escalation.initial-delay", () -> "PT24H");
         registry.add("appeals.contract-link.initial-delay", () -> "PT24H");
+        registry.add("appeals.retention.initial-delay", () -> "PT24H");
         // разомкнутая цепь в тестах ждёт недолго
         registry.add("appeals.contracts.circuit.open-duration", () -> "PT2S");
         registry.add("appeals.contracts.base-url",

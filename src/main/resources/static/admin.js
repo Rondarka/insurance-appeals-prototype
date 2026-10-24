@@ -227,7 +227,44 @@ async function loadSettings() {
     renderNorms(norms);
     renderAudit(audit);
     await loadAssistantSettings();
+    renderRetention(await api("/api/admin/retention"));
 }
+
+// ---------- сроки хранения (решение 41) ----------
+
+function renderRetention(retention) {
+    $("#retention-settings").innerHTML = `
+        <form id="retention-form" class="engine-save">
+            <label>Хранить, лет после ответа
+                <input name="years" type="number" min="1" max="75" required value="${retention.years}">
+            </label>
+            <label>Причина изменения, попадёт в журнал
+                <input name="reason" maxlength="500" placeholder="Например: новая номенклатура дел">
+            </label>
+            <button class="btn" type="submit">Сохранить срок</button>
+        </form>
+        <p class="muted small-text">Обезличено обращений: ${retention.anonymized}. Ждут обезличивания при текущем сроке:
+            ${retention.due}.</p>`;
+}
+
+$("#retention-settings").addEventListener("submit", async event => {
+    event.preventDefault();
+    const form = new FormData(event.target);
+    try {
+        const reason = form.get("reason").trim();
+        if (reason.length < 5) {
+            event.target.elements.reason.focus();
+            throw new Error("Укажите причину изменения: она попадёт в журнал");
+        }
+        renderRetention(await api("/api/admin/retention", {
+            method: "PUT", body: JSON.stringify({years: Number(form.get("years")), reason})
+        }));
+        showToast("Срок хранения сохранён");
+        await loadSettings();
+    } catch (error) {
+        showToast(error.message, true);
+    }
+});
 
 function renderRouting(routing) {
     const departments = adm.departments.map(item => [item.code, item.name]);

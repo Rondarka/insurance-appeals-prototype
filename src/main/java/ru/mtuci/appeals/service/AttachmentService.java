@@ -294,6 +294,11 @@ public class AttachmentService {
         });
     }
 
+    /** Удалить файлы из хранилища после обезличивания (решение 41): строки о них уже удалены. */
+    public void deleteStored(List<String> storageNames) {
+        storageNames.forEach(this::deleteQuietly);
+    }
+
     private void deleteQuietly(String storageName) {
         try {
             Files.deleteIfExists(resolveStoragePath(storageName));

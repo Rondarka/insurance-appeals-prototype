@@ -85,6 +85,10 @@ appeals:
     initial-delay: PT20S
     interval: PT1M
     max-backoff: PT1H
+  retention:
+    # раз в сутки обезличивать обращения, у которых истёк срок хранения (решение 41)
+    initial-delay: PT5M
+    interval: PT24H
   escalation:
     # за сколько рабочих дней до срока по закону предупреждать и как часто проверять
     warn-working-days: 2

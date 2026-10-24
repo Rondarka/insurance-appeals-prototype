@@ -245,6 +245,19 @@ public class SettingsService {
                 .list();
     }
 
+    // ---------- сроки хранения (решение 41) ----------
+
+    @Transactional
+    public void setRetentionYears(CurrentUser user, int years, String reason) {
+        int before = jdbc.sql("select years from data_retention where id = 1").query(Integer.class).single();
+        if (before == years) {
+            return;
+        }
+        jdbc.sql("update data_retention set years = :years where id = 1").param("years", years).update();
+        audit(user, "RETENTION", "Срок хранения персональных данных", "UPDATED", Map.of("years", before),
+                Map.of("years", years), reason);
+    }
+
     // ---------- помощник сотрудника (решение 35) ----------
 
     /** RULES — правила и поиск, LOCAL_MODEL — локальная модель в контуре страховой. */

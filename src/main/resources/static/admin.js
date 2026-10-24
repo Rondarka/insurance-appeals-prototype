@@ -130,7 +130,7 @@ function renderList() {
                 <small>${escapeHtml(appeal.department?.name || "маршрутизация")} · ${escapeHtml(appeal.publicNumber)}</small>
                 ${statusChip(appeal.status)}
             </span>
-        </button>`).join("") : `<p class="empty">Ничего не найдено</p>`;
+        </button>`).join("") : emptyState("Ничего не найдено", "Измените отдел, статус или запрос поиска");
 }
 
 ["#filter-department", "#filter-status"].forEach(id => $(id).addEventListener("change", renderList));
@@ -182,7 +182,7 @@ async function openCard(id) {
                 <h4>Файлы</h4>${renderAttachments(appeal)}
                 ${renderRelatedSection(appeal)}
                 <h4>Кто открывал обращение</h4>
-                <div id="access-${id}"><p class="muted small-text">Загрузка…</p></div>
+                <div id="access-${id}">${loadingState()}</div>
             </aside>
         </div>`;
     loadRelated(id, $(`#related-${id}`));
@@ -450,6 +450,6 @@ function renderAudit(entries) {
                 <td>${escapeHtml(entry.entityKey)}<br><small class="muted">${ACTION_LABELS[entry.action] || entry.action}</small></td>
                 <td><small>${escapeHtml(describeChange(entry))}</small></td>
                 <td>${escapeHtml(entry.reason)}</td>
-            </tr>`).join("")}</tbody></table></div>` : `<p class="muted">Изменений пока не было</p>`;
+            </tr>`).join("")}</tbody></table></div>` : emptyState("Изменений пока не было", "Каждое изменение правил и нормативов появится здесь с причиной");
 }
 

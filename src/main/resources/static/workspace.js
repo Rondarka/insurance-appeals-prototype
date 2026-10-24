@@ -152,7 +152,8 @@ function renderQueue() {
             <span class="queue-row meta"><small>${escapeHtml(appeal.customerName)} · <span class="${appeal.assignedSubject ? "" : "unassigned"}">${escapeHtml(assigneeLabel(appeal))}</span></small>${isEscalated(appeal) ? escalationPill(appeal) : deadlinePill(appeal)}</span>
             ${isOpen(appeal) && appeal.signals?.some(signal => signal.risk) ? `<span class="queue-row signals">${appeal.signals
                 .filter(signal => signal.risk).map(signal => `<span class="badge late">⚠ ${escapeHtml(signal.label)}</span>`).join("")}</span>` : ""}
-        </button>`).join("") : `<p class="empty">${ws.search ? "Ничего не найдено" : "Здесь пусто"}</p>`;
+        </button>`).join("") : ws.search ? emptyState("Ничего не найдено", "Проверьте номер, тему или имя клиента")
+            : emptyState("В этой группе обращений нет", ws.scope === "mine" ? "Посмотрите «Все отдела» или другие группы" : "Посмотрите другие группы");
 }
 
 $("#queue-scope").addEventListener("click", event => {
@@ -243,7 +244,7 @@ function renderSummary() {
                         <span class="badge ${reason.tone}">${escapeHtml(reason.text)}</span>
                     </button></li>`).join("")}</ul>
                     ${tasks.length > 8 ? `<p class="muted small-text">И ещё ${tasks.length - 8} в очереди.</p>` : ""}`
-                    : `<p class="muted">Срочного нет. Можно разобрать новые обращения.</p>`}
+                    : emptyState("Срочного нет", "Можно разобрать новые обращения")}
             </section>
             ${isSupervisor() ? renderDepartmentLoad(open) : renderMyStats()}
         </div>`;
@@ -417,7 +418,7 @@ function renderCard(appeal) {
             <div class="main-col">
                 ${renderChecks(appeal)}
                 ${canWork && isOpen(appeal) ? `<section class="assistant" id="assistant-${appeal.id}">
-                    <p class="muted small-text">Помощник смотрит обращение…</p></section>` : ""}
+                    ${loadingState("Помощник смотрит обращение")}</section>` : ""}
                 ${renderThread(appeal, "EMPLOYEE")}
                 ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}${typeCorrected(appeal)
                     ? ` · тип уточнён: ${escapeHtml(categoryLabel(appeal.finalCategory))}, ${escapeHtml(typeLabel(appeal.finalCategory, appeal.finalSubcategory))}`
@@ -473,7 +474,7 @@ function renderCard(appeal) {
                 ${sideSection("files", `Файлы · ${appeal.attachments.length}`, renderAttachments(appeal))}
                 <details class="side-section" data-section="related" data-related-section ${sectionOpen("related") ? "open" : ""}>
                     <summary>История клиента<span data-related-count></span></summary>
-                    <div class="section-body" id="related-${appeal.id}"><p class="muted">Загрузка…</p></div>
+                    <div class="section-body" id="related-${appeal.id}">${loadingState()}</div>
                 </details>
                 ${sideSection("journal", `Журнал обработки · ${appeal.history.length}`,
                     renderHistory(appeal) + renderTransfers(appeal))}
@@ -638,7 +639,7 @@ $("#card").addEventListener("submit", async event => {
             if (result.departmentCode !== session.me.department?.code) {
                 // обращение ушло в чужой отдел — в своей очереди его больше нет
                 ws.openedId = null;
-                $("#card").innerHTML = `<p class="empty">Выберите обращение в списке слева</p>`;
+                $("#card").innerHTML = emptyState("Обращение не выбрано", "Выберите обращение в списке слева");
                 await loadQueue();
                 return;
             }
@@ -933,7 +934,7 @@ async function loadTransfers() {
                 <button class="btn" type="submit" name="approved" value="false">Отклонить</button>
                 <button class="btn primary" type="submit" name="approved" value="true">Принять</button>
             </form>
-        </article>`).join("") : `<p class="empty">Входящих передач нет</p>`;
+        </article>`).join("") : emptyState("Входящих передач нет", "Здесь появятся обращения, которые другие отделы хотят передать вам");
 }
 
 $("#transfers").addEventListener("click", async event => {

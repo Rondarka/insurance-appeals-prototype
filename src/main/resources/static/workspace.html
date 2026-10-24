@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Рабочее место · обработка обращений</title>
-    <link rel="stylesheet" href="/styles.css?v=20261024-16">
+    <link rel="stylesheet" href="/styles.css?v=20261024-17">
 </head>
 <body class="app-page">
 <header class="topbar">
@@ -24,7 +24,7 @@
 
 <main>
     <section id="summary-view" class="view page active">
-        <div id="summary"><p class="muted">Загрузка…</p></div>
+        <div id="summary"><div class="state loading-state" role="status"><span class="spinner" aria-hidden="true"></span>Загрузка…</div></div>
     </section>
 
     <section id="queue-view" class="view master-detail">
@@ -37,9 +37,9 @@
                 <input id="queue-search" type="search" placeholder="Номер, тема или клиент" aria-label="Поиск по очереди">
             </div>
             <div id="status-tabs" class="status-tabs"></div>
-            <div id="queue" class="queue-list"><p class="muted">Загрузка…</p></div>
+            <div id="queue" class="queue-list"><div class="state loading-state" role="status"><span class="spinner" aria-hidden="true"></span>Загрузка…</div></div>
         </aside>
-        <article id="card" class="detail"><p class="empty">Выберите обращение в списке слева</p></article>
+        <article id="card" class="detail"><div class="state"><p class="state-title">Обращение не выбрано</p><p class="state-hint">Выберите обращение в списке слева</p></div></article>
     </section>
 
     <section id="calendar-view" class="view page wide-page">
@@ -94,8 +94,8 @@
 </main>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/auth.js?v=20261024-16"></script>
-<script src="/common.js?v=20261024-16"></script>
-<script src="/workspace.js?v=20261024-16"></script>
+<script src="/auth.js?v=20261024-17"></script>
+<script src="/common.js?v=20261024-17"></script>
+<script src="/workspace.js?v=20261024-17"></script>
 </body>
 </html>

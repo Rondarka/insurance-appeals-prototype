@@ -105,9 +105,33 @@ async function startPage(page, onReady) {
         renderUserBox();
         await onReady();
     } catch (error) {
-        showToast(`Не удалось загрузить данные: ${error.message}`, true);
+        // страница не загрузилась: говорим об этом на самой странице, а не только всплывающим сообщением
+        document.querySelector("main")?.insertAdjacentHTML("afterbegin",
+            `<div class="page-error" role="alert">${errorState(`Не удалось загрузить данные: ${error.message}`, true)}</div>`);
     }
 }
+
+// ---------- состояния: пусто, загрузка, ошибка (одинаковые во всех интерфейсах) ----------
+
+/** Пусто: что здесь будет и что сделать дальше. */
+function emptyState(title, hint = "") {
+    return `<div class="state"><p class="state-title">${escapeHtml(title)}</p>${
+        hint ? `<p class="state-hint">${escapeHtml(hint)}</p>` : ""}</div>`;
+}
+
+function loadingState(text = "Загрузка") {
+    return `<div class="state loading-state" role="status"><span class="spinner" aria-hidden="true"></span>${escapeHtml(text)}…</div>`;
+}
+
+/** Ошибка загрузки; reload — показать кнопку «Повторить», которая перезагружает страницу. */
+function errorState(text, reload = false) {
+    return `<div class="state error-state"><p class="state-title">${escapeHtml(text)}</p>${
+        reload ? `<button type="button" class="btn" data-reload>Повторить</button>` : ""}</div>`;
+}
+
+document.addEventListener("click", event => {
+    if (event.target.closest("[data-reload]")) window.location.reload();
+});
 
 function renderUserBox() {
     const me = session.me;
@@ -406,12 +430,12 @@ async function loadRelated(appealId, target) {
         target.closest("[data-related-section]")?.querySelector("[data-related-count]")
             ?.replaceChildren(document.createTextNode(` · ${related.length}`));
     } catch (error) {
-        target.innerHTML = `<p class="muted">Не удалось загрузить историю: ${escapeHtml(error.message)}</p>`;
+        target.innerHTML = errorState(`Не удалось загрузить историю: ${error.message}`);
     }
 }
 
 async function loadTerms(appealId, target) {
-    target.innerHTML = `<p class="muted">Запрашиваем учётную систему…</p>`;
+    target.innerHTML = loadingState("Запрашиваем учётную систему");
     try {
         target.innerHTML = renderTerms(await api(`/api/appeals/${appealId}/contract`));
     } catch (error) {
@@ -495,7 +519,7 @@ function renderRelatedSection(appeal) {
     return `
         <div data-related-section>
             <h4>История клиента<span data-related-count></span></h4>
-            <div id="related-${appeal.id}"><p class="muted">Загрузка…</p></div>
+            <div id="related-${appeal.id}">${loadingState()}</div>
         </div>`;
 }
 
@@ -614,5 +638,5 @@ async function loadEvents(target) {
                     <td class="nowrap">${escapeHtml(event.appealNumber || "—")}</td>
                 </tr>`).join("")}
             </tbody>
-        </table>` : `<p class="empty">Событий пока нет</p>`;
+        </table>` : emptyState("Событий пока нет", "Здесь появятся события, которые подсистема публикует в RabbitMQ");
 }

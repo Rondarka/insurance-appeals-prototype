@@ -193,7 +193,7 @@ function renderMyAppeals() {
             <span class="side-meta">${["NEEDS_CHOICE", "NOT_FOUND"].includes(appeal.contractLink)
                 ? `<span class="chip status-WAITING_CUSTOMER">уточните договор</span>`
                 : statusChip(appeal.status, CLIENT_STATUS)}<small>${formatDateTime(appeal.updatedAt)}</small></span>
-        </button>`).join("") : `<p class="muted">Обращений пока нет</p>`)
+        </button>`).join("") : emptyState("Обращений пока нет", "Подать обращение можно кнопкой «Новое обращение»"))
         + (shortList ? `<button type="button" class="btn ghost wide" data-all-appeals>Все обращения · ${myAppeals.length}</button>` : "");
 }
 

@@ -38,7 +38,7 @@ function renderClientAppeals() {
             <span class="side-meta">${statusChip(appeal.status)}<small>${escapeHtml(appeal.publicNumber)}</small></span>
             ${appeal.legalDeadline && !["RESOLVED", "CLOSED"].includes(appeal.status)
                 ? `<small class="muted">ответ по закону до ${formatDate(appeal.legalDeadline)}</small>` : ""}
-        </div>`).join("") : `<p class="muted">Обращений у клиента нет</p>`;
+        </div>`).join("") : emptyState("Обращений у клиента нет");
 }
 
 function renderContracts() {

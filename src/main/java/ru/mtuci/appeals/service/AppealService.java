@@ -18,6 +18,8 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
+import ru.mtuci.appeals.api.ApiModels.SignalBadge;
+import ru.mtuci.appeals.assistant.SignalDetector;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
 import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
 import ru.mtuci.appeals.api.ApiModels.CreateAppealRequest;
@@ -94,6 +96,7 @@ public class AppealService {
     private final ProductionCalendar calendar;
     private final StaffService staffService;
     private final AppealChecks checks;
+    private final SignalDetector signals;
     private final ZoneId zone;
 
     public AppealService(AppealRepository appealRepository,
@@ -115,6 +118,7 @@ public class AppealService {
                          ProductionCalendar calendar,
                          StaffService staffService,
                          AppealChecks checks,
+                         SignalDetector signals,
                          @Value("${appeals.timezone}") String timezone) {
         this.appealRepository = appealRepository;
         this.attachmentRepository = attachmentRepository;
@@ -135,6 +139,7 @@ public class AppealService {
         this.calendar = calendar;
         this.staffService = staffService;
         this.checks = checks;
+        this.signals = signals;
         this.zone = ZoneId.of(timezone);
     }
 
@@ -226,6 +231,9 @@ public class AppealService {
                     now
             ));
         }
+        // сигналы ссылаются на обращение — оно должно уже быть в базе
+        appealRepository.flush();
+        signals.record(appeal.getId(), appeal.getSubject() + "\n" + appeal.getDescription(), now);
         historyRepository.save(new AppealHistory(
                 appeal,
                 "DEADLINE_SET",
@@ -280,8 +288,12 @@ public class AppealService {
         // одним запросом: в каких обращениях последним написал клиент — ход за сотрудником
         Set<UUID> clientReplied = appeals.isEmpty() ? Set.of()
                 : messageRepository.findWithLastMessageBy(appeals.stream().map(Appeal::getId).toList(), AuthorType.CLIENT);
+        // клиенту сигналы не показываются: это внутренняя оценка его обращения
+        Map<UUID, List<SignalBadge>> badges = user.isClient() || appeals.isEmpty() ? Map.of()
+                : signals.badges(appeals.stream().map(Appeal::getId).toList());
         return appeals.stream()
-                .map(appeal -> toSummary(appeal, clientReplied.contains(appeal.getId())))
+                .map(appeal -> toSummary(appeal, clientReplied.contains(appeal.getId()),
+                        badges.getOrDefault(appeal.getId(), List.of())))
                 .toList();
     }
 
@@ -485,6 +497,9 @@ public class AppealService {
                 now
         ));
         attachmentService.attach(appeal, message.getId(), accepted, authorName);
+        if (authorType == AuthorType.CLIENT) {
+            signals.record(appeal.getId(), text, now);
+        }
 
         historyRepository.save(new AppealHistory(
                 appeal,
@@ -597,7 +612,7 @@ public class AppealService {
                 .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
-    private AppealSummaryResponse toSummary(Appeal appeal, boolean clientReplied) {
+    private AppealSummaryResponse toSummary(Appeal appeal, boolean clientReplied, List<SignalBadge> signals) {
         return new AppealSummaryResponse(
                 appeal.getId(),
                 appeal.getPublicNumber(),
@@ -616,6 +631,7 @@ public class AppealService {
                 appeal.getContractLink(),
                 appeal.getOutcome(),
                 clientReplied,
+                signals,
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt()
         );

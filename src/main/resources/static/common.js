@@ -78,7 +78,8 @@ async function api(path, options = {}) {
         const error = await response.json().catch(() => ({message: "Ошибка запроса"}));
         throw new Error(error.message || "Ошибка запроса");
     }
-    return response.json();
+    // 204 — действие выполнено, отвечать нечем
+    return response.status === 204 ? null : response.json();
 }
 
 /** Каждой роли — своя страница. Чужую страницу открыть можно, но она перенаправит. */

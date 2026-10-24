@@ -38,6 +38,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "/api/appeals/*/assign")
                         .hasRole("SUPERVISOR")
                         .requestMatchers("/api/staff").hasAnyRole("SPECIALIST", "SUPERVISOR")
+                        // подсказки помощника и сигналы — внутренняя информация отдела (решение 35)
+                        .requestMatchers("/api/appeals/*/assistant", "/api/appeals/*/assistant/**").hasAnyRole(EMPLOYEE)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/departments", "/api/events", "/api/integrations").hasAnyRole("SPECIALIST", "SUPERVISOR", "ADMIN")
                         .requestMatchers("/api/**").authenticated()

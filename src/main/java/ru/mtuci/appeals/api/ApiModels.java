@@ -267,6 +267,8 @@ public final class ApiModels {
             AppealOutcome outcome,
             // последнее сообщение в переписке — от клиента: ход за сотрудником
             boolean clientReplied,
+            // сигналы в тексте клиента: грозит жалобой, судом, требует выплату (решение 35)
+            List<SignalBadge> signals,
             Instant createdAt,
             Instant updatedAt
     ) {
@@ -389,6 +391,51 @@ public final class ApiModels {
     ) {
     }
 
+    // ---------- помощник сотрудника (решение 35) ----------
+
+    /** risk — грозит спором или проверкой: такие обращения поднимаются в очереди. */
+    public record SignalBadge(String code, String label, boolean risk) {
+    }
+
+    public record SignalResponse(String code, String label, String hint, boolean risk, String excerpt) {
+    }
+
+    /** Похоже на другой тип: каким был бы срок по закону и можно ли его продлить. */
+    public record TypeHintResponse(String category, String subcategory, String label, List<String> reasons,
+                                   LocalDate legalDeadline, String normTitle, String legalBasis,
+                                   boolean extensionAllowed, LocalDate currentLegalDeadline, String source) {
+    }
+
+    /** Решённое обращение того же типа; имя клиента в ответе скрыто. */
+    public record SimilarAppealResponse(String publicNumber, String subject, AppealOutcome outcome,
+                                        LocalDate resolvedOn, long resolutionDays, String answer) {
+    }
+
+    /** engine — кто подсказывает; notice — почему подсказки дают правила, хотя выбрана модель. */
+    public record AssistantAdviceResponse(String engine, String notice, List<SignalResponse> signals,
+                                          TypeHintResponse typeHint, List<SimilarAppealResponse> similar,
+                                          Map<String, String> decisions) {
+    }
+
+    public record DraftResponse(String text, String templateTitle, String source, String notice) {
+    }
+
+    public record AssistantFeedbackRequest(
+            @NotBlank @jakarta.validation.constraints.Pattern(regexp = "TYPE_HINT|SIMILAR|DRAFT") String kind,
+            @NotBlank @jakarta.validation.constraints.Pattern(regexp = "ACCEPTED|REJECTED") String decision
+    ) {
+    }
+
+    public record AssistantSettingsResponse(String engine, String modelName, String modelUrl, String modelState,
+                                            float failureRate) {
+    }
+
+    public record AssistantSettingsRequest(
+            @NotBlank @jakarta.validation.constraints.Pattern(regexp = "RULES|LOCAL_MODEL") String engine,
+            @NotBlank @Size(max = 500) String reason
+    ) {
+    }
+
     // ---------- аналитика (решение 23) ----------
 
     /** Доля в процентах с одним знаком; база — от чего она посчитана, чтобы 100 % из 2 не путать со 100 % из 200. */
@@ -421,12 +468,16 @@ public final class ApiModels {
     public record TypeCorrection(String initial, String finalType, long count) {
     }
 
+    /** Подсказки помощника: сколько показано и какую долю сотрудники приняли (решение 35). */
+    public record AssistantUsage(String kind, String source, long shown, Rate accepted, long rejected) {
+    }
+
     /** from выровнен на понедельник; product — выбранный вид страхования или null — все. */
     public record AnalyticsResponse(LocalDate from, LocalDate to, String product, AnalyticsSummary summary,
                                     List<ShareItem> products, List<ShareItem> types, List<LocalDate> weeks,
                                     List<WeekSeries> weekly, List<DepartmentOnTime> departments,
                                     List<TransferFlow> transfers, List<TypeCorrection> corrections,
-                                    List<ShareItem> outcomes) {
+                                    List<ShareItem> outcomes, List<AssistantUsage> assistant) {
     }
 
     public record ErrorResponse(String message, Instant timestamp) {

@@ -112,6 +112,10 @@ public abstract class IntegrationTest {
         registry.add("appeals.contracts.circuit.open-duration", () -> "PT2S");
         registry.add("appeals.contracts.base-url",
                 () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
+        // локальная модель помощника — поддельная, как поставщик идентификации (решение 35)
+        registry.add("appeals.assistant.model.base-url", TestLocalModel::baseUrl);
+        registry.add("appeals.assistant.model.timeout", () -> "2s");
+        registry.add("appeals.assistant.model.open-duration", () -> "PT1S");
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> TestIdentityProvider.ISSUER);
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", TestIdentityProvider::jwkSetUri);
     }

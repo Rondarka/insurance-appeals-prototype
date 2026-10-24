@@ -42,7 +42,10 @@ async function loadAll() {
     adm.appeals = await api("/api/appeals");
     const integrations = await api("/api/integrations").catch(() => []);
     $("#integrations").innerHTML = integrations.map(item => {
-        const [tone, text] = INTEGRATION_STATE[item.state] || ["", item.state];
+        // у модели помощника своё следствие недоступности: подсказки дают правила (решение 35)
+        const [tone, text] = item.code === "ASSISTANT" && ["OPEN", "HALF_OPEN"].includes(item.state)
+            ? ["late", "недоступна — подсказки сотрудникам дают правила"]
+            : INTEGRATION_STATE[item.state] || ["", item.state];
         return `<p class="integration ${tone}"><span class="dot"></span>${escapeHtml(item.name)}: ${text}${
             item.failureRate >= 0 ? ` <small class="muted">· сбоев ${Math.round(item.failureRate)} %</small>` : ""}${
             item.pending ? ` <small class="muted">· ждут отправки: ${item.pending}</small>` : ""}</p>`;
@@ -204,6 +207,7 @@ async function loadSettings() {
     renderRouting(routing);
     renderNorms(norms);
     renderAudit(audit);
+    await loadAssistantSettings();
 }
 
 function renderRouting(routing) {
@@ -310,6 +314,46 @@ $("#norm-add").addEventListener("submit", event => {
         form.reset();
         await loadSettings();
     })().catch(error => showToast(error.message, true));
+});
+
+// ---------- помощник сотрудника (решение 35) ----------
+
+const ASSISTANT_ENGINES = {
+    RULES: ["Правила и поиск", "Сигналы в тексте, «похоже на претензию», похожие решённые обращения, шаблоны ответов"],
+    LOCAL_MODEL: ["Локальная модель", "Те же подсказки и черновики пишет модель в контуре страховой; при сбое — правила"]
+};
+const MODEL_STATE = {CLOSED: "отвечает", HALF_OPEN: "проверяется после сбоя", OPEN: "недоступна — работают правила"};
+
+async function loadAssistantSettings() {
+    renderAssistantSettings(await api("/api/admin/assistant"));
+}
+
+function renderAssistantSettings(settings) {
+    $("#assistant-settings").innerHTML = `
+        <form id="assistant-form" class="engine-choice">
+            ${Object.entries(ASSISTANT_ENGINES).map(([code, [label, note]]) => `
+                <label class="engine-option ${settings.engine === code ? "selected" : ""}">
+                    <input type="radio" name="engine" value="${code}" ${settings.engine === code ? "checked" : ""}>
+                    <span><strong>${label}</strong><small class="muted">${note}</small></span>
+                </label>`).join("")}
+            <button class="btn" type="submit">Сохранить выбор</button>
+        </form>
+        <p class="muted small-text">Модель: <code>${escapeHtml(settings.modelName)}</code> по адресу <code>${escapeHtml(settings.modelUrl)}</code>${
+            settings.engine === "LOCAL_MODEL" ? ` · ${MODEL_STATE[settings.modelState] || settings.modelState}` : ""}.
+            Адрес и модель задаются при развёртывании (ASSISTANT_MODEL_URL, ASSISTANT_MODEL).</p>`;
+}
+
+$("#assistant-settings").addEventListener("submit", async event => {
+    event.preventDefault();
+    try {
+        const reason = settingsReason();
+        const engine = new FormData(event.target).get("engine");
+        renderAssistantSettings(await api("/api/admin/assistant", {method: "PUT", body: JSON.stringify({engine, reason})}));
+        showToast(`Подсказки даёт: ${ASSISTANT_ENGINES[engine][0].toLowerCase()}`);
+        await loadSettings();
+    } catch (error) {
+        showToast(error.message, true);
+    }
 });
 
 function describeChange(entry) {

@@ -12,7 +12,9 @@ const GROUPS = [
 
 const ws = {
     appeals: [], group: "new", openedId: null, departments: [], staff: [], pendingTransfers: 0,
-    scope: null, search: "", transferForm: false, resolveForm: false, extendForm: false
+    scope: null, search: "", transferForm: false, resolveForm: false, extendForm: false,
+    // помощник (решение 35): подсказки по открытому обращению, текст для формы ответа, принятый тип
+    advice: null, adviceKey: null, answerDraft: null, finalTypeHint: {}
 };
 const $ = selector => document.querySelector(selector);
 const isSupervisor = () => hasRole("SUPERVISOR");
@@ -91,7 +93,8 @@ function renderQueue() {
 
     const group = GROUPS.find(item => item.key === ws.group);
     // сверху то, что сгорит первым: сначала эскалации по сроку закона; решённые — свежие сверху
-    const urgency = appeal => ({BREACHED: 0, AT_RISK: 1}[appeal.escalationLevel] ?? 2);
+    // затем — где клиент грозит жалобой в Банк России, судом или финансовым уполномоченным
+    const urgency = appeal => ({BREACHED: 0, AT_RISK: 1}[appeal.escalationLevel] ?? (riskSignal(appeal) ? 2 : 3));
     const items = visible
         .filter(appeal => group.statuses.includes(appeal.status))
         .sort((a, b) => group.key === "done"
@@ -104,6 +107,8 @@ function renderQueue() {
                 ${appeal.clientReplied && isOpen(appeal) ? `<span class="badge reply">клиент ответил</span>` : ""}</span>
             <span class="queue-row sub"><small>${escapeHtml(appeal.publicNumber)} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}</small></span>
             <span class="queue-row meta"><small>${escapeHtml(appeal.customerName)} · <span class="${appeal.assignedSubject ? "" : "unassigned"}">${escapeHtml(assigneeLabel(appeal))}</span></small>${isEscalated(appeal) ? escalationPill(appeal) : deadlinePill(appeal)}</span>
+            ${isOpen(appeal) && appeal.signals?.some(signal => signal.risk) ? `<span class="queue-row signals">${appeal.signals
+                .filter(signal => signal.risk).map(signal => `<span class="badge late">⚠ ${escapeHtml(signal.label)}</span>`).join("")}</span>` : ""}
         </button>`).join("") : `<p class="empty">${ws.search ? "Ничего не найдено" : "Здесь пусто"}</p>`;
 }
 
@@ -137,12 +142,19 @@ function attentionReason(appeal) {
     if (appeal.status === "NEEDS_CLASSIFICATION") return {rank: 0, tone: "late", text: "нужно выбрать отдел"};
     if (appeal.escalationLevel === "BREACHED" || isLegallyOverdue(appeal)) return {rank: 1, tone: "late", text: "нарушен срок по закону"};
     if (appeal.escalationLevel === "AT_RISK") return {rank: 2, tone: "soon", text: `по закону до ${formatDate(appeal.legalDeadline)}`};
+    const risk = riskSignal(appeal);
+    if (risk) return {rank: 2.5, tone: "late", text: `⚠ ${risk.label.charAt(0).toLowerCase()}${risk.label.slice(1)}`};
     if (appeal.clientReplied) return {rank: 3, tone: "reply", text: "клиент ответил"};
     if (appeal.status !== "WAITING_CUSTOMER" && appeal.deadlineAt && new Date(appeal.deadlineAt) < new Date()) {
         return {rank: 4, tone: "soon", text: "просрочен срок отдела"};
     }
     if (appeal.status === "ROUTED" && !appeal.assignedSubject) return {rank: 5, tone: "", text: "новое, без исполнителя"};
     return null;
+}
+
+/** Первый сигнал риска спора в тексте клиента (решение 35). */
+function riskSignal(appeal) {
+    return appeal.signals?.find(signal => signal.risk);
 }
 
 function greeting() {
@@ -288,6 +300,11 @@ async function openCard(id) {
     ws.openedSignature = cardSignature(appeal);
     $("#card").innerHTML = renderCard(appeal);
     loadRelated(id, $(`#related-${id}`));
+    loadAssistant(appeal).catch(error => showToast(error.message, true));
+    if (ws.answerDraft && $("[data-resolve] textarea")) {
+        $("[data-resolve] textarea").value = ws.answerDraft;
+        ws.answerDraft = null;
+    }
     renderQueue();
 }
 
@@ -296,7 +313,9 @@ function finalTypeOptions(appeal) {
     return session.schema.categories.map(category => `<optgroup label="${escapeHtml(category.label)}">${category.types
         .map(type => {
             const value = `${category.code}/${type.code}`;
-            const selected = category.code === appeal.category && type.code === appeal.subcategory ? " selected" : "";
+            // сотрудник принял подсказку «похоже на претензию» — итоговый тип уже выбран
+            const chosen = ws.finalTypeHint[appeal.id] || acceptedHintType(appeal) || `${appeal.category}/${appeal.subcategory}`;
+            const selected = value === chosen ? " selected" : "";
             return `<option value="${value}"${selected}>${escapeHtml(type.label)}</option>`;
         }).join("")}</optgroup>`).join("");
 }
@@ -358,6 +377,8 @@ function renderCard(appeal) {
         <div class="card-body">
             <div class="main-col">
                 ${renderChecks(appeal)}
+                ${canWork && isOpen(appeal) ? `<section class="assistant" id="assistant-${appeal.id}">
+                    <p class="muted small-text">Помощник смотрит обращение…</p></section>` : ""}
                 ${renderThread(appeal, "EMPLOYEE")}
                 ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}${typeCorrected(appeal)
                     ? ` · тип уточнён: ${escapeHtml(categoryLabel(appeal.finalCategory))} — ${escapeHtml(typeLabel(appeal.finalCategory, appeal.finalSubcategory))}`
@@ -368,10 +389,15 @@ function renderCard(appeal) {
                     <p class="muted small-text">Закон требует обоснованный ответ: результат рассмотрения, на каком основании,
                         что сделано (Закон № 4015-1, ст. 6.2 п. 6). Сама выплата или перерасчёт выполняются в учётных системах
                         страховой — здесь фиксируется результат.</p>
-                    <label>Итог
-                        <select name="outcome">${Object.entries(OUTCOME_LABELS)
-                            .map(([code, label]) => `<option value="${code}">${label}</option>`).join("")}</select>
-                    </label>
+                    <div class="resolve-head">
+                        <label>Итог
+                            <select name="outcome">${Object.entries(OUTCOME_LABELS)
+                                .map(([code, label]) => `<option value="${code}">${label}</option>`).join("")}</select>
+                        </label>
+                        <button class="btn small-btn" type="button" data-draft>${ws.advice?.data.engine === "LOCAL_MODEL"
+                            ? "Черновик — локальная модель" : "Черновик по шаблону"}</button>
+                    </div>
+                    <div id="draft-preview"></div>
                     <label>Тип обращения по итогам рассмотрения
                         <select name="finalType">${finalTypeOptions(appeal)}</select>
                         <small class="muted">Измените, если клиент выбрал не тот тип: по итоговому типу строится аналитика.</small>
@@ -464,11 +490,23 @@ async function changeStatus(status) {
 }
 
 $("#card").addEventListener("click", async event => {
+    const assistantAction = event.target.closest("[data-assistant]");
+    if (assistantAction) {
+        assistantClick(assistantAction).catch(error => showToast(error.message, true));
+        return;
+    }
     const related = event.target.closest("[data-open-related]");
     if (related) {
         const appeal = ws.appeals.find(item => item.id === related.dataset.openRelated);
         if (appeal) ws.group = groupOf(appeal.status).key;
         openCard(related.dataset.openRelated).catch(error => showToast(error.message, true));
+        return;
+    }
+    if (event.target.closest("[data-draft]")) {
+        requestDraft().catch(error => {
+            $("#draft-preview").innerHTML = "";
+            showToast(error.message, true);
+        });
         return;
     }
     const step = event.target.closest("[data-status]");
@@ -572,6 +610,148 @@ async function refreshOpened() {
     // обращение ушло в другую группу — переключаемся вслед за ним
     if (opened) ws.group = groupOf(opened.status).key;
     await openCard(ws.openedId);
+}
+
+// ---------- помощник сотрудника (решение 35) ----------
+
+const ENGINE_LABELS = {RULES: "правила и поиск", LOCAL_MODEL: "локальная модель"};
+
+/**
+ * Подсказки по обращению. Пока обращение не изменилось, повторно не запрашиваются: локальная
+ * модель думает секунды, а карточка перерисовывается при каждом действии.
+ */
+async function loadAssistant(appeal) {
+    const box = $(`#assistant-${appeal.id}`);
+    if (!box) return;
+    const key = `${appeal.id}|${cardSignature(appeal)}`;
+    if (ws.adviceKey !== key) {
+        const data = await api(`/api/appeals/${appeal.id}/assistant`);
+        ws.advice = {id: appeal.id, data};
+        ws.adviceKey = key;
+    }
+    if (ws.openedId === appeal.id) renderAssistant(appeal, box);
+}
+
+function renderAssistant(appeal, box = $(`#assistant-${appeal.id}`)) {
+    if (!box || ws.advice?.id !== appeal.id) return;
+    const advice = ws.advice.data;
+    const hint = advice.typeHint;
+    const parts = [];
+    if (advice.notice) parts.push(`<p class="notice small">${escapeHtml(advice.notice)}</p>`);
+    if (advice.signals.length) {
+        parts.push(`<ul class="signal-list-card">${advice.signals.map(signal => `
+            <li class="${signal.risk ? "risk" : ""}">
+                <strong>${signal.risk ? "⚠ " : ""}${escapeHtml(signal.label)}</strong>
+                <q>${escapeHtml(signal.excerpt)}</q>
+                <small class="muted">${escapeHtml(signal.hint)}</small>
+            </li>`).join("")}</ul>`);
+    }
+    if (hint && advice.decisions.TYPE_HINT !== "REJECTED") {
+        const earlier = hint.legalDeadline < appeal.legalDeadline;
+        parts.push(`<div class="hint-card">
+            <p><strong>Похоже на претензию</strong> — клиент выбрал «${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}».
+                <small class="muted">${escapeHtml(ENGINE_LABELS[hint.source])}</small></p>
+            ${hint.reasons.length ? `<ul class="quotes">${hint.reasons.map(reason => `<li><q>${escapeHtml(reason)}</q></li>`).join("")}</ul>` : ""}
+            <p class="small-text">По претензии срок по закону — до ${formatDate(hint.legalDeadline)}
+                (${escapeHtml(hint.normTitle.toLowerCase())}; ${escapeHtml(hint.legalBasis)})${hint.extensionAllowed ? "" : ", продлить его нельзя"}.
+                Сейчас стоит ${formatDate(appeal.legalDeadline)}.</p>
+            ${earlier ? `<p class="notice small warning-note">⚠ Ответить нужно раньше текущего срока — до ${formatDate(hint.legalDeadline)}.</p>` : ""}
+            ${advice.decisions.TYPE_HINT === "ACCEPTED"
+                ? `<p class="muted small-text">✓ Учтено: в форме ответа итоговый тип — «${escapeHtml(hint.label)}».</p>`
+                : `<div class="hint-actions">
+                    <button type="button" class="btn small-btn" data-assistant="type-accept">Учесть при ответе</button>
+                    <button type="button" class="btn ghost small-btn" data-assistant="type-reject">Не подходит</button>
+                </div>`}
+        </div>`);
+    }
+    if (advice.similar.length) {
+        parts.push(`<details class="similar">
+            <summary>Как решали похожие · ${advice.similar.length}</summary>
+            ${advice.similar.map((item, i) => `<article>
+                <p><strong>${escapeHtml(item.subject)}</strong><br>
+                    <small class="muted">${escapeHtml(item.publicNumber)} · ${escapeHtml(OUTCOME_LABELS[item.outcome])}
+                    · решено за ${item.resolutionDays} дн., ${formatDate(item.resolvedOn)}</small></p>
+                ${item.answer ? `<p class="similar-answer">${escapeHtml(item.answer)}</p>
+                    <button type="button" class="btn ghost small-btn" data-assistant="use-answer" data-index="${i}">Взять за основу ответа</button>` : ""}
+            </article>`).join("")}
+        </details>`);
+    }
+    box.innerHTML = parts.length ? `<header class="assistant-head"><h4>Помощник</h4>
+            <small class="muted">${escapeHtml(ENGINE_LABELS[advice.engine])} · подсказка советует, решаете вы</small></header>${parts.join("")}`
+        : `<p class="muted small-text">Помощник: сигналов в тексте клиента нет, похожих решённых обращений пока нет.</p>`;
+}
+
+/** Подсказку о типе приняли раньше, в другой сессии, — тип берётся из сохранённого решения. */
+function acceptedHintType(appeal) {
+    const advice = ws.advice?.id === appeal.id ? ws.advice.data : null;
+    return advice?.typeHint && advice.decisions.TYPE_HINT === "ACCEPTED"
+        ? `${advice.typeHint.category}/${advice.typeHint.subcategory}` : null;
+}
+
+async function assistantFeedback(kind, decision) {
+    await api(`/api/appeals/${ws.openedId}/assistant/feedback`, {method: "POST", body: JSON.stringify({kind, decision})});
+    ws.advice.data.decisions[kind] = decision;
+}
+
+/** Действия помощника меняют только свой блок — написанный ответ в форме не теряется. */
+async function assistantClick(button) {
+    const appeal = await api(`/api/appeals/${ws.openedId}`);
+    const action = button.dataset.assistant;
+    if (action === "type-accept" || action === "type-reject") {
+        const hint = ws.advice.data.typeHint;
+        await assistantFeedback("TYPE_HINT", action === "type-accept" ? "ACCEPTED" : "REJECTED");
+        if (action === "type-accept") {
+            ws.finalTypeHint[appeal.id] = `${hint.category}/${hint.subcategory}`;
+            const select = $("[data-resolve] select[name=finalType]");
+            if (select) select.value = ws.finalTypeHint[appeal.id];
+            showToast(`При ответе итоговый тип — «${hint.label}»`);
+        }
+        renderAssistant(appeal);
+    }
+    if (action === "use-answer") {
+        const item = ws.advice.data.similar[Number(button.dataset.index)];
+        await assistantFeedback("SIMILAR", "ACCEPTED");
+        const textarea = $("[data-resolve] textarea");
+        if (textarea) {
+            textarea.value = item.answer;
+            textarea.focus();
+        } else {
+            ws.resolveForm = true;
+            ws.answerDraft = item.answer;
+            await openCard(ws.openedId);
+        }
+        showToast("Ответ взят за основу — поправьте его под это обращение");
+    }
+    if (action === "draft-use" || action === "draft-reject") {
+        await assistantFeedback("DRAFT", action === "draft-use" ? "ACCEPTED" : "REJECTED");
+        if (action === "draft-use") {
+            const textarea = $("[data-resolve] textarea");
+            textarea.value = ws.draft;
+            textarea.rows = Math.min(16, ws.draft.split("\n").length + 4);
+            textarea.focus();
+            showToast("Черновик вставлен — допишите места в квадратных скобках");
+        }
+        $("#draft-preview").innerHTML = "";
+    }
+}
+
+async function requestDraft() {
+    const form = $("[data-resolve]");
+    const preview = $("#draft-preview");
+    preview.innerHTML = `<p class="muted small-text">Готовим черновик…</p>`;
+    const query = new URLSearchParams({outcome: form.elements.outcome.value, type: form.elements.finalType.value});
+    const draft = await api(`/api/appeals/${ws.openedId}/assistant/draft?${query}`);
+    ws.draft = draft.text;
+    preview.innerHTML = `<div class="draft-preview">
+        <p class="small-text"><strong>${escapeHtml(draft.templateTitle)}</strong>
+            <span class="muted">· ${escapeHtml(ENGINE_LABELS[draft.source])}</span></p>
+        ${draft.notice ? `<p class="notice small">${escapeHtml(draft.notice)}</p>` : ""}
+        <pre>${escapeHtml(draft.text)}</pre>
+        <div class="hint-actions">
+            <button type="button" class="btn small-btn" data-assistant="draft-use">Вставить в ответ</button>
+            <button type="button" class="btn ghost small-btn" data-assistant="draft-reject">Не подходит</button>
+        </div>
+    </div>`;
 }
 
 // ---------- календарь сроков ----------

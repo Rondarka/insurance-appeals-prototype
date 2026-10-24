@@ -90,6 +90,7 @@ function renderAnalytics() {
     renderTransfers(data.transfers, summary);
     renderCorrections(data.corrections, summary);
     renderSignals(summary);
+    renderAssistantUsage(data.assistant);
 }
 
 // ---------- плитки ----------
@@ -359,6 +360,19 @@ function renderSignals(summary) {
     $("#analytics-signals").innerHTML = signals.map(([label, rate, hint]) => `
         <li><strong>${percent(rate)}</strong><span><b>${label}</b> <span class="muted">${ofBase(rate)}</span>
             <small class="muted">${hint}</small></span></li>`).join("");
+}
+
+// ---------- помощник сотрудника (решение 35) ----------
+
+const SUGGESTION_KINDS = {TYPE_HINT: "Похоже на претензию", SIMILAR: "Как решали похожие", DRAFT: "Черновик ответа"};
+const SUGGESTION_SOURCES = {RULES: "правила", LOCAL_MODEL: "локальная модель"};
+
+function renderAssistantUsage(usage) {
+    $("#analytics-assistant").innerHTML = usage.length ? bars(usage.map(item => ({
+        label: `${SUGGESTION_KINDS[item.kind] || item.kind} · ${SUGGESTION_SOURCES[item.source] || item.source}`,
+        value: item.accepted.percent ?? 0,
+        text: `принято ${percent(item.accepted)} · ${item.accepted.count} из ${item.shown}${item.rejected ? ` · отклонено ${item.rejected}` : ""}`
+    })), 100) : `<p class="muted">За период подсказок не показывали.</p>`;
 }
 
 // ---------- подсказка при наведении ----------

@@ -84,6 +84,12 @@ services:
       CALENDAR_PATH: /data/calendar
       # демонстрационные обращения за полгода — один раз, если их ещё нет (решение 33)
       APPEALS_DEMO_ENABLED: "true"
+      # локальная модель помощника на компьютере со стендом, например Ollama (решение 35);
+      # включает администратор на вкладке «Правила», без модели подсказки дают правила
+      ASSISTANT_MODEL_URL: ${ASSISTANT_MODEL_URL:-http://host.docker.internal:11434/v1}
+      ASSISTANT_MODEL: ${ASSISTANT_MODEL:-qwen2.5:7b-instruct}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "18080:8080"
     volumes:

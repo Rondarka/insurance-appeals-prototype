@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Администрирование — обработка обращений</title>
-    <link rel="stylesheet" href="/styles.css?v=20261023-4">
+    <link rel="stylesheet" href="/styles.css?v=20261024-3">
 </head>
 <body class="app-page">
 <header class="topbar admin-topbar">
@@ -113,6 +113,12 @@
                     <div id="analytics-transfers"></div>
                 </section>
                 <section class="panel chart-panel">
+                    <h2>Помощник сотрудника</h2>
+                    <p class="decision">Какая доля подсказок пригодилась. По ней решают, вкладываться ли в локальную
+                        модель: сравните правила и модель на одних и тех же подсказках.</p>
+                    <div id="analytics-assistant"></div>
+                </section>
+                <section class="panel chart-panel">
                     <h2>Тип исправлен при ответе</h2>
                     <p class="decision">Клиенты не понимают категории формы — поправить формулировки и состав формы.
                         Передача исправляет, где обращение, итоговый тип — о чём оно.</p>
@@ -167,6 +173,14 @@
         </section>
 
         <section class="panel settings-block">
+            <h2>Помощник сотрудника</h2>
+            <p class="muted small-text">Кто подсказывает сотрудникам. Правила и поиск по решённым обращениям работают всегда;
+                локальная модель работает в контуре страховой — текст обращения не уходит во внешние сервисы. Модель
+                недоступна — подсказки дают правила, сотрудник видит об этом пометку.</p>
+            <div id="assistant-settings"></div>
+        </section>
+
+        <section class="panel settings-block">
             <h2>Журнал изменений</h2>
             <div id="settings-audit"></div>
         </section>
@@ -185,9 +199,9 @@
 </main>
 
 <div id="toast" class="toast"></div>
-<script src="/auth.js?v=20261023-4"></script>
-<script src="/common.js?v=20261023-4"></script>
-<script src="/admin.js?v=20261023-4"></script>
-<script src="/analytics.js?v=20261023-4"></script>
+<script src="/auth.js?v=20261024-3"></script>
+<script src="/common.js?v=20261024-3"></script>
+<script src="/admin.js?v=20261024-3"></script>
+<script src="/analytics.js?v=20261024-3"></script>
 </body>
 </html>

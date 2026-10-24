@@ -35,7 +35,10 @@ import ru.mtuci.appeals.api.ApiModels.CreateTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.DepartmentResponse;
 import ru.mtuci.appeals.api.ApiModels.EventAuditResponse;
 import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
+import ru.mtuci.appeals.api.ApiModels.AssistantSettingsResponse;
 import ru.mtuci.appeals.api.ApiModels.IntegrationStatusResponse;
+import ru.mtuci.appeals.assistant.AssistantEngine;
+import ru.mtuci.appeals.assistant.AssistantService;
 import ru.mtuci.appeals.api.ApiModels.MeResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.StaffMemberResponse;
@@ -56,6 +59,7 @@ import ru.mtuci.appeals.service.TransferService;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -77,6 +81,7 @@ public class AppealController {
     private final OutboxRelay outboxRelay;
     private final ClassificationService classificationService;
     private final StaffService staffService;
+    private final AssistantService assistantService;
 
     public AppealController(AppealService appealService,
                             AttachmentService attachmentService,
@@ -87,7 +92,8 @@ public class AppealController {
                             ContractsClient contractsClient,
                             OutboxRelay outboxRelay,
                             ClassificationService classificationService,
-                            StaffService staffService) {
+                            StaffService staffService,
+                            AssistantService assistantService) {
         this.appealService = appealService;
         this.attachmentService = attachmentService;
         this.directoryService = directoryService;
@@ -98,6 +104,7 @@ public class AppealController {
         this.outboxRelay = outboxRelay;
         this.classificationService = classificationService;
         this.staffService = staffService;
+        this.assistantService = assistantService;
     }
 
     @GetMapping("/me")
@@ -180,11 +187,17 @@ public class AppealController {
         var circuit = contractsClient.circuitBreaker();
         OutboxRelay.Backlog backlog = outboxRelay.backlog();
         boolean delayed = backlog.oldest() != null && backlog.oldest().isBefore(Instant.now().minusSeconds(60));
-        return List.of(
+        List<IntegrationStatusResponse> integrations = new ArrayList<>(List.of(
                 new IntegrationStatusResponse("CONTRACTS", "Учётная система договоров",
                         circuit.getState().name(), circuit.getMetrics().getFailureRate(), 0),
                 new IntegrationStatusResponse("EVENTS", "Доставка событий в RabbitMQ",
-                        delayed ? "DELAYED" : "OK", -1, backlog.pending()));
+                        delayed ? "DELAYED" : "OK", -1, backlog.pending())));
+        AssistantSettingsResponse assistant = assistantService.status();
+        if (AssistantEngine.LOCAL_MODEL.equals(assistant.engine())) {
+            integrations.add(new IntegrationStatusResponse("ASSISTANT", "Локальная модель помощника",
+                    assistant.modelState(), assistant.failureRate(), 0));
+        }
+        return integrations;
     }
 
     /** Виды страхования — когда договоры клиента загрузить не удалось. */

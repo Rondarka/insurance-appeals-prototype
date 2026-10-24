@@ -12,6 +12,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import ru.mtuci.appeals.api.ApiModels.FormAppealType;
 import ru.mtuci.appeals.api.ApiModels.FormCategory;
 import ru.mtuci.appeals.api.ApiModels.FormField;
+import ru.mtuci.appeals.assistant.SignalDetector;
 import ru.mtuci.appeals.domain.Appeal;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
@@ -137,6 +138,7 @@ public class DemoDataGenerator {
     private final ProductionCalendar calendar;
     private final ObjectMapper objectMapper;
     private final JdbcClient jdbc;
+    private final SignalDetector signals;
     private final TransactionTemplate transactions;
     private final ZoneId zone;
 
@@ -144,7 +146,7 @@ public class DemoDataGenerator {
                              TransferRequestRepository transfers, DepartmentRepository departments,
                              RoutingRuleRepository rules, AppealFormPolicy formPolicy, DeadlineNormService normService,
                              ProductionCalendar calendar, ObjectMapper objectMapper, JdbcClient jdbc,
-                             PlatformTransactionManager transactionManager,
+                             SignalDetector signals, PlatformTransactionManager transactionManager,
                              @Value("${appeals.timezone}") String timezone) {
         this.appeals = appeals;
         this.history = history;
@@ -157,6 +159,7 @@ public class DemoDataGenerator {
         this.calendar = calendar;
         this.objectMapper = objectMapper;
         this.jdbc = jdbc;
+        this.signals = signals;
         this.transactions = new TransactionTemplate(transactionManager);
         this.zone = ZoneId.of(timezone);
     }
@@ -237,6 +240,9 @@ public class DemoDataGenerator {
         appeal.applyNorm(norm, legalDeadline);
         // идентификатор задан заранее — save() сливает и возвращает управляемый экземпляр, дальше работаем с ним
         appeal = appeals.save(appeal);
+        // сигналы в тексте клиента — как при обычной регистрации (решение 35)
+        appeals.flush();
+        signals.record(appeal.getId(), subject + "\n" + description, createdAt);
         note(appeal, "CREATED", "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация.", customer.name, createdAt);
         note(appeal, "DEADLINE_SET", "Срок ответа по закону — до " + legalDeadline.format(DAY) + ": "
                 + norm.getTitle().toLowerCase(Locale.ROOT) + " (" + norm.getLegalBasis() + ")", "Подсистема", createdAt);

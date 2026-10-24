@@ -13,11 +13,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import ru.mtuci.appeals.api.ApiModels.AnalyticsResponse;
+import ru.mtuci.appeals.api.ApiModels.AssistantSettingsRequest;
+import ru.mtuci.appeals.api.ApiModels.AssistantSettingsResponse;
 import ru.mtuci.appeals.api.ApiModels.NewNormVersionRequest;
 import ru.mtuci.appeals.api.ApiModels.NormVersionResponse;
 import ru.mtuci.appeals.api.ApiModels.RoutingSettingsResponse;
 import ru.mtuci.appeals.api.ApiModels.SaveRoutingRuleRequest;
 import ru.mtuci.appeals.api.ApiModels.SettingsAuditResponse;
+import ru.mtuci.appeals.assistant.AssistantService;
 import ru.mtuci.appeals.security.CurrentUser;
 import ru.mtuci.appeals.service.AnalyticsService;
 import ru.mtuci.appeals.service.SettingsService;
@@ -31,10 +34,12 @@ public class AdminController {
 
     private final SettingsService settings;
     private final AnalyticsService analytics;
+    private final AssistantService assistant;
 
-    public AdminController(SettingsService settings, AnalyticsService analytics) {
+    public AdminController(SettingsService settings, AnalyticsService analytics, AssistantService assistant) {
         this.settings = settings;
         this.analytics = analytics;
+        this.assistant = assistant;
     }
 
     @GetMapping("/routing-rules")
@@ -70,6 +75,18 @@ public class AdminController {
     @GetMapping("/settings-audit")
     List<SettingsAuditResponse> audit() {
         return settings.auditLog();
+    }
+
+    /** Кто подсказывает сотрудникам: правила или локальная модель (решение 35). */
+    @GetMapping("/assistant")
+    AssistantSettingsResponse assistant() {
+        return assistant.status();
+    }
+
+    @PutMapping("/assistant")
+    AssistantSettingsResponse saveAssistant(CurrentUser user, @Valid @RequestBody AssistantSettingsRequest request) {
+        settings.setAssistantEngine(user, request.engine(), request.reason());
+        return assistant.status();
     }
 
     /** Показатели обращений за период (решение 23); product — вид страхования, пусто — все. */

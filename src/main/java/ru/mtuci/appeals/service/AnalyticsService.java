@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mtuci.appeals.api.ApiModels.AnalyticsResponse;
 import ru.mtuci.appeals.api.ApiModels.AnalyticsSummary;
+import ru.mtuci.appeals.api.ApiModels.AssistantUsage;
 import ru.mtuci.appeals.api.ApiModels.DepartmentOnTime;
 import ru.mtuci.appeals.api.ApiModels.Rate;
 import ru.mtuci.appeals.api.ApiModels.ShareItem;
@@ -72,7 +73,7 @@ public class AnalyticsService {
         }
         return new AnalyticsResponse(from, to, selected, summary(filter), products(all), types(filter),
                 weeks, weekly(filter, weeks), departments(filter), transfers(filter), corrections(filter),
-                outcomes(filter));
+                outcomes(filter), assistant(filter));
     }
 
     private AnalyticsSummary summary(Filter filter) {
@@ -232,6 +233,23 @@ public class AnalyticsService {
                         order by n desc, 1, 2""")
                 .params(filter.params())
                 .query((rs, row) -> new TypeCorrection(rs.getString("initial"), rs.getString("final"), rs.getLong("n")))
+                .list();
+    }
+
+    /** Подсказки помощника (решение 35): по доле принятых решают, вкладываться ли в локальную модель. */
+    private List<AssistantUsage> assistant(Filter filter) {
+        return jdbc.sql("""
+                        select s.kind, s.source, count(*) as shown,
+                               count(*) filter (where s.decision = 'ACCEPTED') as accepted,
+                               count(*) filter (where s.decision = 'REJECTED') as rejected
+                        from assistant_suggestion s
+                        join appeal_facts f on f.id = s.appeal_id""" + filter.where() + """
+
+                        group by s.kind, s.source
+                        order by s.kind, s.source""")
+                .params(filter.params())
+                .query((rs, row) -> new AssistantUsage(rs.getString("kind"), rs.getString("source"), rs.getLong("shown"),
+                        Rate.of(rs.getLong("accepted"), rs.getLong("shown")), rs.getLong("rejected")))
                 .list();
     }
 

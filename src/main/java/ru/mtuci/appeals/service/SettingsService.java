@@ -245,6 +245,24 @@ public class SettingsService {
                 .list();
     }
 
+    // ---------- помощник сотрудника (решение 35) ----------
+
+    /** RULES — правила и поиск, LOCAL_MODEL — локальная модель в контуре страховой. */
+    public String assistantEngine() {
+        return jdbc.sql("select engine from assistant_setting where id = 1").query(String.class).single();
+    }
+
+    @Transactional
+    public void setAssistantEngine(CurrentUser user, String engine, String reason) {
+        String before = assistantEngine();
+        if (before.equals(engine)) {
+            return;
+        }
+        jdbc.sql("update assistant_setting set engine = :engine where id = 1").param("engine", engine).update();
+        audit(user, "ASSISTANT", "Помощник сотрудника", "UPDATED", Map.of("engine", before), Map.of("engine", engine),
+                reason);
+    }
+
     private void audit(CurrentUser user, String entity, String key, String action,
                        Map<String, Object> before, Map<String, Object> after, String reason) {
         jdbc.sql("""

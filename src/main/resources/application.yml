@@ -98,6 +98,17 @@ appeals:
   auth:
     # публичный клиент OAuth, через который входит интерфейс (код авторизации + PKCE)
     ui-client-id: appeals-ui
+  assistant:
+    # локальная модель помощника сотрудника (решение 35); включает администратор на вкладке «Правила»
+    model:
+      # OpenAI-совместимый API в контуре страховой: Ollama, LM Studio, vLLM. Внешние сервисы не подключать:
+      # в запросе текст обращения — персональные данные
+      base-url: ${ASSISTANT_MODEL_URL:http://localhost:11434/v1}
+      name: ${ASSISTANT_MODEL:qwen2.5:7b-instruct}
+      timeout: 30s
+      api-key: ${ASSISTANT_MODEL_KEY:}
+      # после серии сбоев к модели не обращаемся, подсказки дают правила
+      open-duration: PT1M
   contracts:
     # учётная система договоров страховой; в стенде — заглушка WireMock
     base-url: ${CONTRACTS_BASE_URL:http://localhost:18081}

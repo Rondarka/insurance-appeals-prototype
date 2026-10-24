@@ -3,6 +3,7 @@ package ru.mtuci.appeals.service;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -62,6 +63,7 @@ public class EscalationService {
 
     @Scheduled(initialDelayString = "${appeals.escalation.initial-delay}",
             fixedDelayString = "${appeals.escalation.interval}")
+    @SchedulerLock(name = "escalation")
     public void scheduledScan() {
         scan(LocalDate.now(zone));
     }

@@ -6,6 +6,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.OptimisticLockingFailureException;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -102,6 +103,7 @@ public class ContractLinkService {
      */
     @Scheduled(initialDelayString = "${appeals.contract-link.initial-delay}",
             fixedDelayString = "${appeals.contract-link.interval}")
+    @SchedulerLock(name = "contract-link")
     public void linkPending() {
         for (UUID id : appealRepository.findContractLinkDue(ContractLink.PENDING, Instant.now())) {
             try {

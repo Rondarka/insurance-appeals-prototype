@@ -9,6 +9,7 @@ import org.springframework.amqp.AmqpException;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.simple.JdbcClient;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -24,9 +25,10 @@ import java.util.UUID;
 /**
  * Доставка событий из outbox в RabbitMQ (решение 3).
  *
- * Проход берёт неотправленные события по порядку через SELECT … FOR UPDATE SKIP LOCKED:
- * второй экземпляр подсистемы пропустит строки, которые уже отправляет первый, и не разошлёт
- * их дважды. Каждое событие отправляется с подтверждением брокера, и только после него
+ * Плановый проход выполняет один экземпляр подсистемы — под блокировкой ShedLock (решение 36):
+ * два экземпляра, отправляя разные пачки одновременно, нарушили бы порядок событий одного
+ * обращения. SELECT … FOR UPDATE SKIP LOCKED остаётся второй защитой — от двойной отправки,
+ * если проход запущен вне расписания. Каждое событие отправляется с подтверждением брокера, и только после него
  * помечается отправленным. Брокер недоступен — проход останавливается, а оставшиеся события
  * ждут следующего: так сохраняется порядок событий одного обращения.
  *
@@ -61,6 +63,7 @@ public class OutboxRelay {
     }
 
     @Scheduled(initialDelayString = "${appeals.outbox.initial-delay}", fixedDelayString = "${appeals.outbox.interval}")
+    @SchedulerLock(name = "outbox-relay", lockAtMostFor = "PT1M")
     public void scheduledRelay() {
         relay();
     }
@@ -103,6 +106,7 @@ public class OutboxRelay {
 
     /** Отправленные события больше не нужны: журнал аудита хранит их отдельно. */
     @Scheduled(initialDelayString = "${appeals.outbox.cleanup-interval}", fixedDelayString = "${appeals.outbox.cleanup-interval}")
+    @SchedulerLock(name = "outbox-cleanup")
     public void cleanup() {
         int removed = jdbc.sql("delete from outbox_event where published_at < :border")
                 .param("border", Timestamp.from(Instant.now().minus(retention)))

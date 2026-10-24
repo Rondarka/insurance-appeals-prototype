@@ -123,7 +123,7 @@ public class ContractLinkService {
             Appeal appeal = find(id);
             access.checkWork(user, appeal);
             if (appeal.getContractLink() != ContractLink.PENDING) {
-                throw new IllegalStateException("Договор не ждёт привязки — выберите его из списка");
+                throw new IllegalStateException("Договор не ждёт привязки, выберите его из списка");
             }
         });
         try {
@@ -154,7 +154,7 @@ public class ContractLinkService {
             Appeal appeal = find(id);
             checkChoice(user, appeal);
             if (appeal.getContractLink() == ContractLink.PENDING) {
-                throw new IllegalStateException("Договор ещё подбирается — выбор понадобится, если подойдёт несколько");
+                throw new IllegalStateException("Договор ещё подбирается, выбор понадобится, если подойдёт несколько");
             }
             return appeal.getCounterpartyId();
         });
@@ -255,7 +255,7 @@ public class ContractLinkService {
                 LocalDate deadline = calendar.deadline(registeredOn, norm.getTermDays(), norm.getCounting());
                 appeal.applyNorm(norm, deadline);
                 historyRepository.save(new AppealHistory(appeal, "DEADLINE_SET",
-                        "Срок по закону пересчитан по виду договора — до " + DAY.format(deadline) + ": "
+                        "Срок по закону пересчитан по виду договора: до " + DAY.format(deadline) + ": "
                                 + norm.getTitle().toLowerCase(Locale.ROOT) + " (" + norm.getLegalBasis() + ")",
                         "Подсистема", now));
             }
@@ -274,8 +274,8 @@ public class ContractLinkService {
         String product = formPolicy.productLabel(appeal.getRequestedProductCode());
         historyRepository.save(new AppealHistory(appeal, "CONTRACT_CHOICE_REQUIRED",
                 reason == ContractLink.NEEDS_CHOICE
-                        ? "Подходит несколько договоров «" + product + "» — клиенту предложено выбрать"
-                        : "Договор «" + product + "» у клиента не найден — предложено выбрать из всех его договоров",
+                        ? "Подходит несколько договоров «" + product + "», клиенту предложено выбрать"
+                        : "Договор «" + product + "» у клиента не найден, предложено выбрать из всех его договоров",
                 "Подсистема", now));
         eventPublisher.publishEvent(new AppealDomainEvent(
                 "APPEAL_CONTRACT_CHOICE_REQUIRED",

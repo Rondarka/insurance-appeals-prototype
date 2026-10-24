@@ -30,7 +30,7 @@ public class CalendarController {
     List<CalendarDay> days(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
                            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
         if (to.isBefore(from) || ChronoUnit.DAYS.between(from, to) > 92) {
-            throw new IllegalArgumentException("Период календаря — от одного дня до трёх месяцев");
+            throw new IllegalArgumentException("Период календаря: от одного дня до трёх месяцев");
         }
         return from.datesUntil(to.plusDays(1))
                 .map(day -> new CalendarDay(day, calendar.kind(day)))

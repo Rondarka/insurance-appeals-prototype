@@ -106,10 +106,10 @@ public class EscalationService {
 
         String description;
         if (level == EscalationLevel.BREACHED) {
-            description = "Срок по закону нарушен: истёк " + DAY.format(deadline) + ". Приоритет — критический";
+            description = "Срок по закону нарушен: истёк " + DAY.format(deadline) + ". Приоритет критический";
         } else {
             int left = calendar.workingDaysAfter(today, deadline);
-            description = "Срок по закону истекает " + DAY.format(deadline) + " — "
+            description = "Срок по закону истекает " + DAY.format(deadline) + ": "
                     + (left == 0 ? "сегодня последний день." : "осталось " + left + " раб. дн.")
                     + " Приоритет повышен, руководитель отдела предупреждён";
         }

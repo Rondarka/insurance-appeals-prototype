@@ -203,7 +203,7 @@ public class AppealWorkflowService {
         appeal.extendLegalDeadline(request.days(), newDeadline, reason, LocalDate.now(zone), now);
 
         messageRepository.save(new AppealMessage(appeal, AuthorType.EMPLOYEE, supervisorName,
-                "Срок рассмотрения вашего обращения продлён на " + request.days() + " раб. дн. — до "
+                "Срок рассмотрения вашего обращения продлён на " + request.days() + " раб. дн., до "
                         + DAY.format(newDeadline) + ".\nПричина: " + reason,
                 now));
         historyRepository.save(new AppealHistory(

@@ -64,7 +64,7 @@ public class AssistantService {
     public static final String DRAFT = "DRAFT";
     private static final Logger log = LoggerFactory.getLogger(AssistantService.class);
     private static final DateTimeFormatter DAY = DateTimeFormatter.ofPattern("dd.MM.yyyy");
-    private static final String DEGRADED = "Локальная модель недоступна — подсказки дают правила";
+    private static final String DEGRADED = "Локальная модель недоступна, подсказки дают правила";
     private static final int SIMILAR_LIMIT = 4;
     private static final int SIMILAR_FOR_DRAFT = 2;
     private static final String VOWEL_ENDINGS = "аяеёоуыиюйьАЯЕЁОУЫИЮЙЬ";
@@ -178,7 +178,7 @@ public class AssistantService {
             try {
                 return new Result<>(call.apply(engine), engine.source(), false);
             } catch (AssistantUnavailableException exception) {
-                log.warn("Помощник: {} — подсказку дают правила", exception.getMessage());
+                log.warn("Помощник: {}; подсказку дают правила", exception.getMessage());
                 return new Result<>(call.apply(rules), AssistantEngine.RULES, true);
             }
         }

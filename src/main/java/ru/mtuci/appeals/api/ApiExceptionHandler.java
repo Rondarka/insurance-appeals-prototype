@@ -64,7 +64,7 @@ public class ApiExceptionHandler {
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ResponseEntity<ErrorResponse> handleConcurrentChange(OptimisticLockingFailureException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse("Обращение только что изменилось — обновите карточку и повторите", Instant.now()));
+                .body(new ErrorResponse("Обращение только что изменилось. Обновите карточку и повторите", Instant.now()));
     }
 
     @ExceptionHandler({IllegalArgumentException.class, IllegalStateException.class})

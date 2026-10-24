@@ -189,7 +189,7 @@ public class AppealRegistrationService {
             historyRepository.save(new AppealHistory(
                     appeal,
                     "CONTRACT_PENDING",
-                    "Учётная система договоров недоступна — договор «" + formPolicy.productLabel(productCode)
+                    "Учётная система договоров недоступна, договор «" + formPolicy.productLabel(productCode)
                             + "» будет подобран автоматически, когда она заработает",
                     "Подсистема",
                     now
@@ -201,7 +201,7 @@ public class AppealRegistrationService {
         historyRepository.save(new AppealHistory(
                 appeal,
                 "DEADLINE_SET",
-                "Срок ответа по закону — до " + legalDeadline.format(DAY) + ": " + norm.getTitle().toLowerCase(Locale.ROOT)
+                "Срок ответа по закону: до " + legalDeadline.format(DAY) + ": " + norm.getTitle().toLowerCase(Locale.ROOT)
                         + " (" + norm.getLegalBasis() + ")",
                 "Подсистема",
                 now

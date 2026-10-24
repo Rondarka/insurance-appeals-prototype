@@ -34,7 +34,7 @@ public class AppealChecks {
         ContractSnapshot contract = appeal.getContract();
         if (contract == null) {
             checks.add(warning("CONTRACT_NOT_LINKED",
-                    "Договор ещё не привязан — проверки покрытия и статуса появятся после привязки"));
+                    "Договор ещё не привязан, проверки покрытия и статуса появятся после привязки"));
             return checks;
         }
 
@@ -59,7 +59,7 @@ public class AppealChecks {
                 .toList();
         checks.add(repeats.isEmpty()
                 ? ok("REPEATED", "Первое обращение на эту тему по договору за 30 дней")
-                : warning("REPEATED", "Повторное обращение: по этому договору на ту же тему за 30 дней — "
+                : warning("REPEATED", "Повторное обращение: по этому договору на ту же тему за 30 дней их "
                         + repeats.size() + " (" + String.join(", ", repeats) + ")"));
         return checks;
     }
@@ -74,7 +74,7 @@ public class AppealChecks {
         try {
             date = LocalDate.parse(incident);
         } catch (DateTimeParseException exception) {
-            return warning("COVERAGE", "Дата происшествия не распознана — проверить покрытие вручную");
+            return warning("COVERAGE", "Дата происшествия не распознана, проверьте покрытие вручную");
         }
         String day = date.format(DAY);
         if (date.isBefore(contract.getValidFrom()) || date.isAfter(contract.getValidTo())) {

@@ -68,7 +68,7 @@ public class RoutingConsumer {
                     appeal,
                     "CLASSIFICATION_REQUIRED",
                     "Нет правила маршрутизации для «" + appeal.getCategory() + " / " + appeal.getSubcategory()
-                            + "» — отдел выберет руководитель",
+                            + "», отдел выберет руководитель",
                     "Сервис маршрутизации",
                     now
             ));

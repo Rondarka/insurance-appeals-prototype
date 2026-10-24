@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Администрирование — обработка обращений</title>
-    <link rel="stylesheet" href="/styles.css?v=20261024-14">
+    <title>Администрирование · обработка обращений</title>
+    <link rel="stylesheet" href="/styles.css?v=20261024-16">
 </head>
 <body class="app-page">
 <header class="topbar admin-topbar">
@@ -53,7 +53,7 @@
             <div>
                 <h1>Аналитика</h1>
                 <p class="muted">Где у страховой проблемы в продуктах и процессах. Показатели считаются по итоговому типу
-                    обращения — его подтверждает сотрудник при ответе. У каждого показателя — какое решение он поддерживает.</p>
+                    обращения, его подтверждает сотрудник при ответе. У каждого показателя указано, какое решение он поддерживает.</p>
             </div>
             <button id="refresh-analytics" class="btn" type="button">Обновить</button>
         </div>
@@ -80,14 +80,14 @@
                 </section>
                 <section class="panel chart-panel">
                     <h2 id="types-title">О чём обращаются</h2>
-                    <p class="decision">Какой процесс продукта порождает обращения — с него начинать улучшения.
+                    <p class="decision">Какой процесс продукта порождает обращения: с него начинать улучшения.
                         Доли типов внутри продукта сравнимы честно: у них одна база.</p>
                     <div id="analytics-types"></div>
                     <details class="table-view"><summary>Таблица</summary><div id="types-table"></div></details>
                 </section>
                 <section class="panel chart-panel span-2">
                     <h2>Поступление по неделям</h2>
-                    <p class="decision">Где готовиться к пикам: рост в продукте — повод выяснить, что изменилось
+                    <p class="decision">Где готовиться к пикам: если в продукте рост, стоит выяснить, что изменилось
                         (правила, тарифы, сбой), и заранее усилить отдел.</p>
                     <div id="analytics-weekly" class="chart-box"></div>
                     <p id="weekly-note" class="muted small-text"></p>
@@ -95,7 +95,7 @@
                 </section>
                 <section class="panel chart-panel">
                     <h2>Нарушения срока по отделам</h2>
-                    <p class="decision">Где не справляются — туда перераспределить людей или пересмотреть срок отдела
+                    <p class="decision">Где не справляются: туда перераспределить людей или пересмотреть срок отдела
                         во вкладке «Правила». Доля решённых позже срока по закону, худшие сверху.</p>
                     <div id="analytics-departments"></div>
                     <p id="departments-scale" class="muted small-text"></p>
@@ -107,7 +107,7 @@
                 </section>
                 <section class="panel chart-panel">
                     <h2>Передачи между отделами</h2>
-                    <p class="decision">Устойчивый поток из одного отдела в другой — правило маршрутизации ошибается:
+                    <p class="decision">Устойчивый поток из одного отдела в другой значит, что правило маршрутизации ошибается:
                         поправьте его во вкладке «Правила».</p>
                     <p id="transfers-share" class="small-text"></p>
                     <div id="analytics-transfers"></div>
@@ -120,8 +120,8 @@
                 </section>
                 <section class="panel chart-panel">
                     <h2>Тип исправлен при ответе</h2>
-                    <p class="decision">Клиенты не понимают категории формы — поправить формулировки и состав формы.
-                        Передача исправляет, где обращение, итоговый тип — о чём оно.</p>
+                    <p class="decision">Клиенты не понимают категории формы: стоит поправить формулировки и состав формы.
+                        Передача исправляет, где обращение, а итоговый тип исправляет, о чём оно.</p>
                     <p id="corrections-share" class="figure-line"></p>
                     <div id="analytics-corrections"></div>
                 </section>
@@ -134,11 +134,11 @@
             <div>
                 <h1>Правила</h1>
                 <p class="muted">Куда направлять обращения и за сколько отвечать. Срок отдела не может быть длиннее срока
-                    по закону: подсистема оставляет запас на согласование и отправку ответа. Каждое изменение — с причиной
+                    по закону: подсистема оставляет запас на согласование и отправку ответа. Каждое изменение записывается с причиной
                     и в журнале.</p>
             </div>
         </div>
-        <label class="reason-field">Причина изменения — попадёт в журнал
+        <label class="reason-field">Причина изменения, попадёт в журнал
             <input id="settings-reason" maxlength="500" placeholder="Например: отдел убытков перегружен, ускоряем первичный разбор">
         </label>
 
@@ -157,7 +157,7 @@
 
         <section class="panel settings-block">
             <h2>Нормативы сроков</h2>
-            <p class="muted small-text">Срок по закону меняется только новой версией — со ссылкой на акт и с будущей даты.
+            <p class="muted small-text">Срок по закону меняется только новой версией: со ссылкой на акт и с будущей даты.
                 Обращения, зарегистрированные раньше, сохраняют свой срок.</p>
             <div class="table-scroll"><table id="norms" class="table settings-table"></table></div>
             <form id="norm-add" class="settings-add">
@@ -165,7 +165,7 @@
                 <label>Срок<input name="termDays" type="number" min="1" max="365" required></label>
                 <label>Как считать<select name="counting"></select></label>
                 <label>Продление, раб. дн.<input name="maxExtensionDays" type="number" min="0" max="30" value="0" required></label>
-                <label class="wide">Основание — акт и статья<input name="legalBasis" maxlength="300" required
+                <label class="wide">Основание: акт и статья<input name="legalBasis" maxlength="300" required
                        placeholder="Федеральный закон от … № …-ФЗ, ст. …"></label>
                 <label>Действует с<input name="validFrom" type="date" required></label>
                 <button class="btn" type="submit">Добавить версию</button>
@@ -175,8 +175,8 @@
         <section class="panel settings-block">
             <h2>Помощник сотрудника</h2>
             <p class="muted small-text">Кто подсказывает сотрудникам. Правила и поиск по решённым обращениям работают всегда;
-                локальная модель работает в контуре страховой — текст обращения не уходит во внешние сервисы. Модель
-                недоступна — подсказки дают правила, сотрудник видит об этом пометку.</p>
+                локальная модель работает в контуре страховой, и текст обращения не уходит во внешние сервисы. Модель
+                недоступна, подсказки дают правила, а сотрудник видит об этом пометку.</p>
             <div id="assistant-settings"></div>
         </section>
 
@@ -207,9 +207,9 @@
 </main>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
-<script src="/auth.js?v=20261024-14"></script>
-<script src="/common.js?v=20261024-14"></script>
-<script src="/admin.js?v=20261024-14"></script>
-<script src="/analytics.js?v=20261024-14"></script>
+<script src="/auth.js?v=20261024-16"></script>
+<script src="/common.js?v=20261024-16"></script>
+<script src="/admin.js?v=20261024-16"></script>
+<script src="/analytics.js?v=20261024-16"></script>
 </body>
 </html>

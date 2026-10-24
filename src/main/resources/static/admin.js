@@ -33,9 +33,9 @@ function showTab(name) {
 const INTEGRATION_STATE = {
     CLOSED: ["ok", "работает"],
     OK: ["ok", "работает"],
-    DELAYED: ["late", "события задерживаются — брокер недоступен, события ждут в outbox и уйдут, когда он вернётся"],
+    DELAYED: ["late", "события задерживаются: брокер недоступен, события ждут в outbox и уйдут, когда он вернётся"],
     HALF_OPEN: ["soon", "проверяется после сбоя"],
-    OPEN: ["late", "недоступна — обращения к ней приостановлены, кабинет работает в резервном режиме"]
+    OPEN: ["late", "недоступна: обращения к ней приостановлены, кабинет работает в резервном режиме"]
 };
 
 async function loadAll() {
@@ -44,7 +44,7 @@ async function loadAll() {
     $("#integrations").innerHTML = integrations.map(item => {
         // у модели помощника своё следствие недоступности: подсказки дают правила (решение 35)
         const [tone, text] = item.code === "ASSISTANT" && ["OPEN", "HALF_OPEN"].includes(item.state)
-            ? ["late", "недоступна — подсказки сотрудникам дают правила"]
+            ? ["late", "недоступна, подсказки сотрудникам дают правила"]
             : INTEGRATION_STATE[item.state] || ["", item.state];
         return `<p class="integration ${tone}"><span class="dot"></span>${escapeHtml(item.name)}: ${text}${
             item.failureRate >= 0 ? ` <small class="muted">· сбоев ${Math.round(item.failureRate)} %</small>` : ""}${
@@ -212,7 +212,7 @@ function settingsReason() {
     const reason = $("#settings-reason").value.trim();
     if (reason.length < 5) {
         $("#settings-reason").focus();
-        throw new Error("Укажите причину изменения — она попадёт в журнал");
+        throw new Error("Укажите причину изменения: она попадёт в журнал");
     }
     return reason;
 }
@@ -273,7 +273,7 @@ function renderRouting(routing) {
     const departments = adm.departments.map(item => [item.code, item.name]);
     const priorities = Object.entries(PRIORITY_LABELS);
     $("#routing-uncovered").innerHTML = routing.uncovered.length ? `
-        <p class="notice small">Нет правила — обращения уйдут на ручную классификацию:
+        <p class="notice small">Нет правила, обращения уйдут на ручную классификацию:
             ${routing.uncovered.map(item => escapeHtml(`${item.categoryLabel} / ${item.typeLabel}`)).join(", ")}</p>` : "";
     $("#routing-rules").innerHTML = `
         <thead><tr><th>Вид обращения</th><th>Отдел</th><th>Приоритет</th><th>Срок отдела, ч</th><th>Предел по закону</th><th></th></tr></thead>
@@ -380,9 +380,9 @@ $("#norm-add").addEventListener("submit", event => {
 
 const ASSISTANT_ENGINES = {
     RULES: ["Правила и поиск", "Сигналы в тексте, «похоже на претензию», похожие решённые обращения, шаблоны ответов"],
-    LOCAL_MODEL: ["Локальная модель", "Те же подсказки и черновики пишет модель в контуре страховой; при сбое — правила"]
+    LOCAL_MODEL: ["Локальная модель", "Те же подсказки и черновики пишет модель в контуре страховой; при сбое работают правила"]
 };
-const MODEL_STATE = {CLOSED: "отвечает", HALF_OPEN: "проверяется после сбоя", OPEN: "недоступна — работают правила"};
+const MODEL_STATE = {CLOSED: "отвечает", HALF_OPEN: "проверяется после сбоя", OPEN: "недоступна, работают правила"};
 
 async function loadAssistantSettings() {
     renderAssistantSettings(await api("/api/admin/assistant"));

@@ -57,7 +57,7 @@ public class AnalyticsService {
     @Transactional(readOnly = true)
     public AnalyticsResponse analytics(int days, String product) {
         if (days < MIN_DAYS || days > MAX_DAYS) {
-            throw new IllegalArgumentException("Период аналитики — от " + MIN_DAYS + " до " + MAX_DAYS + " дней");
+            throw new IllegalArgumentException("Период аналитики: от " + MIN_DAYS + " до " + MAX_DAYS + " дней");
         }
         String selected = product == null || product.isBlank() ? null : product;
         if (selected != null && !productExists(selected)) {

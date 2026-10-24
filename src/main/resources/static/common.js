@@ -423,9 +423,9 @@ async function loadTerms(appealId, target) {
 // ---------- договор, привязанный позже (решение 29) ----------
 
 const CONTRACT_LINK_TEXT = {
-    PENDING: "Учётная система договоров была недоступна — договор подберётся автоматически, когда она заработает.",
-    NEEDS_CHOICE: "Подходит несколько договоров — клиенту предложено выбрать. Можно выбрать за него.",
-    NOT_FOUND: "Договор указанного вида у клиента не найден — выберите из его договоров."
+    PENDING: "Учётная система договоров была недоступна. Договор подберётся автоматически, когда она заработает.",
+    NEEDS_CHOICE: "Подходит несколько договоров, клиенту предложено выбрать. Можно выбрать за него.",
+    NOT_FOUND: "Договор указанного вида у клиента не найден. Выберите из его договоров."
 };
 
 function requestedContractText(appeal) {
@@ -466,7 +466,7 @@ document.addEventListener("click", event => {
     (async () => {
         if (linkNow) {
             const appeal = await api(`/api/appeals/${linkNow.dataset.linkNow}/contract/link`, {method: "POST"});
-            showToast(appeal.contract ? `Договор привязан: ${appeal.contract.policyNumber}` : "Подходит несколько договоров — выберите");
+            showToast(appeal.contract ? `Договор привязан: ${appeal.contract.policyNumber}` : "Подходит несколько договоров, выберите нужный");
             await afterContractLinked(appeal.id);
         }
         if (load) {

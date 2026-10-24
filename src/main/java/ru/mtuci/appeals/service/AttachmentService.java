@@ -99,7 +99,7 @@ public class AttachmentService {
             throw new AccessDeniedException("Сотрудник прикладывает файлы к сообщению в переписке");
         }
         if (appeal.getStatus() == AppealStatus.CLOSED) {
-            throw new IllegalStateException("Обращение закрыто — создайте новое");
+            throw new IllegalStateException("Обращение закрыто, создайте новое");
         }
         List<CheckedFile> accepted = accepted(appeal, files);
         if (accepted.isEmpty()) {

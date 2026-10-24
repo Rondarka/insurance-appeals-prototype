@@ -110,7 +110,7 @@ public class LocalModelEngine implements AssistantEngine {
                 %s""".formatted(input.outcome().label(), appeal.subject(), appeal.description(), clientMessages(appeal),
                 input.filledTemplate(), input.similarAnswers().isEmpty() ? ""
                         : "Как отвечали на похожие обращения:\n" + input.similarAnswers().stream()
-                        .map(text -> "— " + text).collect(Collectors.joining("\n"))));
+                        .map(text -> "- " + text).collect(Collectors.joining("\n"))));
         if (answer.isBlank()) {
             throw new AssistantUnavailableException("Модель вернула пустой ответ", null);
         }
@@ -134,7 +134,7 @@ public class LocalModelEngine implements AssistantEngine {
         try {
             return circuitBreaker.executeSupplier(() -> call(system, user));
         } catch (CallNotPermittedException exception) {
-            throw new AssistantUnavailableException("Локальная модель недоступна — подсказки дают правила", exception);
+            throw new AssistantUnavailableException("Локальная модель недоступна, подсказки дают правила", exception);
         }
     }
 

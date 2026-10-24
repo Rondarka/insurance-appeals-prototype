@@ -74,7 +74,7 @@ public class CorrespondenceService {
             authorType = AuthorType.EMPLOYEE;
         }
         if (appeal.getStatus() == AppealStatus.CLOSED) {
-            throw new IllegalStateException("Обращение закрыто — создайте новое");
+            throw new IllegalStateException("Обращение закрыто, создайте новое");
         }
         String text = body == null ? "" : body.trim();
         List<AttachmentService.CheckedFile> accepted = attachmentService.accepted(appeal, files);
@@ -120,7 +120,7 @@ public class CorrespondenceService {
             historyRepository.save(new AppealHistory(
                     appeal,
                     "STATUS_CHANGED",
-                    "Клиент ответил — обращение снова в работе",
+                    "Клиент ответил, обращение снова в работе",
                     "Подсистема",
                     now
             ));

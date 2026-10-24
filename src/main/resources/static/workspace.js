@@ -242,7 +242,7 @@ function renderSummary() {
                             <small class="muted">${escapeHtml(appeal.publicNumber)} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))} · ${escapeHtml(assigneeLabel(appeal))}</small></span>
                         <span class="badge ${reason.tone}">${escapeHtml(reason.text)}</span>
                     </button></li>`).join("")}</ul>
-                    ${tasks.length > 8 ? `<p class="muted small-text">И ещё ${tasks.length - 8} — в очереди.</p>` : ""}`
+                    ${tasks.length > 8 ? `<p class="muted small-text">И ещё ${tasks.length - 8} в очереди.</p>` : ""}`
                     : `<p class="muted">Срочного нет. Можно разобрать новые обращения.</p>`}
             </section>
             ${isSupervisor() ? renderDepartmentLoad(open) : renderMyStats()}
@@ -364,7 +364,7 @@ function typeCorrected(appeal) {
 
 function actionLabel(target, current) {
     if (target === "IN_PROGRESS") return current === "ROUTED" ? "Взять в работу" : "Вернуть в работу";
-    if (target === "RESOLVED") return "Решено — ответить по существу";
+    if (target === "RESOLVED") return "Решено: ответить по существу";
     if (target === "CLOSED") return "Закрыть обращение";
     return STATUS_LABELS[target];
 }
@@ -400,7 +400,7 @@ function renderCard(appeal) {
         <div class="actions">
             <h4>Ручная классификация</h4>
             <p class="notice small">Для типа «${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}» нет правила
-                маршрутизации. Выберите отдел — обращение уйдёт туда с обычным сроком отдела.</p>
+                маршрутизации. Выберите отдел, и обращение уйдёт туда с обычным сроком отдела.</p>
             <form class="transfer-form" data-classify>
                 <label>Отдел
                     <select name="departmentCode">${ws.departments
@@ -408,7 +408,7 @@ function renderCard(appeal) {
                 </label>
                 <button class="btn primary" type="submit">Направить в отдел</button>
             </form>
-        </div>` : `<p class="notice small">Обращение другого отдела — только просмотр.</p>`;
+        </div>` : `<p class="notice small">Обращение другого отдела, только просмотр.</p>`;
 
     const signals = ws.appeals.find(item => item.id === appeal.id)?.signals || [];
     return `
@@ -420,21 +420,21 @@ function renderCard(appeal) {
                     <p class="muted small-text">Помощник смотрит обращение…</p></section>` : ""}
                 ${renderThread(appeal, "EMPLOYEE")}
                 ${appeal.outcome ? `<p class="notice small">Итог: ${escapeHtml(OUTCOME_LABELS[appeal.outcome])}${typeCorrected(appeal)
-                    ? ` · тип уточнён: ${escapeHtml(categoryLabel(appeal.finalCategory))} — ${escapeHtml(typeLabel(appeal.finalCategory, appeal.finalSubcategory))}`
+                    ? ` · тип уточнён: ${escapeHtml(categoryLabel(appeal.finalCategory))}, ${escapeHtml(typeLabel(appeal.finalCategory, appeal.finalSubcategory))}`
                     : ""}</p>` : ""}
                 ${canWork && ws.resolveForm && appeal.nextStatuses.includes("RESOLVED") ? `
                 <form class="reply resolve-form" data-resolve>
                     <h4>Ответ клиенту по существу</h4>
                     <p class="muted small-text">Закон требует обоснованный ответ: результат рассмотрения, на каком основании,
                         что сделано (Закон № 4015-1, ст. 6.2 п. 6). Сама выплата или перерасчёт выполняются в учётных системах
-                        страховой — здесь фиксируется результат.</p>
+                        страховой, а здесь фиксируется результат.</p>
                     <div class="resolve-head">
                         <label>Итог
                             <select name="outcome">${Object.entries(OUTCOME_LABELS)
                                 .map(([code, label]) => `<option value="${code}">${label}</option>`).join("")}</select>
                         </label>
                         <button class="btn small-btn" type="button" data-draft>${ws.advice?.data.engine === "LOCAL_MODEL"
-                            ? "Черновик — локальная модель" : "Черновик по шаблону"}</button>
+                            ? "Черновик от локальной модели" : "Черновик по шаблону"}</button>
                     </div>
                     <div id="draft-preview"></div>
                     <label>Тип обращения по итогам рассмотрения
@@ -522,7 +522,7 @@ function renderExtension(appeal, canWork) {
                 <select name="days">${Array.from({length: max}, (_, index) => max - index)
                     .map(days => `<option value="${days}">${days}</option>`).join("")}</select>
             </label>
-            <label>Причина — её увидит клиент
+            <label>Причина, её увидит клиент
                 <textarea name="reason" rows="3" minlength="10" maxlength="1000" required
                           placeholder="Какие документы нужны, у кого запрошены и когда ждём ответ"></textarea>
             </label>
@@ -545,7 +545,7 @@ function renderAssignee(appeal, canWork) {
         <form class="assign-form" data-assign>
             <select name="subject" aria-label="Исполнитель">${ws.staff.map(member => `
                 <option value="${escapeHtml(member.id)}" ${member.id === appeal.assignedSubject ? "selected" : ""}>
-                    ${escapeHtml(member.fullName)}${member.supervisor ? " — руководитель" : ""}</option>`).join("")}</select>
+                    ${escapeHtml(member.fullName)}${member.supervisor ? ", руководитель" : ""}</option>`).join("")}</select>
             <button class="btn" type="submit">Назначить</button>
         </form>`;
 }
@@ -714,15 +714,15 @@ function renderAssistant(appeal, box = $(`#assistant-${appeal.id}`)) {
     if (hint && advice.decisions.TYPE_HINT !== "REJECTED") {
         const earlier = hint.legalDeadline < appeal.legalDeadline;
         parts.push(`<div class="hint-card">
-            <p><strong>Похоже на претензию</strong> — клиент выбрал «${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}».
+            <p><strong>Похоже на претензию</strong>, хотя клиент выбрал «${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}».
                 <small class="muted">${escapeHtml(ENGINE_LABELS[hint.source])}</small></p>
             ${hint.reasons.length ? `<ul class="quotes">${hint.reasons.map(reason => `<li><q>${escapeHtml(reason)}</q></li>`).join("")}</ul>` : ""}
-            <p class="small-text">По претензии срок по закону — до ${formatDate(hint.legalDeadline)}
+            <p class="small-text">По претензии срок по закону: до ${formatDate(hint.legalDeadline)}
                 (${escapeHtml(hint.normTitle.toLowerCase())}; ${escapeHtml(hint.legalBasis)})${hint.extensionAllowed ? "" : ", продлить его нельзя"}.
                 Сейчас стоит ${formatDate(appeal.legalDeadline)}.</p>
-            ${earlier ? `<p class="notice small warning-note">⚠ Ответить нужно раньше текущего срока — до ${formatDate(hint.legalDeadline)}.</p>` : ""}
+            ${earlier ? `<p class="notice small warning-note">⚠ Ответить нужно раньше текущего срока: до ${formatDate(hint.legalDeadline)}.</p>` : ""}
             ${advice.decisions.TYPE_HINT === "ACCEPTED"
-                ? `<p class="muted small-text">✓ Учтено: в форме ответа итоговый тип — «${escapeHtml(hint.label)}».</p>`
+                ? `<p class="muted small-text">✓ Учтено: в форме ответа итоговый тип «${escapeHtml(hint.label)}».</p>`
                 : `<div class="hint-actions">
                     <button type="button" class="btn small-btn" data-assistant="type-accept">Учесть при ответе</button>
                     <button type="button" class="btn ghost small-btn" data-assistant="type-reject">Не подходит</button>
@@ -769,7 +769,7 @@ async function assistantClick(button) {
             ws.finalTypeHint[appeal.id] = `${hint.category}/${hint.subcategory}`;
             const select = $("[data-resolve] select[name=finalType]");
             if (select) select.value = ws.finalTypeHint[appeal.id];
-            showToast(`При ответе итоговый тип — «${hint.label}»`);
+            showToast(`При ответе итоговый тип: «${hint.label}»`);
         }
         renderAssistant(appeal);
     }
@@ -785,7 +785,7 @@ async function assistantClick(button) {
             ws.answerDraft = item.answer;
             await openCard(ws.openedId);
         }
-        showToast("Ответ взят за основу — поправьте его под это обращение");
+        showToast("Ответ взят за основу. Поправьте его под это обращение");
     }
     if (action === "draft-use" || action === "draft-reject") {
         await assistantFeedback("DRAFT", action === "draft-use" ? "ACCEPTED" : "REJECTED");
@@ -794,7 +794,7 @@ async function assistantClick(button) {
             textarea.value = ws.draft;
             textarea.rows = Math.min(16, ws.draft.split("\n").length + 4);
             textarea.focus();
-            showToast("Черновик вставлен — допишите места в квадратных скобках");
+            showToast("Черновик вставлен. Допишите места в квадратных скобках");
         }
         $("#draft-preview").innerHTML = "";
     }

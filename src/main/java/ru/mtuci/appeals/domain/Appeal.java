@@ -239,7 +239,7 @@ public class Appeal {
      */
     public void extendLegalDeadline(int days, LocalDate newDeadline, String reason, LocalDate today, Instant now) {
         if (norm == null || legalDeadline == null) {
-            throw new IllegalStateException("У обращения нет срока по закону — продлевать нечего");
+            throw new IllegalStateException("У обращения нет срока по закону, продлевать нечего");
         }
         if (status == AppealStatus.RESOLVED || status == AppealStatus.CLOSED) {
             throw new IllegalStateException("Обращение уже решено");
@@ -254,7 +254,7 @@ public class Appeal {
             throw new IllegalArgumentException("Продлить можно на 1–" + norm.getMaxExtensionDays() + " рабочих дней");
         }
         if (today.isAfter(legalDeadline)) {
-            throw new IllegalStateException("Срок уже истёк — продлить его задним числом нельзя");
+            throw new IllegalStateException("Срок уже истёк, продлить его задним числом нельзя");
         }
         this.legalDeadline = newDeadline;
         this.deadlineExtendedDays = days;

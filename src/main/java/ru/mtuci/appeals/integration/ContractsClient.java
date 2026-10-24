@@ -108,7 +108,7 @@ public class ContractsClient {
             return circuitBreaker.executeSupplier(call);
         } catch (CallNotPermittedException exception) {
             throw new ContractSourceUnavailableException(
-                    "Учётная система договоров недоступна — обращения к ней приостановлены",
+                    "Учётная система договоров недоступна, обращения к ней приостановлены",
                     ContractSourceUnavailableException.CIRCUIT_OPEN, exception);
         }
     }

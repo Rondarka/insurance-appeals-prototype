@@ -100,7 +100,7 @@ public class SettingsService {
                 .orElseThrow(() -> new IllegalArgumentException("Неизвестный отдел: " + request.departmentCode()));
         LegalLimit limit = limitFor(category, subcategory, LocalDate.now(zone));
         if (request.slaHours() > limit.maxSlaHours()) {
-            throw new IllegalArgumentException("Срок отдела " + request.slaHours() + " ч длиннее допустимого — "
+            throw new IllegalArgumentException("Срок отдела " + request.slaHours() + " ч длиннее допустимого: "
                     + limit.explanation());
         }
 
@@ -165,9 +165,9 @@ public class SettingsService {
                 .min(Comparator.comparingInt(Norm::termDays))
                 .orElseThrow(() -> new IllegalStateException("Нет действующего норматива для " + category + "/" + subcategory));
         int max = (shortest.termDays() - RESERVE_DAYS) * 24;
-        return new LegalLimit(max, "не больше " + max + " ч: по закону «" + shortest.title().toLowerCase() + "» — "
+        return new LegalLimit(max, "не больше " + max + " ч: по закону «" + shortest.title().toLowerCase() + "» даёт "
                 + shortest.termDays() + " " + COUNTING.get(shortest.counting()) + " (" + shortest.legalBasis()
-                + "), " + RESERVE_DAYS + " дня — запас на согласование и отправку ответа");
+                + "), " + RESERVE_DAYS + " дня остаются на согласование и отправку ответа");
     }
 
     record LegalLimit(int maxSlaHours, String explanation) {
@@ -194,7 +194,7 @@ public class SettingsService {
     public void addNormVersion(CurrentUser user, NewNormVersionRequest request) {
         LocalDate validFrom = request.validFrom();
         if (!validFrom.isAfter(LocalDate.now(zone))) {
-            throw new IllegalArgumentException("Новая версия норматива действует только с будущей даты — "
+            throw new IllegalArgumentException("Новая версия норматива действует только с будущей даты: "
                     + "обращения, зарегистрированные раньше, сохраняют свой срок");
         }
         record Version(long id, String title, String condition, LocalDate validFrom, LocalDate validTo) {
@@ -208,7 +208,7 @@ public class SettingsService {
         }
         Version last = versions.get(versions.size() - 1);
         if (!validFrom.isAfter(last.validFrom())) {
-            throw new IllegalArgumentException("Уже есть версия с " + last.validFrom().format(DAY) + " — новая должна начинаться позже");
+            throw new IllegalArgumentException("Уже есть версия с " + last.validFrom().format(DAY) + ", новая должна начинаться позже");
         }
         jdbc.sql("update deadline_norm set valid_to = :to where id = :id")
                 .param("to", Date.valueOf(validFrom.minusDays(1))).param("id", last.id()).update();

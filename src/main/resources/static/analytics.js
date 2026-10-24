@@ -77,7 +77,7 @@ function renderAnalytics() {
     const selected = an.products.find(item => item.code === data.product);
     $("#analytics-scope").textContent = `${selected ? selected.label : "Все виды страхования"} · с ${formatDate(data.from)}`
         + ` по ${formatDate(data.to)} · ${summary.received} ${plural(summary.received, "обращение", "обращения", "обращений")}`
-        + (summary.demo ? `, из них ${summary.demo} демонстрационных — от генератора стенда` : "");
+        + (summary.demo ? `, из них ${summary.demo} демонстрационных от генератора стенда` : "");
     const empty = summary.received === 0;
     $("#analytics-empty").hidden = !empty;
     $("#analytics-panels").hidden = empty;
@@ -103,7 +103,7 @@ function renderKpi(summary) {
         ["Поступило", summary.received, "за период"],
         ["Решено", summary.resolved, "ответ по существу дан"],
         ["Решено в срок по закону", percent(onTime),
-            late(onTime) ? `⚠ ${late(onTime)} из ${onTime.of} — позже срока` : `${onTime.of} из ${onTime.of}`,
+            late(onTime) ? `⚠ ${late(onTime)} из ${onTime.of} позже срока` : `${onTime.of} из ${onTime.of}`,
             late(onTime) ? "late" : ""],
         ["Среднее время решения", summary.averageResolutionDays == null ? "—"
             : `${summary.averageResolutionDays.toLocaleString("ru-RU")} дн.`, "от регистрации до ответа"],
@@ -146,13 +146,13 @@ function renderProducts(products) {
 const TOP_TYPES = 8;
 
 function renderTypes(types, selected) {
-    $("#types-title").textContent = selected ? `О чём обращаются — ${selected.label}` : "О чём обращаются";
+    $("#types-title").textContent = selected ? `О чём обращаются: ${selected.label}` : "О чём обращаются";
     let rows = types;
     if (types.length > TOP_TYPES + 1) {
         const rest = types.slice(TOP_TYPES);
         const count = rest.reduce((sum, item) => sum + item.rate.count, 0);
         const of = types[0].rate.of;
-        rows = [...types.slice(0, TOP_TYPES), {code: "", label: `Остальные типы (${rest.length}) — вместе`,
+        rows = [...types.slice(0, TOP_TYPES), {code: "", label: `Остальные типы (${rest.length}) вместе`,
             rate: {count, of, percent: of ? Math.round(count * 1000 / of) / 10 : null}, color: OTHER_COLOR}];
     }
     $("#analytics-types").innerHTML = bars(rows.map(item => ({
@@ -204,11 +204,11 @@ function renderWeekly() {
     const peak = Math.max(1, ...series.flatMap(item => item.counts));
     const box = $("#analytics-weekly");
     $("#weekly-note").textContent = complete < weeks.length
-        ? `Текущая неделя (с ${formatDate(weeks[weeks.length - 1])}) не показана — она ещё не закончилась; её числа есть в таблице.`
+        ? `Текущая неделя (с ${formatDate(weeks[weeks.length - 1])}) не показана: она ещё не закончилась. Её числа есть в таблице.`
         : "";
     box.classList.toggle("multiples", series.length > 1);
     if (shown.length < 2) {
-        box.innerHTML = `<p class="muted">Для динамики нужны хотя бы две полные недели — выберите период длиннее.</p>`;
+        box.innerHTML = `<p class="muted">Для динамики нужны хотя бы две полные недели. Выберите период длиннее.</p>`;
     } else if (series.length === 1) {
         box.innerHTML = `<div class="multiple-plot"></div>`;
         lineChart(box.firstElementChild, shown, series[0], peak, 240, false);
@@ -318,7 +318,7 @@ function renderDepartments(departments) {
     });
     // шкала — до ближайших 5 %, а не до худшего отдела: иначе 9 % выглядит как полная полоса
     const scale = Math.max(5, Math.ceil(Math.max(...rows.map(row => row.value), 0) / 5) * 5);
-    $("#departments-scale").textContent = `Шкала полос — от 0 до ${scale} % решённых позже срока.`;
+    $("#departments-scale").textContent = `Шкала полос: от 0 до ${scale} % решённых позже срока.`;
     $("#analytics-departments").innerHTML = rows.length
         ? bars(rows, scale, row => `<small class="hbar-note">открыто ${row.open}${row.overdue
             ? ` · <span class="badge late">⚠ просрочено ${row.overdue}</span>` : ""}</small>`)
@@ -334,12 +334,12 @@ function renderTransfers(transfers, summary) {
     $("#transfers-share").textContent = `Передано между отделами ${percent(summary.transferred)} обращений (${ofBase(summary.transferred)}).`;
     $("#analytics-transfers").innerHTML = transfers.length
         ? table(["Откуда", "Куда", "Передач"], transfers.slice(0, 10).map(item => [item.from, `→ ${item.to}`, item.count]))
-        : `<p class="muted">Одобренных передач за период нет — правила маршрутизации не ошибались.</p>`;
+        : `<p class="muted">Одобренных передач за период нет: правила маршрутизации не ошибались.</p>`;
 }
 
 function renderCorrections(corrections, summary) {
     $("#corrections-share").innerHTML = `<strong class="big-figure">${percent(summary.typeCorrected)}</strong>
-        <span class="muted">решённых обращений — тип исправлен при ответе (${ofBase(summary.typeCorrected)})</span>`;
+        <span class="muted">решённых обращений, у которых тип исправлен при ответе (${ofBase(summary.typeCorrected)})</span>`;
     $("#analytics-corrections").innerHTML = corrections.length
         ? table(["Клиент выбрал", "Итоговый тип", "Сколько"], corrections.slice(0, 8)
             .map(item => [item.initial, `→ ${item.finalType}`, item.count]))
@@ -351,13 +351,13 @@ function renderCorrections(corrections, summary) {
 function renderSignals(summary) {
     const signals = [
         ["Ручная классификация", summary.manuallyClassified,
-            "Каких правил маршрутизации не хватает — добавьте их во вкладке «Правила»."],
+            "Каких правил маршрутизации не хватает: добавьте их во вкладке «Правила»."],
         ["Приняты без договора", summary.acceptedWithoutContract,
             "Учётная система договоров была недоступна: показатель надёжности интеграции."],
         ["Повторные обращения", summary.repeated,
-            "Тот же клиент, договор и тема в течение 30 дней — проблема не решена с первого раза."],
+            "Тот же клиент, договор и тема в течение 30 дней: проблема не решена с первого раза."],
         ["Требование удовлетворено", summary.satisfied,
-            "Полностью или частично, от обращений с итогом. Рост отказов — повод проверить продукт и разъяснения."]
+            "Полностью или частично, от обращений с итогом. Рост отказов говорит, что стоит проверить продукт и разъяснения."]
     ];
     $("#analytics-signals").innerHTML = signals.map(([label, rate, hint]) => `
         <li><strong>${percent(rate)}</strong><span><b>${label}</b> <span class="muted">${ofBase(rate)}</span>

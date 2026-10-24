@@ -124,9 +124,9 @@ public class DemoDataGenerator {
 
     /** Типичные ошибки маршрутизации: откуда и куда передают и почему. */
     private static final Map<String, List<String>> TRANSFERS = Map.of(
-            "SUPPORT", List.of("PAYMENTS", "Клиент спрашивает о возврате платежа — компетенция отдела расчётов"),
+            "SUPPORT", List.of("PAYMENTS", "Клиент спрашивает о возврате платежа, это компетенция отдела расчётов"),
             "POLICY", List.of("CLAIMS", "В обращении заявлено о страховом случае"),
-            "PAYMENTS", List.of("POLICY", "Возврат связан с расторжением договора — сначала нужно оформить расторжение"));
+            "PAYMENTS", List.of("POLICY", "Возврат связан с расторжением договора, сначала нужно оформить расторжение"));
 
     private final AppealRepository appeals;
     private final AppealHistoryRepository history;
@@ -255,7 +255,7 @@ public class DemoDataGenerator {
                 ? "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация."
                 : "Оператор принял обращение со слов клиента " + channel.label() + ". Ожидается автоматическая маршрутизация.",
                 operator == null ? customer.name : operator, createdAt);
-        note(appeal, "DEADLINE_SET", "Срок ответа по закону — до " + legalDeadline.format(DAY) + ": "
+        note(appeal, "DEADLINE_SET", "Срок ответа по закону: до " + legalDeadline.format(DAY) + ": "
                 + norm.getTitle().toLowerCase(Locale.ROOT) + " (" + norm.getLegalBasis() + ")", "Подсистема", createdAt);
 
         Timeline time = new Timeline(createdAt, now);
@@ -310,7 +310,7 @@ public class DemoDataGenerator {
                 }
                 message(appeal, AuthorType.CLIENT, customer.name, pick(random, DemoTexts.CLIENT_REPLIES), time.at);
                 appeal.changeStatus(AppealStatus.IN_PROGRESS, null, null, time.at);
-                note(appeal, "STATUS_CHANGED", "Клиент ответил — обращение снова в работе", "Подсистема", time.at);
+                note(appeal, "STATUS_CHANGED", "Клиент ответил, обращение снова в работе", "Подсистема", time.at);
             }
         }
 
@@ -389,7 +389,7 @@ public class DemoDataGenerator {
         Staff supervisor = supervisor(department);
         appeal.extendLegalDeadline(days, extended, reason, today, time.at);
         message(appeal, AuthorType.EMPLOYEE, supervisor.name, "Срок рассмотрения вашего обращения продлён на " + days
-                + " раб. дн. — до " + extended.format(DAY) + ".\nПричина: " + reason, time.at);
+                + " раб. дн., до " + extended.format(DAY) + ".\nПричина: " + reason, time.at);
         note(appeal, "DEADLINE_EXTENDED", "Срок по закону продлён на " + days + " раб. дн., до " + extended.format(DAY)
                 + ". Причина: " + reason, supervisor.name, time.at);
     }

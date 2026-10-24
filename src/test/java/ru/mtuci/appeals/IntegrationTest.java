@@ -72,6 +72,8 @@ public abstract class IntegrationTest {
             UUID.fromString("34444444-4444-4444-4444-444444444444"), "Сергей Лебедев", "SPECIALIST", "CLAIMS");
     protected static final TestUser ADMIN = new TestUser(
             "a0000000-0000-0000-0000-00000000000a", "Администратор подсистемы", null, List.of("ADMIN"), null, null);
+    protected static final TestUser OPERATOR = new TestUser(
+            "0e000000-0000-0000-0000-000000000001", "Наталья Ковалёва", null, List.of("OPERATOR"), null, null);
 
     private static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:17.10-alpine").asCompatibleSubstituteFor("postgres"));

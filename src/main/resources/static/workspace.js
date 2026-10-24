@@ -423,7 +423,9 @@ function renderCard(appeal) {
                 ${actions}
                 <h4>Срок по закону</h4>${renderNorm(appeal)}${renderExtension(appeal, canWork)}
                 <h4>Клиент</h4>
-                <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small></p>
+                <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small>
+                    ${appeal.channel && appeal.channel !== "CABINET" ? `<br><small class="muted">Обращение принято
+                        ${CHANNEL_LABELS[appeal.channel]}, оператор ${escapeHtml(appeal.registeredBy || "")}</small>` : ""}</p>
                 <h4>Исполнитель</h4>${renderAssignee(appeal, canWork)}
                 ${renderContractSection(appeal, canWork)}
                 <h4>Данные обращения</h4>${renderDetails(appeal)}

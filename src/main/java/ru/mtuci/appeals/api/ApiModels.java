@@ -1,10 +1,12 @@
 package ru.mtuci.appeals.api;
 
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
+import ru.mtuci.appeals.domain.AppealChannel;
 import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
@@ -344,6 +346,9 @@ public final class ApiModels {
             AppealOutcome outcome,
             String finalCategory,
             String finalSubcategory,
+            // как поступило обращение и кто из операторов его принял (решение 38)
+            AppealChannel channel,
+            String registeredBy,
             Instant resolvedAt,
             Instant createdAt,
             Instant updatedAt,
@@ -389,6 +394,22 @@ public final class ApiModels {
             boolean required,
             String contractAttribute
     ) {
+    }
+
+    // ---------- оператор контакт-центра (решение 38) ----------
+
+    /** Обращение со слов клиента: канал, как к нему обращаться, и та же форма, что в кабинете. */
+    public record OperatorAppealRequest(
+            @NotNull UUID counterpartyId,
+            @NotNull AppealChannel channel,
+            @NotBlank @Size(max = 160) String customerName,
+            @NotNull @Valid CreateAppealRequest appeal
+    ) {
+    }
+
+    /** Клиент, найденный по номеру договора, с договорами и обращениями: оператор отвечает на звонок о статусе. */
+    public record OperatorClientResponse(UUID counterpartyId, List<ContractResponse> contracts,
+                                         List<AppealSummaryResponse> appeals) {
     }
 
     // ---------- помощник сотрудника (решение 35) ----------
@@ -477,7 +498,8 @@ public final class ApiModels {
                                     List<ShareItem> products, List<ShareItem> types, List<LocalDate> weeks,
                                     List<WeekSeries> weekly, List<DepartmentOnTime> departments,
                                     List<TransferFlow> transfers, List<TypeCorrection> corrections,
-                                    List<ShareItem> outcomes, List<AssistantUsage> assistant) {
+                                    List<ShareItem> outcomes, List<AssistantUsage> assistant,
+                                    List<ShareItem> channels) {
     }
 
     public record ErrorResponse(String message, Instant timestamp) {

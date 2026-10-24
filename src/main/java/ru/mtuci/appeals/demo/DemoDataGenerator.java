@@ -14,6 +14,7 @@ import ru.mtuci.appeals.api.ApiModels.FormCategory;
 import ru.mtuci.appeals.api.ApiModels.FormField;
 import ru.mtuci.appeals.assistant.SignalDetector;
 import ru.mtuci.appeals.domain.Appeal;
+import ru.mtuci.appeals.domain.AppealChannel;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealOutcome;
@@ -235,6 +236,13 @@ public class DemoDataGenerator {
         Appeal appeal = new Appeal(id, number, customer.id, customer.name, customer.email, contract, category, type,
                 json(details), subject, description, createdAt);
         appeal.markDemo();
+        // примерно каждое пятое обращение звонят, каждое двадцатое приносят в офис
+        double way = random.nextDouble();
+        AppealChannel channel = way < 0.75 ? AppealChannel.CABINET : way < 0.95 ? AppealChannel.PHONE : AppealChannel.OFFICE;
+        String operator = channel == AppealChannel.CABINET ? null : pick(random, DemoTexts.OPERATORS);
+        if (operator != null) {
+            appeal.registeredBy(channel, operator);
+        }
         DeadlineNorm norm = normService.choose(category, type, contract.getProductCode(), details, registeredOn);
         LocalDate legalDeadline = calendar.deadline(registeredOn, norm.getTermDays(), norm.getCounting());
         appeal.applyNorm(norm, legalDeadline);
@@ -243,7 +251,10 @@ public class DemoDataGenerator {
         // сигналы в тексте клиента — как при обычной регистрации (решение 35)
         appeals.flush();
         signals.record(appeal.getId(), subject + "\n" + description, createdAt);
-        note(appeal, "CREATED", "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация.", customer.name, createdAt);
+        note(appeal, "CREATED", operator == null
+                ? "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация."
+                : "Оператор принял обращение со слов клиента " + channel.label() + ". Ожидается автоматическая маршрутизация.",
+                operator == null ? customer.name : operator, createdAt);
         note(appeal, "DEADLINE_SET", "Срок ответа по закону — до " + legalDeadline.format(DAY) + ": "
                 + norm.getTitle().toLowerCase(Locale.ROOT) + " (" + norm.getLegalBasis() + ")", "Подсистема", createdAt);
 

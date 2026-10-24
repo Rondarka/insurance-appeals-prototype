@@ -136,7 +136,9 @@ function renderProducts(products) {
                 <span class="share-label">${escapeHtml(item.label)}</span>
                 <strong>${percent(item.rate)}</strong><span class="muted">${item.rate.count}</span>
             </button></li>`).join("")}</ul>
-        <p class="muted small-text">Всего ${total}. Нажмите на вид страхования, чтобы смотреть все панели по нему.</p>`;
+        <p class="muted small-text">Всего ${total}. Нажмите на вид страхования, чтобы смотреть все панели по нему.</p>
+        <p class="small-text channel-line"><strong>Каналы поступления:</strong> ${an.data.channels
+            .map(item => `${escapeHtml(item.label)} ${percent(item.rate)}`).join(", ")}</p>`;
 }
 
 // ---------- типы проблем ----------

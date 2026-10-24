@@ -57,7 +57,10 @@ const COUNTING_LABELS = {
     CALENDAR_EXCEPT_HOLIDAYS: "календарных дней без праздников"
 };
 
-const ROLE_LABELS = {CLIENT: "Клиент", SPECIALIST: "Специалист", SUPERVISOR: "Руководитель", ADMIN: "Администратор"};
+const ROLE_LABELS = {CLIENT: "Клиент", SPECIALIST: "Специалист", SUPERVISOR: "Руководитель", ADMIN: "Администратор",
+    OPERATOR: "Оператор контакт-центра"};
+/** Как поступило обращение (решение 38). */
+const CHANNEL_LABELS = {CABINET: "через личный кабинет", PHONE: "по телефону", OFFICE: "в офисе"};
 
 const hasRole = role => session.me?.roles.includes(role);
 
@@ -86,6 +89,7 @@ async function api(path, options = {}) {
 function homeFor(me) {
     if (me.roles.includes("ADMIN")) return "/admin.html";
     if (me.roles.includes("CLIENT")) return "/client.html";
+    if (me.roles.includes("OPERATOR")) return "/operator.html";
     return "/workspace.html";
 }
 

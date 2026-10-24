@@ -18,6 +18,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
+import ru.mtuci.appeals.api.ApiModels.OperatorAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.SignalBadge;
 import ru.mtuci.appeals.assistant.SignalDetector;
 import ru.mtuci.appeals.api.ApiModels.AttachmentResponse;
@@ -36,6 +37,7 @@ import ru.mtuci.appeals.api.ApiModels.RelatedAppealResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.api.ApiModels.StaffMemberResponse;
 import ru.mtuci.appeals.domain.Appeal;
+import ru.mtuci.appeals.domain.AppealChannel;
 import ru.mtuci.appeals.domain.AppealHistory;
 import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealStatus;
@@ -148,7 +150,30 @@ public class AppealService {
      * сетевой вызов не должен держать соединение с базой. Транзакция охватывает только запись.
      */
     public AppealDetailResponse create(CurrentUser user, CreateAppealRequest request) {
-        UUID counterpartyId = user.requireCounterparty();
+        // имя и почта берутся из токена на момент регистрации, как и снимок договора
+        return create(new Applicant(user.requireCounterparty(), Objects.requireNonNullElse(user.name(), "Клиент"),
+                Objects.requireNonNullElse(user.email(), ""), AppealChannel.CABINET, null), request);
+    }
+
+    /**
+     * Оператор контакт-центра регистрирует обращение со слов клиента, по телефону или в офисе
+     * (решение 38). Дальше всё как у обращения из кабинета: договор сверяется с клиентом,
+     * срок по закону, маршрутизация, уведомление клиенту.
+     */
+    public AppealDetailResponse createByOperator(CurrentUser operator, OperatorAppealRequest request) {
+        if (request.channel() == AppealChannel.CABINET) {
+            throw new IllegalArgumentException("Оператор принимает обращения по телефону или в офисе");
+        }
+        return create(new Applicant(request.counterpartyId(), request.customerName().trim(), "", request.channel(),
+                Objects.requireNonNullElse(operator.name(), operator.subject())), request.appeal());
+    }
+
+    /** Кто подаёт обращение: клиент сам или оператор с его слов. */
+    private record Applicant(UUID counterpartyId, String name, String email, AppealChannel channel, String operator) {
+    }
+
+    private AppealDetailResponse create(Applicant applicant, CreateAppealRequest request) {
+        UUID counterpartyId = applicant.counterpartyId();
         ContractSnapshot found = null;
         if (request.contractId() != null) {
             try {
@@ -172,18 +197,17 @@ public class AppealService {
         Map<String, String> details = formPolicy.details(
                 request.category(), request.subcategory(), productCode, contract, request.details());
 
-        return transactionTemplate.execute(transaction -> register(user, request, contract, productCode, details));
+        return transactionTemplate.execute(transaction -> register(applicant, request, contract, productCode, details));
     }
 
     private static boolean blank(String value) {
         return value == null || value.isBlank();
     }
 
-    private AppealDetailResponse register(CurrentUser user, CreateAppealRequest request, ContractSnapshot contract,
+    private AppealDetailResponse register(Applicant applicant, CreateAppealRequest request, ContractSnapshot contract,
                                           String productCode, Map<String, String> details) {
-        // имя и почта — из токена на момент регистрации, как и снимок договора
-        String customerName = Objects.requireNonNullElse(user.name(), "Клиент");
-        String customerEmail = Objects.requireNonNullElse(user.email(), "");
+        String customerName = applicant.name();
+        String customerEmail = applicant.email();
         Instant now = Instant.now();
         UUID id = UUID.randomUUID();
         String publicNumber = "APP-" + NUMBER_DATE.format(now) + "-"
@@ -192,7 +216,7 @@ public class AppealService {
         Appeal appeal = new Appeal(
                 id,
                 publicNumber,
-                user.counterpartyId(),
+                applicant.counterpartyId(),
                 customerName,
                 customerEmail,
                 contract,
@@ -203,6 +227,9 @@ public class AppealService {
                 request.description().trim(),
                 now
         );
+        if (applicant.operator() != null) {
+            appeal.registeredBy(applicant.channel(), applicant.operator());
+        }
         if (contract == null) {
             appeal.awaitContract(request.contractId(), productCode,
                     blank(request.policyNumber()) ? null : request.policyNumber().trim(), now);
@@ -217,8 +244,11 @@ public class AppealService {
         historyRepository.save(new AppealHistory(
                 appeal,
                 "CREATED",
-                "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация.",
-                customerName,
+                applicant.operator() == null
+                        ? "Клиент зарегистрировал обращение. Ожидается автоматическая маршрутизация."
+                        : "Оператор принял обращение со слов клиента " + applicant.channel().label()
+                        + ". Ожидается автоматическая маршрутизация.",
+                applicant.operator() == null ? customerName : applicant.operator(),
                 now
         ));
         if (contract == null) {
@@ -294,6 +324,15 @@ public class AppealService {
         return appeals.stream()
                 .map(appeal -> toSummary(appeal, clientReplied.contains(appeal.getId()),
                         badges.getOrDefault(appeal.getId(), List.of())))
+                .toList();
+    }
+
+    /** Обращения клиента для оператора контакт-центра: на звонок «что с моим обращением» (решение 38). */
+    @Transactional(readOnly = true)
+    public List<AppealSummaryResponse> ofClient(UUID counterpartyId) {
+        return appealRepository.findAll((root, query, cb) -> cb.equal(root.get("counterpartyId"), counterpartyId),
+                        Sort.by(Sort.Direction.DESC, "createdAt")).stream()
+                .map(appeal -> toSummary(appeal, false, List.of()))
                 .toList();
     }
 
@@ -700,6 +739,8 @@ public class AppealService {
                 appeal.getOutcome(),
                 appeal.getFinalCategory(),
                 appeal.getFinalSubcategory(),
+                appeal.getChannel(),
+                appeal.getRegisteredBy(),
                 appeal.getResolvedAt(),
                 appeal.getCreatedAt(),
                 appeal.getUpdatedAt(),

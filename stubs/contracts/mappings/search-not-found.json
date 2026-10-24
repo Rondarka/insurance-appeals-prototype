@@ -1,0 +1,14 @@
+{
+  "priority": 10,
+  "request": {
+    "method": "GET",
+    "urlPath": "/contracts"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json; charset=utf-8"
+    },
+    "jsonBody": []
+  }
+}

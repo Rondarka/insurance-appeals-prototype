@@ -25,6 +25,10 @@
       {
         "name": "ADMIN",
         "description": "Администратор подсистемы"
+      },
+      {
+        "name": "OPERATOR",
+        "description": "Оператор контакт-центра: регистрирует обращения со слов клиента"
       }
     ]
   },
@@ -379,6 +383,26 @@
       ],
       "realmRoles": [
         "ADMIN"
+      ]
+    },
+    {
+      "id": "0e000000-0000-0000-0000-000000000001",
+      "username": "operator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Наталья",
+      "lastName": "Ковалёва",
+      "email": "kovaleva@insurer.example",
+      "attributes": {},
+      "credentials": [
+        {
+          "type": "password",
+          "value": "demo",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "OPERATOR"
       ]
     }
   ]

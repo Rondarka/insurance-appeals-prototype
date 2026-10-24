@@ -13,6 +13,7 @@ import ru.mtuci.appeals.api.ApiModels.ShareItem;
 import ru.mtuci.appeals.api.ApiModels.TransferFlow;
 import ru.mtuci.appeals.api.ApiModels.TypeCorrection;
 import ru.mtuci.appeals.api.ApiModels.WeekSeries;
+import ru.mtuci.appeals.domain.AppealChannel;
 import ru.mtuci.appeals.domain.AppealOutcome;
 
 import java.math.BigDecimal;
@@ -73,7 +74,7 @@ public class AnalyticsService {
         }
         return new AnalyticsResponse(from, to, selected, summary(filter), products(all), types(filter),
                 weeks, weekly(filter, weeks), departments(filter), transfers(filter), corrections(filter),
-                outcomes(filter), assistant(filter));
+                outcomes(filter), assistant(filter), channels(filter));
     }
 
     private AnalyticsSummary summary(Filter filter) {
@@ -251,6 +252,21 @@ public class AnalyticsService {
                 .query((rs, row) -> new AssistantUsage(rs.getString("kind"), rs.getString("source"), rs.getLong("shown"),
                         Rate.of(rs.getLong("accepted"), rs.getLong("shown")), rs.getLong("rejected")))
                 .list();
+    }
+
+    /** Каналы поступления (решение 38): сколько обращений приходит через контакт-центр. */
+    private List<ShareItem> channels(Filter filter) {
+        Map<String, Long> counts = new HashMap<>();
+        jdbc.sql("select f.channel, count(*) as n from appeal_facts f" + filter.where() + " group by f.channel")
+                .params(filter.params())
+                .query(rs -> {
+                    counts.put(rs.getString("channel"), rs.getLong("n"));
+                });
+        long total = counts.values().stream().mapToLong(Long::longValue).sum();
+        return Arrays.stream(AppealChannel.values())
+                .map(channel -> new ShareItem(channel.name(), channel.label(),
+                        Rate.of(counts.getOrDefault(channel.name(), 0L), total)))
+                .toList();
     }
 
     private List<ShareItem> outcomes(Filter filter) {

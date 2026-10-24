@@ -39,6 +39,12 @@ public class ApiExceptionHandler {
                 .body(new ErrorResponse(exception.getMessage(), Instant.now()));
     }
 
+    @ExceptionHandler(NotFoundException.class)
+    ResponseEntity<ErrorResponse> handleNotFound(NotFoundException exception) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(exception.getMessage(), Instant.now()));
+    }
+
     /** Обращение видно, но действие не по роли или не своего подразделения. */
     @ExceptionHandler(AccessDeniedException.class)
     ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException exception) {

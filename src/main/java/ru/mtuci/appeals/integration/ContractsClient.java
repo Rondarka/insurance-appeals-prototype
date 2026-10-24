@@ -69,6 +69,21 @@ public class ContractsClient {
         return interactive(() -> fetch(ExternalContract.class, "/contracts/{id}", contractId));
     }
 
+    /** Договор по номеру полиса: так оператор находит клиента, который звонит (решение 38). */
+    public Optional<ExternalContract> contractByPolicyNumber(String policyNumber) {
+        return interactive(() -> restClient.get()
+                .uri(builder -> builder.path("/contracts").queryParam("policyNumber", policyNumber).build())
+                .exchange((request, response) -> {
+                    if (response.getStatusCode().isError()) {
+                        throw new ContractSourceUnavailableException(
+                                "Учётная система договоров ответила ошибкой " + response.getStatusCode().value(),
+                                response.getStatusCode().value(), null);
+                    }
+                    ExternalContract[] found = response.bodyTo(ExternalContract[].class);
+                    return found == null || found.length == 0 ? Optional.<ExternalContract>empty() : Optional.of(found[0]);
+                }));
+    }
+
     /** Все договоры клиента, включая истёкшие и прекращённые; пусто, если клиент неизвестен. */
     public List<ExternalContract> clientContracts(UUID counterpartyId) {
         return interactive(() -> fetchClientContracts(counterpartyId));

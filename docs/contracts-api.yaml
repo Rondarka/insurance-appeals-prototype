@@ -47,6 +47,30 @@ paths:
           $ref: '#/components/responses/NotFound'
         '5XX':
           $ref: '#/components/responses/Unavailable'
+  /contracts:
+    get:
+      operationId: findContractsByPolicyNumber
+      summary: Договор по номеру полиса
+      description: |
+        Оператор контакт-центра находит клиента, который звонит или пришёл в офис
+        (решение 38). В эксплуатации клиента ищут в CDI; поиск по номеру договора
+        нужен, когда клиент называет номер полиса.
+      parameters:
+        - name: policyNumber
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Найденные договоры; пустой список, если такого номера нет
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Contract'
+        '5XX':
+          $ref: '#/components/responses/Unavailable'
   /contracts/{contractId}:
     get:
       operationId: getContract

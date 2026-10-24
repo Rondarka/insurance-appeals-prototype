@@ -57,6 +57,8 @@ code { font: 13px Consolas, "Courier New", monospace; color: var(--blue); }
 }
 
 .client-topbar { background: #0f5132; }
+.operator-topbar { background: #4a3a78; }
+.client-search { display: grid; gap: 8px; }
 .admin-topbar { background: #2b2f3a; }
 
 .brand { display: flex; align-items: center; gap: 12px; }

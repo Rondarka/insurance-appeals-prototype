@@ -41,6 +41,8 @@ public class SecurityConfig implements WebMvcConfigurer {
                         // подсказки помощника и сигналы — внутренняя информация отдела (решение 35)
                         .requestMatchers("/api/appeals/*/assistant", "/api/appeals/*/assistant/**").hasAnyRole(EMPLOYEE)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        // оператор контакт-центра регистрирует обращения со слов клиента (решение 38)
+                        .requestMatchers("/api/operator/**").hasRole("OPERATOR")
                         .requestMatchers("/api/departments", "/api/events", "/api/integrations").hasAnyRole("SPECIALIST", "SUPERVISOR", "ADMIN")
                         .requestMatchers("/api/**").authenticated()
                         // интерфейс и его настройки входа открыты: без них не войти

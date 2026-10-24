@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Контакт-центр · обработка обращений</title>
+    <link rel="stylesheet" href="/styles.css?v=20261024-5">
+</head>
+<body>
+<header class="topbar operator-topbar">
+    <div class="brand">
+        <span class="brand-mark">ОО</span>
+        <span><strong>Обработка обращений</strong><small>Контакт-центр</small></span>
+    </div>
+    <div id="user-box" class="user-box"></div>
+</header>
+
+<main class="client-layout">
+    <aside class="sidebar">
+        <form id="client-search" class="client-search">
+            <label>Номер договора клиента
+                <input name="policyNumber" required maxlength="80" placeholder="Например, КАСКО-2026-004821">
+            </label>
+            <button class="btn primary wide" type="submit">Найти клиента</button>
+            <small class="muted">В страховой клиента находят в CDI по телефону или паспорту; в стенде CDI нет,
+                поэтому поиск по номеру договора.</small>
+        </form>
+        <h3 class="side-title">Обращения клиента</h3>
+        <div id="client-appeals" class="side-list"><p class="muted">Найдите клиента, чтобы увидеть его обращения
+            и ответить на вопрос «что с моим обращением».</p></div>
+    </aside>
+
+    <section class="content">
+        <p id="operator-empty" class="panel muted">Клиент позвонил или пришёл в офис: найдите его по номеру договора
+            и запишите обращение с его слов. Дальше обращение пойдёт как поданное из кабинета: срок по закону,
+            отдел, уведомления клиенту.</p>
+
+        <form id="operator-appeal" class="panel" novalidate hidden>
+            <h2>Обращение со слов клиента</h2>
+
+            <section class="step">
+                <h3><span class="step-no">1</span> Кто и как обратился</h3>
+                <div id="channels" class="chip-row">
+                    <button type="button" class="chip-button selected" data-channel="PHONE">По телефону</button>
+                    <button type="button" class="chip-button" data-channel="OFFICE">В офисе</button>
+                </div>
+                <label>Как обращаться к клиенту
+                    <input name="customerName" required maxlength="160" placeholder="Например, Анна Сергеевна">
+                </label>
+            </section>
+
+            <section class="step">
+                <h3><span class="step-no">2</span> По какому договору</h3>
+                <div id="contracts" class="choice-grid"></div>
+            </section>
+
+            <section class="step">
+                <h3><span class="step-no">3</span> Что случилось</h3>
+                <div id="categories" class="chip-row"></div>
+                <div id="types" class="choice-grid compact"></div>
+            </section>
+
+            <section class="step">
+                <h3><span class="step-no">4</span> Подробности со слов клиента</h3>
+                <div id="fields" class="fields"></div>
+                <label>Тема
+                    <input name="subject" maxlength="200" required placeholder="Коротко: что произошло">
+                </label>
+                <label>Описание
+                    <textarea name="description" rows="5" maxlength="5000" required
+                              placeholder="Что случилось, когда и чего клиент просит"></textarea>
+                </label>
+            </section>
+
+            <div class="form-actions">
+                <button class="btn primary" type="submit">Зарегистрировать обращение</button>
+            </div>
+        </form>
+
+        <article id="operator-done" class="panel" hidden></article>
+    </section>
+</main>
+
+<div id="toast" class="toast"></div>
+<script src="/auth.js?v=20261024-5"></script>
+<script src="/common.js?v=20261024-5"></script>
+<script src="/operator.js?v=20261024-5"></script>
+</body>
+</html>

@@ -133,6 +133,14 @@ public class Appeal {
     @Column(nullable = false)
     private boolean demo;
 
+    /** Канал поступления и оператор, если обращение принято со слов клиента (решение 38). */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private AppealChannel channel = AppealChannel.CABINET;
+
+    @Column(name = "registered_by", length = 160)
+    private String registeredBy;
+
     @Enumerated(EnumType.STRING)
     @Column(length = 30)
     private AppealOutcome outcome;
@@ -475,6 +483,20 @@ public class Appeal {
 
     public void markDemo() {
         this.demo = true;
+    }
+
+    /** Обращение принял оператор контакт-центра со слов клиента. */
+    public void registeredBy(AppealChannel channel, String operatorName) {
+        this.channel = channel;
+        this.registeredBy = operatorName;
+    }
+
+    public AppealChannel getChannel() {
+        return channel;
+    }
+
+    public String getRegisteredBy() {
+        return registeredBy;
     }
 
     public boolean isDemo() {

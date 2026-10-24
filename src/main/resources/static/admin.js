@@ -266,6 +266,9 @@ $("#retention-settings").addEventListener("submit", async event => {
     }
 });
 
+/** Подпись строки правила для экранного диктора: «Расчёты, все типы категории». */
+const ruleName = rule => `${rule.categoryLabel}, ${rule.subcategory === "GENERAL" ? "все типы категории" : rule.typeLabel}`;
+
 function renderRouting(routing) {
     const departments = adm.departments.map(item => [item.code, item.name]);
     const priorities = Object.entries(PRIORITY_LABELS);
@@ -278,9 +281,10 @@ function renderRouting(routing) {
             <tr data-rule="${rule.category}/${rule.subcategory}">
                 <td><strong>${escapeHtml(rule.categoryLabel)}</strong><br>
                     <small class="muted">${rule.subcategory === "GENERAL" ? "все типы категории" : escapeHtml(rule.typeLabel)}</small></td>
-                <td><select name="departmentCode">${options(departments, rule.departmentCode)}</select></td>
-                <td><select name="priority">${options(priorities, rule.priority)}</select></td>
-                <td><input name="slaHours" type="number" min="1" max="${rule.maxSlaHours}" value="${rule.slaHours}"></td>
+                <td><select name="departmentCode" aria-label="${escapeHtml(`Отдел: ${ruleName(rule)}`)}">${options(departments, rule.departmentCode)}</select></td>
+                <td><select name="priority" aria-label="${escapeHtml(`Приоритет: ${ruleName(rule)}`)}">${options(priorities, rule.priority)}</select></td>
+                <td><input name="slaHours" type="number" min="1" max="${rule.maxSlaHours}" value="${rule.slaHours}"
+                           aria-label="${escapeHtml(`Срок отдела в часах: ${ruleName(rule)}`)}"></td>
                 <td><small title="${escapeHtml(rule.legalLimit)}">≤ ${rule.maxSlaHours} ч</small></td>
                 <td class="row-actions">
                     <button type="button" class="btn small-btn" data-save-rule>Сохранить</button>

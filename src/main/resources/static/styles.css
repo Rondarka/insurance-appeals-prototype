@@ -1,6 +1,7 @@
 :root {
     --ink: #17233c;
-    --muted: #65718a;
+    /* контраст не ниже 4,5:1 на всех фонах интерфейса (WCAG 2.1 AA) */
+    --muted: #5d6982;
     --line: #dfe5ef;
     --surface: #ffffff;
     --soft: #f5f7fb;
@@ -8,9 +9,9 @@
     --navy: #132a52;
     --blue: #2364d2;
     --blue-soft: #e8f0ff;
-    --green: #17805f;
+    --green: #14765a;
     --green-soft: #e3f4ec;
-    --amber: #a8620f;
+    --amber: #9a5a0d;
     --amber-soft: #fdf1df;
     --violet: #6a3fb5;
     --violet-soft: #f0e9fb;
@@ -29,6 +30,8 @@ body {
 }
 
 button, input, select, textarea { font: inherit; color: inherit; }
+/* фокус с клавиатуры виден на любом элементе, мышью рамка не мешает */
+:focus-visible { outline: 2px solid var(--blue); outline-offset: 2px; }
 button { cursor: pointer; }
 h1, h2, h3, h4 { margin: 0; font-weight: 600; }
 h1 { font-size: 24px; }
@@ -403,7 +406,8 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .calendar-day { min-height: 112px; padding: 6px 8px; display: flex; flex-direction: column; gap: 4px; background: var(--surface); }
 .calendar-day.weekend { background: #f6f7fa; }
 .calendar-day.holiday { background: var(--red-soft); }
-.calendar-day.other-month { opacity: 0.45; }
+.calendar-day.other-month { background: var(--soft); }
+.calendar-day.other-month .calendar-date { color: var(--muted); }
 .calendar-day.today { box-shadow: inset 0 0 0 2px var(--blue); }
 .calendar-date { display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; }
 .calendar-date small { font-weight: 400; color: var(--red); }

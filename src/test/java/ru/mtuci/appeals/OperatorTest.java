@@ -53,7 +53,7 @@ class OperatorTest extends IntegrationTest {
         awaitRouted(created.id());
         assertThat(Arrays.stream(as(ANNA).getForObject("/api/appeals", AppealSummaryResponse[].class)))
                 .extracting(AppealSummaryResponse::id).contains(created.id());
-        // и оператор видит его у клиента — на случай звонка «что с моим обращением»
+        // и оператор видит его у клиента на случай звонка «что с моим обращением»
         assertThat(as(OPERATOR).getForObject("/api/operator/clients?policyNumber={number}",
                 OperatorClientResponse.class, ANNA_CASCO).appeals())
                 .extracting(AppealSummaryResponse::id).contains(created.id());
@@ -71,7 +71,7 @@ class OperatorTest extends IntegrationTest {
                 .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(as(OPERATOR).getForEntity("/api/operator/clients?policyNumber=НЕТ-0000", String.class)
                 .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        // канал «кабинет» — это сам клиент, не оператор
+        // канал «кабинет» означает, что подаёт сам клиент, а не оператор
         assertThat(as(OPERATOR).postForEntity("/api/operator/appeals",
                 new OperatorAppealRequest(ANNA_COUNTERPARTY, AppealChannel.CABINET, "Анна", loginProblem()), String.class)
                 .getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

@@ -59,6 +59,47 @@ $("#refresh-events").addEventListener("click", () => loadEvents($("#events")).ca
 async function loadQueue() {
     ws.appeals = await api("/api/appeals");
     renderQueue();
+    announce(null);
+}
+
+// ---------- новое без перезагрузки ----------
+
+const BASE_TITLE = document.title;
+
+/** Обращения в зоне сотрудника: специалисту свои и ничьи, руководителю весь отдел. */
+function scopedOpen() {
+    const open = ws.appeals.filter(isOpen);
+    return isSupervisor() ? open : open.filter(appeal => isMine(appeal) || !appeal.assignedSubject);
+}
+
+/** То же, что «Что сделать сейчас»: срочное сверху. */
+function attentionTasks() {
+    return scopedOpen()
+        .map(appeal => ({appeal, reason: attentionReason(appeal)}))
+        .filter(task => task.reason)
+        .sort((a, b) => a.reason.rank - b.reason.rank
+            || new Date(a.appeal.deadlineAt || 8.64e15) - new Date(b.appeal.deadlineAt || 8.64e15));
+}
+
+/**
+ * Счётчик дел в заголовке вкладки браузера и на вкладке «Сводка»: сотрудник видит, что
+ * появилось новое, даже когда работает в другой программе. О новом обращении и ответе
+ * клиента подсказывает всплывающее сообщение; previous — очередь до обновления.
+ */
+function announce(previous) {
+    const count = attentionTasks().length;
+    document.title = count ? `(${count}) ${BASE_TITLE}` : BASE_TITLE;
+    $("#attention-count").textContent = count || "";
+    if (!previous) return;
+    const before = new Map(previous.map(appeal => [appeal.id, appeal]));
+    const scoped = scopedOpen();
+    const fresh = scoped.filter(appeal => !before.has(appeal.id));
+    const replied = scoped.filter(appeal => appeal.clientReplied && before.has(appeal.id) && !before.get(appeal.id).clientReplied);
+    if (fresh.length) {
+        showToast(fresh.length === 1 ? `Новое обращение: ${fresh[0].subject}` : `Новых обращений: ${fresh.length}`);
+    } else if (replied.length) {
+        showToast(replied.length === 1 ? `Клиент ответил: ${replied[0].subject}` : `Клиенты ответили: ${replied.length}`);
+    }
 }
 
 /** Отпечаток обращения: изменился статус, переписка или история — значит, есть что показать. */
@@ -168,8 +209,7 @@ function renderSummary() {
     const box = $("#summary");
     if (!box || !session.me) return;
     const open = ws.appeals.filter(isOpen);
-    // специалисту — свои и ничьи, руководителю — весь отдел
-    const scoped = isSupervisor() ? open : open.filter(appeal => isMine(appeal) || !appeal.assignedSubject);
+    const scoped = scopedOpen();
     const legallyLate = appeal => appeal.escalationLevel === "BREACHED" || isLegallyOverdue(appeal);
     const tiles = [
         ["Мои в работе", open.filter(a => isMine(a) && ["IN_PROGRESS", "WAITING_CUSTOMER"].includes(a.status)).length, "", "work", "mine"],
@@ -178,11 +218,7 @@ function renderSummary() {
         ["Срок по закону истекает", scoped.filter(a => a.escalationLevel === "AT_RISK").length, "soon", "work", "all"],
         ["Нарушен срок по закону", scoped.filter(legallyLate).length, "late", "work", "all"]
     ];
-    const tasks = scoped
-        .map(appeal => ({appeal, reason: attentionReason(appeal)}))
-        .filter(task => task.reason)
-        .sort((a, b) => a.reason.rank - b.reason.rank
-            || new Date(a.appeal.deadlineAt || 8.64e15) - new Date(b.appeal.deadlineAt || 8.64e15));
+    const tasks = attentionTasks();
     const firstName = (session.me.name || "").split(" ")[0];
     const today = new Date().toLocaleDateString("ru-RU", {weekday: "long", day: "numeric", month: "long"});
 
@@ -938,11 +974,13 @@ $("#transfers").addEventListener("submit", async event => {
  * раскрытые условия договора, а клик в момент перерисовки терялся.
  */
 async function refresh() {
+    const previous = ws.appeals;
     const before = JSON.stringify(ws.appeals);
     ws.appeals = await api("/api/appeals").catch(() => ws.appeals);
     if (JSON.stringify(ws.appeals) !== before) {
         renderQueue();
         if ($("#summary-view").classList.contains("active")) renderSummary();
+        announce(previous);
     }
     // открытую вкладку передач не перерисовываем: там может быть начатый комментарий
     if (isSupervisor() && !$("#transfers-view").classList.contains("active")) {

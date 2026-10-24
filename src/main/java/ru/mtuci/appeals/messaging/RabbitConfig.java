@@ -2,6 +2,7 @@ package ru.mtuci.appeals.messaging;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.Declarables;
 import org.springframework.amqp.core.Queue;
 import org.springframework.amqp.core.QueueBuilder;
 import org.springframework.amqp.core.TopicExchange;
@@ -42,6 +43,27 @@ public class RabbitConfig {
     }
 
     @Bean
+    Queue notificationQueue() {
+        return QueueBuilder.durable(RabbitTopology.NOTIFICATION_QUEUE)
+                .deadLetterExchange(RabbitTopology.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey("appeal.notifications.failed")
+                .build();
+    }
+
+    /**
+     * Сервис коммуникаций в стенде не эмулируется целиком: подсистема объявляет его очередь,
+     * чтобы запросы уведомлений было видно в RabbitMQ. В эксплуатации очередь объявляет и
+     * читает сам сервис. Без читателя очередь не растёт бесконечно: неделя и 10 000 сообщений.
+     */
+    @Bean
+    Queue communicationsQueue() {
+        return QueueBuilder.durable(RabbitTopology.COMMUNICATIONS_QUEUE)
+                .ttl(7 * 24 * 60 * 60 * 1000)
+                .maxLength(10_000L)
+                .build();
+    }
+
+    @Bean
     Queue deadLetterQueue() {
         return QueueBuilder.durable(RabbitTopology.DEAD_LETTER_QUEUE).build();
     }
@@ -54,6 +76,21 @@ public class RabbitConfig {
     @Bean
     Binding auditBinding(Queue auditQueue, TopicExchange appealExchange) {
         return BindingBuilder.bind(auditQueue).to(appealExchange).with("appeal.#");
+    }
+
+    /** Когда клиенту есть что сообщить: регистрация, сообщение сотрудника, продление, ответ. */
+    @Bean
+    Declarables notificationBindings(Queue notificationQueue, TopicExchange appealExchange) {
+        return new Declarables(
+                BindingBuilder.bind(notificationQueue).to(appealExchange).with("appeal.created.#"),
+                BindingBuilder.bind(notificationQueue).to(appealExchange).with("appeal.message.employee"),
+                BindingBuilder.bind(notificationQueue).to(appealExchange).with("appeal.deadline.extended"),
+                BindingBuilder.bind(notificationQueue).to(appealExchange).with("appeal.status.resolved"));
+    }
+
+    @Bean
+    Binding communicationsBinding(Queue communicationsQueue, TopicExchange appealExchange) {
+        return BindingBuilder.bind(communicationsQueue).to(appealExchange).with("appeal.notification.#");
     }
 
     @Bean

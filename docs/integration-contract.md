@@ -19,7 +19,7 @@ flowchart LR
         lk[Личный кабинет<br/>клиента]
         acc[(Учётная система<br/>договоров)]
         crm[Система учёта<br/>обращений]
-        notify[Служба<br/>уведомлений]
+        notify[Сервис<br/>коммуникаций]
         bus{{Шина событий<br/>RabbitMQ}}
     end
 
@@ -36,7 +36,7 @@ flowchart LR
     sub -->|REST: договоры клиента| acc
     sub -->|события appeal.*| bus
     bus -->|подписка по шаблону| crm
-    bus -->|подписка по шаблону| notify
+    bus -->|appeal.notification.#| notify
     cal -->|годовой файл| sub
 ```
 
@@ -54,7 +54,7 @@ flowchart LR
 | Учётная система договоров | WireMock по `contracts-api.yaml` |
 | Личный кабинет клиента | демонстрационный экран клиента |
 | Система учёта обращений | очередь-подписчик на `appeal.#` |
-| Служба уведомлений | не эмулируется, события публикуются |
+| Сервис коммуникаций | очередь `communications.appeal-notifications`: запросы уведомлений видны в RabbitMQ и журнале событий, доставка не эмулируется |
 | Производственный календарь | импорт файла в таблицу |
 
 ---
@@ -184,14 +184,27 @@ Server: принимает токен из заголовка `Authorization: Be
 | `APPEAL_TRANSFER_REJECTED` | `appeal.transfer.rejected.<целевой отдел>` | передача отклонена | `fromDepartment`, `toDepartment`, `reviewedBy` — идентификатор сотрудника в IdP |
 | `APPEAL_SLA_BREACHING` | `appeal.sla.breaching.<отдел>` | до срока по закону 2 рабочих дня или меньше (решение 14) | `departmentCode`, `legalDeadline`, `priority` |
 | `APPEAL_SLA_BREACHED` | `appeal.sla.breached.<отдел>` | срок по закону истёк без ответа по существу | `departmentCode`, `legalDeadline`, `priority` |
+| `CLIENT_NOTIFICATION_REQUESTED` | `appeal.notification.<шаблон>` | клиенту нужно сообщить о его обращении (решение 37) | `template`, `counterpartyId`, `appealNumber`, `registeredAt`, `legalDeadline`; у `ANSWER_READY` ещё `outcome` |
 
 Сегменты ключа — в нижнем регистре. Примеры подписок:
 
 | Потребитель | Шаблоны |
 |---|---|
 | Система учёта обращений | `appeal.routed.#`, `appeal.status.#`, `appeal.transfer.approved.#` |
-| Служба уведомлений | `appeal.status.#`, `appeal.message.employee` |
+| Сервис коммуникаций | `appeal.notification.#` |
 | Руководитель отдела убытков | `appeal.sla.breaching.claims`, `appeal.transfer.requested.claims` |
+
+### Уведомления клиенту
+
+Когда сообщить клиенту, решает подсистема; как доставить, решает сервис коммуникаций
+(решение 37). Шаблоны: `APPEAL_REGISTERED` (зарегистрировано, срок ответа),
+`NEW_MESSAGE` (сотрудник написал), `DEADLINE_EXTENDED` (новый срок), `ANSWER_READY`
+(ответ готов, итог). Требования к сервису коммуникаций:
+
+- контакты клиента брать из CDI по `counterpartyId`, в событии их нет;
+- канал выбирать по согласиям клиента; текст ответа по существу не пересказывать, а
+  давать ссылку на личный кабинет;
+- дедуплицировать по `eventId`: доставка at-least-once.
 
 ### Гарантии
 

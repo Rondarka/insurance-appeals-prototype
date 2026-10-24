@@ -14,7 +14,9 @@ const ws = {
     appeals: [], group: "new", openedId: null, departments: [], staff: [], pendingTransfers: 0,
     scope: null, search: "", transferForm: false, resolveForm: false, extendForm: false,
     // помощник (решение 35): подсказки по открытому обращению, текст для формы ответа, принятый тип
-    advice: null, adviceKey: null, answerDraft: null, finalTypeHint: {}
+    advice: null, adviceKey: null, answerDraft: null, finalTypeHint: {},
+    // какие разделы правой колонки карточки открыты: запоминается между перерисовками
+    sections: {}
 };
 const $ = selector => document.querySelector(selector);
 const isSupervisor = () => hasRole("SUPERVISOR");
@@ -372,8 +374,9 @@ function renderCard(appeal) {
             </form>
         </div>` : `<p class="notice small">Обращение другого отдела — только просмотр.</p>`;
 
+    const signals = ws.appeals.find(item => item.id === appeal.id)?.signals || [];
     return `
-        ${appealHeading(appeal)}
+        ${appealHeading(appeal, signals)}
         <div class="card-body">
             <div class="main-col">
                 ${renderChecks(appeal)}
@@ -421,23 +424,47 @@ function renderCard(appeal) {
             </div>
             <aside class="side-col">
                 ${actions}
-                <h4>Срок по закону</h4>${renderNorm(appeal)}${renderExtension(appeal, canWork)}
-                <h4>Клиент</h4>
-                <p>${escapeHtml(appeal.customerName)}<br><small class="muted">${escapeHtml(appeal.customerEmail)}</small>
+                ${sideSection("norm", "Срок по закону и продление",
+                    renderNorm(appeal) + renderExtension(appeal, canWork), ws.extendForm)}
+                ${canWork && isSupervisor() && isOpen(appeal)
+                    ? sideSection("assignee", "Исполнитель", renderAssignee(appeal, canWork)) : ""}
+                ${sideSection("client", "Клиент", `<p>${escapeHtml(appeal.customerName)}<br>
+                    <small class="muted">${escapeHtml(appeal.customerEmail)}</small>
                     ${appeal.channel && appeal.channel !== "CABINET" ? `<br><small class="muted">Обращение принято
-                        ${CHANNEL_LABELS[appeal.channel]}, оператор ${escapeHtml(appeal.registeredBy || "")}</small>` : ""}</p>
-                <h4>Исполнитель</h4>${renderAssignee(appeal, canWork)}
-                ${renderContractSection(appeal, canWork)}
-                <h4>Данные обращения</h4>${renderDetails(appeal)}
-                <h4>Файлы</h4>${renderAttachments(appeal)}
-                ${renderRelatedSection(appeal)}
-                <details class="more">
-                    <summary>Журнал обработки · ${appeal.history.length}</summary>
-                    ${renderHistory(appeal)}${renderTransfers(appeal)}
+                        ${CHANNEL_LABELS[appeal.channel]}, оператор ${escapeHtml(appeal.registeredBy || "")}</small>` : ""}</p>`)}
+                ${sideSection("contract", "Договор", renderContractSection(appeal, canWork, false))}
+                ${sideSection("details", "Данные обращения", renderDetails(appeal))}
+                ${sideSection("files", `Файлы · ${appeal.attachments.length}`, renderAttachments(appeal))}
+                <details class="side-section" data-section="related" data-related-section ${sectionOpen("related") ? "open" : ""}>
+                    <summary>История клиента<span data-related-count></span></summary>
+                    <div class="section-body" id="related-${appeal.id}"><p class="muted">Загрузка…</p></div>
                 </details>
+                ${sideSection("journal", `Журнал обработки · ${appeal.history.length}`,
+                    renderHistory(appeal) + renderTransfers(appeal))}
             </aside>
         </div>`;
 }
+
+// ---------- разделы правой колонки ----------
+
+/** По умолчанию открыто то, что нужно для ответа; остальное раскрывается по клику и запоминается. */
+const OPEN_SECTIONS = ["assignee", "contract", "details", "files"];
+
+function sectionOpen(key) {
+    return ws.sections[key] ?? OPEN_SECTIONS.includes(key);
+}
+
+function sideSection(key, title, body, forceOpen = false) {
+    return `<details class="side-section" data-section="${key}" ${forceOpen || sectionOpen(key) ? "open" : ""}>
+        <summary>${title}</summary><div class="section-body">${body}</div></details>`;
+}
+
+// событие toggle не всплывает, поэтому слушаем на погружении
+$("#card").addEventListener("toggle", event => {
+    if (event.target.matches?.("details[data-section]")) {
+        ws.sections[event.target.dataset.section] = event.target.open;
+    }
+}, true);
 
 /** Продлить срок по закону может руководитель отдела — один раз и пока срок не истёк. */
 const canExtend = appeal => appeal.norm?.maxExtensionDays > 0 && !appeal.deadlineExtendedDays

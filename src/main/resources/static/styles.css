@@ -230,12 +230,13 @@ textarea { resize: vertical; }
 
 /* ---------- карточка обращения ---------- */
 
-.card-head { display: flex; justify-content: space-between; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.card-head { display: flex; justify-content: space-between; gap: 16px; }
 .card-title small { color: var(--muted); }
 .card-title h2 { margin: 2px 0 4px; }
 .card-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 
-.card-body { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(240px, 1fr); gap: 24px; padding-top: 16px; }
+.card-body { display: grid; grid-template-columns: minmax(0, 2.2fr) minmax(260px, 1fr); gap: 24px; padding-top: 16px;
+    border-top: 1px solid var(--line); }
 .side-col { border-left: 1px solid var(--line); padding-left: 20px; font-size: 14px; }
 .side-col > h4:first-child, .actions h4 { margin-top: 0; }
 .actions { display: grid; gap: 8px; padding-bottom: 8px; }
@@ -617,6 +618,29 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .draft-preview { display: grid; gap: 6px; padding: 10px 12px; border: 1px dashed var(--blue); border-radius: 8px;
     background: var(--surface); }
 .draft-preview pre { margin: 0; white-space: pre-wrap; font: 13px/1.5 "Segoe UI", Roboto, Arial, sans-serif; }
+/* ---------- карточка: главное сверху (фаза «Интерфейс») ---------- */
+
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; padding: 12px 0; }
+.fact { display: grid; gap: 2px; align-content: start; min-width: 0; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; background: var(--surface); font-size: 13px; }
+.fact small { color: var(--muted); }
+.fact strong { font-size: 14px; overflow-wrap: anywhere; }
+.fact span { color: var(--muted); font-size: 12px; overflow-wrap: anywhere; }
+.fact.late { border-color: var(--red); background: var(--red-soft); }
+.fact.late span { color: var(--red); font-weight: 600; }
+.fact.soon { border-color: var(--amber); background: var(--amber-soft); }
+.fact.soon span { color: var(--amber); font-weight: 600; }
+.fact .chip { justify-self: start; }
+.fact-signals { display: flex; flex-wrap: wrap; gap: 6px; padding-bottom: 12px; }
+.side-section { border-top: 1px solid var(--line); padding: 10px 0; }
+.side-section > summary { display: flex; justify-content: space-between; gap: 8px; cursor: pointer; list-style: none;
+    font-size: 13px; font-weight: 600; color: var(--ink); }
+.side-section > summary::-webkit-details-marker { display: none; }
+.side-section > summary::after { content: "▸"; color: var(--muted); }
+.side-section[open] > summary::after { content: "▾"; }
+.side-section .section-body { display: grid; gap: 8px; margin-top: 8px; }
+.side-col .actions + .side-section { margin-top: 8px; }
+
 .access-log { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 13px; }
 .access-log li { display: grid; gap: 1px; padding-bottom: 6px; border-bottom: 1px solid var(--line); }
 .access-log li:last-child { border-bottom: 0; }

@@ -435,13 +435,13 @@ function requestedContractText(appeal) {
 }
 
 /** Договор ещё не привязан: что происходит и что может сделать сотрудник отдела. */
-function renderPendingContract(appeal, canWork) {
+function renderPendingContract(appeal, canWork, titled = true) {
     const action = !canWork ? ""
         : appeal.contractLink === "PENDING"
             ? `<button type="button" class="btn ghost small" data-link-now="${appeal.id}">Привязать сейчас</button>`
             : `<button type="button" class="btn ghost small" data-load-candidates="${appeal.id}">Выбрать договор</button>`;
     return `
-        <h4>Договор</h4>
+        ${titled ? "<h4>Договор</h4>" : ""}
         <p class="notice small">${CONTRACT_LINK_TEXT[appeal.contractLink] || "Договор не привязан"}</p>
         ${requestedContractText(appeal)}
         <div id="candidates-${appeal.id}"></div>
@@ -483,10 +483,10 @@ document.addEventListener("click", event => {
     })().catch(error => showToast(error.message, true));
 });
 
-function renderContractSection(appeal, canWork = false) {
-    if (!appeal.contract) return renderPendingContract(appeal, canWork);
+function renderContractSection(appeal, canWork = false, titled = true) {
+    if (!appeal.contract) return renderPendingContract(appeal, canWork, titled);
     return `
-        <h4>Договор</h4>${renderContract(appeal.contract)}
+        ${titled ? "<h4>Договор</h4>" : ""}${renderContract(appeal.contract)}
         <div id="terms-${appeal.id}"></div>
         <button type="button" class="btn ghost small" data-load-terms="${appeal.id}">Условия договора из учётной системы</button>`;
 }
@@ -533,15 +533,54 @@ function renderTransfers(appeal) {
         </li>`).join("")}</ol>`;
 }
 
-function appealHeading(appeal) {
+/** Сколько осталось до срока по закону, в календарных днях, и тон подсветки. */
+function legalDeadlineInfo(appeal) {
+    if (!appeal.legalDeadline) return {text: "норматив не назначен", tone: "none"};
+    if (["RESOLVED", "CLOSED"].includes(appeal.status)) return {text: "ответ дан", tone: "done"};
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const days = Math.round((new Date(`${appeal.legalDeadline}T00:00:00`) - today) / 86400000);
+    if (days < 0) return {text: `нарушен на ${-days} дн.`, tone: "late"};
+    if (days === 0) return {text: "сегодня последний день", tone: "late"};
+    return {text: `через ${days} дн.`, tone: appeal.escalationLevel === "AT_RISK" || days <= 2 ? "soon" : "ok"};
+}
+
+/**
+ * Главное об обращении одной полосой под заголовком: сроки, статус, исполнитель, клиент и
+ * сигналы риска. Сотрудник видит, что горит, не листая правую колонку.
+ */
+function appealFacts(appeal, signals = []) {
+    const legal = legalDeadlineInfo(appeal);
+    const department = deadlineInfo(appeal);
+    const risks = signals.filter(signal => signal.risk);
+    const channel = appeal.channel && appeal.channel !== "CABINET"
+        ? `принято ${CHANNEL_LABELS[appeal.channel]}` : appeal.customerEmail || "";
+    return `
+        <div class="facts">
+            <div class="fact ${legal.tone}"><small>Срок по закону</small>
+                <strong>${appeal.legalDeadline ? `до ${formatDate(appeal.legalDeadline)}` : "не назначен"}</strong>
+                <span>${escapeHtml(legal.text)}</span></div>
+            <div class="fact ${department.tone}"><small>Срок отдела</small>
+                <strong>${appeal.deadlineAt ? formatDateTime(appeal.deadlineAt) : "не назначен"}</strong>
+                <span>${escapeHtml(department.text)}</span></div>
+            <div class="fact"><small>Статус</small>${statusChip(appeal.status)}</div>
+            <div class="fact"><small>Исполнитель</small><strong>${escapeHtml(appeal.assignedEmployee || "не назначен")}</strong></div>
+            <div class="fact"><small>Клиент</small><strong>${escapeHtml(appeal.customerName)}</strong>
+                <span>${escapeHtml(channel)}</span></div>
+        </div>
+        ${risks.length ? `<div class="fact-signals">${risks.map(signal =>
+            `<span class="badge late">⚠ ${escapeHtml(signal.label)}</span>`).join("")}</div>` : ""}`;
+}
+
+function appealHeading(appeal, signals = []) {
     return `
         <div class="card-head">
             <div class="card-title">
                 <small>${escapeHtml(appeal.publicNumber)} · ${escapeHtml(categoryLabel(appeal.category))} · ${escapeHtml(typeLabel(appeal.category, appeal.subcategory))}</small>
                 <h2>${escapeHtml(appeal.subject)}</h2>
             </div>
-            <div class="card-badges">${statusChip(appeal.status)}${deadlinePill(appeal)}${legalPill(appeal)}</div>
-        </div>`;
+        </div>
+        ${appealFacts(appeal, signals)}`;
 }
 
 /** Ссылка на файл не передаст токен, поэтому файл забирается запросом с токеном. */

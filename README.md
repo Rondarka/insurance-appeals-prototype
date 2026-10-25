@@ -64,7 +64,9 @@ docker compose up --build
 
 После запуска:
 
-- приложение: http://localhost:18080 — откроется вход Keycloak
+- приложение: http://localhost:18080 — откроется вход Keycloak; страница входа в стиле
+  страховой (тема `keycloak/themes/insurer`, решение 45). После изменения реалма или темы:
+  `docker compose up -d --force-recreate keycloak`
 - консоль Keycloak (настройка пользователей и ролей, не подсистемы): http://localhost:18082,
   `admin` / `admin_dev`
 - заглушка учётной системы договоров (WireMock): http://localhost:18081 — страницы у неё нет,

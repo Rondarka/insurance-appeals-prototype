@@ -1,0 +1,94 @@
+/* Цвета и шрифт те же, что в интерфейсе подсистемы (static/styles.css) */
+:root {
+    --insurer-ink: #17233c;
+    --insurer-muted: #5d6982;
+    --insurer-line: #dfe5ef;
+    --insurer-background: #eef2f7;
+    --insurer-navy: #132a52;
+    --insurer-blue: #2364d2;
+    --keycloak-card-top-color: var(--insurer-navy);
+    --pf-v5-global--FontFamily--text: "Segoe UI", Roboto, Arial, sans-serif;
+    --pf-v5-global--FontFamily--heading: "Segoe UI", Roboto, Arial, sans-serif;
+    --pf-v5-global--primary-color--100: var(--insurer-blue);
+    --pf-v5-global--link--Color: var(--insurer-blue);
+}
+
+.login-pf body {
+    background: var(--insurer-background);
+    color: var(--insurer-ink);
+}
+
+.pf-v5-c-login__container {
+    grid-template-columns: minmax(0, 26rem);
+}
+
+/* знак и название компании над карточкой, как в шапке приложения */
+#kc-header-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 20px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0;
+    color: var(--insurer-ink) !important;
+}
+
+#kc-header-wrapper::before {
+    content: "СК";
+    display: grid;
+    place-items: center;
+    flex: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #fff;
+    background: var(--insurer-navy);
+}
+
+.pf-v5-c-login__main {
+    border: 1px solid var(--insurer-line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(19, 42, 82, 0.08);
+}
+
+.pf-v5-c-login__main-header {
+    border-top-width: 3px;
+}
+
+#kc-page-title {
+    font-size: 22px;
+    font-weight: 600;
+}
+
+.pf-v5-c-form-control {
+    border-radius: 8px;
+}
+
+.pf-v5-c-button.pf-m-primary {
+    border-radius: 8px;
+    font-weight: 600;
+    --pf-v5-c-button--m-primary--BackgroundColor: var(--insurer-blue);
+    --pf-v5-c-button--m-primary--hover--BackgroundColor: #1b4fa8;
+}
+
+/* под карточкой: что это за стенд */
+.pf-v5-c-login__container::after {
+    content: "Учебный стенд подсистемы обработки обращений. Данные клиентов вымышленные.";
+    display: block;
+    padding: 16px 8px 0;
+    font-size: 13px;
+    text-align: center;
+    color: var(--insurer-muted);
+}
+
+/* на телефоне карточка не прилипает к краям экрана */
+@media (max-width: 575px) {
+    .pf-v5-c-login__container {
+        padding-inline: 16px;
+    }
+}

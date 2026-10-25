@@ -1,6 +1,7 @@
 {
   "realm": "insurer",
-  "displayName": "Страховая организация — учебный стенд",
+  "displayName": "Страховая компания",
+  "loginTheme": "insurer",
   "enabled": true,
   "internationalizationEnabled": true,
   "supportedLocales": [

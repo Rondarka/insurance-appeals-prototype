@@ -57,6 +57,8 @@ services:
       KC_HEALTH_ENABLED: "true"
     volumes:
       - ./keycloak:/opt/keycloak/data/import:ro
+      # тема страницы входа в стиле страховой (решение 45)
+      - ./keycloak/themes/insurer:/opt/keycloak/themes/insurer:ro
     ports:
       - "18082:8080"
     healthcheck:

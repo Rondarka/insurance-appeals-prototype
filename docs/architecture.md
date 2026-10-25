@@ -368,6 +368,7 @@ PENDING_ROUTING → ROUTED → IN_PROGRESS → WAITING_CUSTOMER → RESOLVED →
 | Изменить вид интерфейса | `static/styles.css` |
 | Изменить договоры в стенде | `stubs/contracts/mappings` — ответы заглушки учётной системы |
 | Пользователи, роли и поля токена в стенде | `keycloak/insurer-realm.json` — реалм Keycloak |
+| Вид страницы входа | `keycloak/themes/insurer/login`: стили поверх стандартной темы и подписи полей (решение 45) |
 | Кому какие операции | роли — `security/SecurityConfig`, конкретное обращение — `service/AppealAccess` |
 | Изменить нормативный срок | новая строка в `deadline_norm` с датой начала действия, старую закрыть `valid_to` — миграцией |
 | Календарь на новый год | файл `calendar/production-calendar-<год>.csv` |

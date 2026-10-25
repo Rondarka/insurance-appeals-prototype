@@ -19,7 +19,8 @@ paths:
       operationId: listClientContracts
       summary: Договоры клиента
       description: |
-        Все договоры контрагента, включая истёкшие и прекращённые. Вызывается, когда
+        Все договоры, где контрагент участвует в любой роли (страхователь, застрахованное
+        лицо, выгодоприобретатель), включая истёкшие и прекращённые. Вызывается, когда
         клиент открывает раздел обращений, — в интерактивном пути, поэтому подсистема
         ждёт ответа не дольше 3 секунд.
       parameters:
@@ -77,8 +78,8 @@ paths:
       summary: Договор по идентификатору
       description: |
         Используется при регистрации обращения и фоновой до-привязке договора. Ответ
-        содержит counterpartyId: подсистема сверяет его с идентификатором клиента из
-        токена и не принимает обращение по чужому договору.
+        содержит counterpartyId и parties: подсистема ищет среди них клиента из токена
+        и не принимает обращение по договору, в котором клиент не участвует.
       parameters:
         - name: contractId
           in: path
@@ -139,7 +140,7 @@ components:
         counterpartyId:
           type: string
           format: uuid
-          description: Владелец договора
+          description: Страхователь, сторона договора
         policyNumber:
           type: string
           maxLength: 80
@@ -184,6 +185,27 @@ components:
           description: Застрахованные риски
           items:
             $ref: '#/components/schemas/Coverage'
+        parties:
+          type: array
+          description: |
+            Участники договора с ролями, включая страхователя. Подсистема по ним определяет,
+            кем клиент приходится договору: изменить или расторгнуть договор может только
+            страхователь. Если списка нет, единственный участник договора его страхователь.
+          items:
+            $ref: '#/components/schemas/Party'
+    Party:
+      type: object
+      required: [counterpartyId, role]
+      properties:
+        counterpartyId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [POLICYHOLDER, INSURED, BENEFICIARY]
+          description: |
+            Страхователь, застрахованное лицо, выгодоприобретатель. Новые роли могут
+            появиться: подсистема считает незнакомую роль участием без прав страхователя.
     Coverage:
       type: object
       required: [code, name]

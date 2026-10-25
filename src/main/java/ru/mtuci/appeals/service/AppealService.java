@@ -130,18 +130,18 @@ public class AppealService {
      * обращению; сетевой вызов — вне транзакции базы.
      */
     public ContractTermsResponse contractTerms(CurrentUser user, UUID id) {
-        UUID contractId = transactionTemplate.execute(transaction -> {
+        Appeal linked = transactionTemplate.execute(transaction -> {
             Appeal appeal = findAppeal(id);
             access.checkView(user, appeal);
             if (appeal.getContract() == null) {
                 throw new IllegalStateException("Договор ещё не привязан к обращению");
             }
-            return appeal.getContract().getContractId();
+            return appeal;
         });
-        var contract = contractsClient.contract(contractId)
+        var contract = contractsClient.contract(linked.getContract().getContractId())
                 .orElseThrow(() -> new IllegalArgumentException("Договор не найден в учётной системе"));
         return new ContractTermsResponse(
-                directoryService.toContract(contract.toSnapshot()),
+                directoryService.toContract(contract.toSnapshot(linked.getCounterpartyId())),
                 contract.insuredSum(),
                 contract.deductible(),
                 contract.premium(),

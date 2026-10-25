@@ -31,6 +31,28 @@ const CONTRACT_STATUS_LABELS = {
     TERMINATED: "Прекращён досрочно"
 };
 
+/** Кем клиент приходится договору (решение 43). */
+const CONTRACT_ROLE_LABELS = {
+    POLICYHOLDER: "страхователь",
+    INSURED: "застрахованное лицо",
+    BENEFICIARY: "выгодоприобретатель"
+};
+
+const roleLabel = role => CONTRACT_ROLE_LABELS[role] || "участник договора";
+
+/** Схема формы для договора: не страхователю не предлагаются типы, которые оформляет страхователь. */
+function formSchemaUrl(contract) {
+    const role = contract.clientRole ? `&clientRole=${encodeURIComponent(contract.clientRole)}` : "";
+    return `/api/form-schema?productCode=${encodeURIComponent(contract.productCode)}${role}`;
+}
+
+/** Пояснение в форме, если клиент в договоре не страхователь. who: «вы» или «клиент». */
+function roleNote(contract, who) {
+    if (!contract?.clientRole || contract.clientRole === "POLICYHOLDER") return "";
+    return `<div class="notice">По этому договору ${who} ${roleLabel(contract.clientRole)}. Изменить или расторгнуть
+        договор и вернуть премию может только страхователь, поэтому таких обращений здесь нет.</div>`;
+}
+
 const EVENT_LABELS = {
     APPEAL_CREATED: "Обращение зарегистрировано",
     APPEAL_ROUTED: "Назначен отдел",
@@ -374,14 +396,16 @@ function hasDraft(container) {
         || [...container.querySelectorAll('input[type="file"]')].some(item => item.files.length);
 }
 
-function renderContract(contract) {
+function renderContract(contract, roleTitle = "Клиент в договоре") {
     if (!contract) return `<p class="muted">Договор ещё не привязан</p>`;
+    const role = contract.clientRole ? roleLabel(contract.clientRole) : "";
     return `
         <dl class="kv">
             <dt>Договор</dt><dd>${escapeHtml(contract.policyNumber)} · ${escapeHtml(contract.insuranceType)}</dd>
             <dt>Объект</dt><dd>${escapeHtml(contract.insuredObject)}</dd>
             <dt>Срок</dt><dd>${formatDate(contract.validFrom)} – ${formatDate(contract.validTo)}</dd>
             <dt>Статус</dt><dd>${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</dd>
+            ${role ? `<dt>${escapeHtml(roleTitle)}</dt><dd>${escapeHtml(role[0].toUpperCase() + role.slice(1))}</dd>` : ""}
         </dl>`;
 }
 

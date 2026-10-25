@@ -2,6 +2,8 @@ package ru.mtuci.appeals.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Embeddable;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 
 import java.time.LocalDate;
 import java.util.UUID;
@@ -43,12 +45,17 @@ public class ContractSnapshot {
     @Column(name = "contract_status", length = 20)
     private String status;
 
+    /** Кем клиент обращения приходится договору (решение 43). */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "contract_client_role", length = 20)
+    private ContractRole clientRole;
+
     protected ContractSnapshot() {
     }
 
     public ContractSnapshot(UUID contractId, String policyNumber, String productCode, String productName,
                             String insuredObject, LocalDate validFrom, LocalDate validTo,
-                            LocalDate terminatedOn, String status) {
+                            LocalDate terminatedOn, String status, ContractRole clientRole) {
         this.contractId = contractId;
         this.policyNumber = policyNumber;
         this.productCode = productCode;
@@ -58,6 +65,7 @@ public class ContractSnapshot {
         this.validTo = validTo;
         this.terminatedOn = terminatedOn;
         this.status = status;
+        this.clientRole = clientRole;
     }
 
     public UUID getContractId() {
@@ -94,5 +102,9 @@ public class ContractSnapshot {
 
     public String getStatus() {
         return status;
+    }
+
+    public ContractRole getClientRole() {
+        return clientRole;
     }
 }

@@ -116,7 +116,7 @@ public class AppealRegistrationService {
                         .filter(contract -> contract.belongsTo(counterpartyId))
                         .orElseThrow(() -> new IllegalArgumentException(
                                 "Договор не найден или не принадлежит выбранному клиенту"))
-                        .toSnapshot();
+                        .toSnapshot(counterpartyId);
             } catch (ContractSourceUnavailableException exception) {
                 // клиенту не отказываем: договор привяжем, когда учётная система вернётся (решение 29)
                 if (blank(request.productCode())) {

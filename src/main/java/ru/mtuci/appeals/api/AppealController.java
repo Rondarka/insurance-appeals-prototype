@@ -45,6 +45,7 @@ import ru.mtuci.appeals.api.ApiModels.StaffMemberResponse;
 import ru.mtuci.appeals.api.ApiModels.ReviewTransferRequest;
 import ru.mtuci.appeals.api.ApiModels.TransferRequestResponse;
 import ru.mtuci.appeals.domain.AppealStatus;
+import ru.mtuci.appeals.domain.ContractRole;
 import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.messaging.OutboxRelay;
 import ru.mtuci.appeals.security.CurrentUser;
@@ -329,8 +330,9 @@ public class AppealController {
 
     /** Без productCode — полная схема, с ним — только типы, допустимые для продукта договора. */
     @GetMapping("/form-schema")
-    FormSchemaResponse formSchema(@RequestParam(required = false) String productCode) {
-        return formPolicy.schema(productCode);
+    FormSchemaResponse formSchema(@RequestParam(required = false) String productCode,
+                                  @RequestParam(required = false) ContractRole clientRole) {
+        return formPolicy.schema(productCode, clientRole);
     }
 
     @GetMapping("/events")

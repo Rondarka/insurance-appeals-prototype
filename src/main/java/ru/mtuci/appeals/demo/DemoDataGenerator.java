@@ -20,6 +20,7 @@ import ru.mtuci.appeals.domain.AppealMessage;
 import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealStatus;
 import ru.mtuci.appeals.domain.AuthorType;
+import ru.mtuci.appeals.domain.ContractRole;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.DeadlineNorm;
 import ru.mtuci.appeals.domain.Department;
@@ -642,7 +643,7 @@ public class DemoDataGenerator {
                 String policy = POLICY_PREFIX.get(code) + "-" + from.getYear() + "-" + String.format("%06d", random.nextInt(1_000_000));
                 return new ContractSnapshot(UUID.nameUUIDFromBytes(("demo-contract-" + id + "-" + code).getBytes()),
                         policy, code, PRODUCTS.get(code), object, from, to, null,
-                        to.isBefore(registeredOn) ? "EXPIRED" : "ACTIVE");
+                        to.isBefore(registeredOn) ? "EXPIRED" : "ACTIVE", ContractRole.POLICYHOLDER);
             });
         }
 

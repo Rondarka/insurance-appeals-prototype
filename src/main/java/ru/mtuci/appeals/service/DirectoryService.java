@@ -8,7 +8,6 @@ import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.domain.Department;
 import ru.mtuci.appeals.integration.ContractsClient;
 import ru.mtuci.appeals.integration.ContractSourceUnavailableException;
-import ru.mtuci.appeals.integration.ExternalContract;
 import ru.mtuci.appeals.repository.DepartmentRepository;
 import ru.mtuci.appeals.security.CurrentUser;
 
@@ -59,7 +58,7 @@ public class DirectoryService {
     /** Договоры клиента из учётной системы — по сети, поэтому без транзакции базы. */
     public List<ContractResponse> contractsOf(UUID counterpartyId) {
         return contractsClient.clientContracts(counterpartyId).stream()
-                .map(ExternalContract::toSnapshot)
+                .map(contract -> contract.toSnapshot(counterpartyId))
                 .map(this::toContract)
                 .toList();
     }
@@ -77,7 +76,8 @@ public class DirectoryService {
                 contract.getValidFrom(),
                 contract.getValidTo(),
                 contract.getTerminatedOn(),
-                contract.getStatus()
+                contract.getStatus(),
+                contract.getClientRole()
         );
     }
 

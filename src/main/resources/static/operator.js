@@ -48,6 +48,8 @@ function renderContracts() {
             <small>${escapeHtml(contract.policyNumber)}</small>
             <small>${escapeHtml(contract.insuredObject)}</small>
             <span class="chip contract-${contract.status}">${escapeHtml(CONTRACT_STATUS_LABELS[contract.status] || contract.status)}</span>
+            ${contract.clientRole && contract.clientRole !== "POLICYHOLDER"
+                ? `<span class="chip contract-role">Клиент: ${escapeHtml(roleLabel(contract.clientRole))}</span>` : ""}
         </button>`).join("") || `<p class="muted">Договоров не найдено</p>`;
 }
 
@@ -60,7 +62,8 @@ async function selectContract(id) {
     op.productCode = contract.productCode;
     document.querySelectorAll("[data-contract]").forEach(item =>
         item.classList.toggle("selected", item.dataset.contract === id));
-    op.schema = await api(`/api/form-schema?productCode=${encodeURIComponent(contract.productCode)}`);
+    op.schema = await api(formSchemaUrl(contract));
+    $("#role-note").innerHTML = roleNote(contract, "клиент");
     selectCategory(op.schema.categories[0]?.code);
 }
 

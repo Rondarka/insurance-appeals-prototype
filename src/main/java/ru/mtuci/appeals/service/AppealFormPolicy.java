@@ -6,6 +6,7 @@ import ru.mtuci.appeals.api.ApiModels.FormCategory;
 import ru.mtuci.appeals.api.ApiModels.FormField;
 import ru.mtuci.appeals.api.ApiModels.FormSchemaResponse;
 import ru.mtuci.appeals.api.ApiModels.ProductResponse;
+import ru.mtuci.appeals.domain.ContractRole;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 import ru.mtuci.appeals.repository.FormSchemaRepository;
 import ru.mtuci.appeals.repository.FormSchemaRepository.Row;
@@ -41,6 +42,14 @@ public class AppealFormPolicy {
 
     /** productCode == null — полная схема, например для подписей в рабочем месте сотрудника. */
     public FormSchemaResponse schema(String productCode) {
+        return schema(productCode, null);
+    }
+
+    /**
+     * clientRole — кем клиент приходится выбранному договору. Не страхователю не показываются
+     * типы, которые оформляет только страхователь (решение 43); null — роль не известна.
+     */
+    public FormSchemaResponse schema(String productCode, ContractRole clientRole) {
         Map<String, List<String>> documents = new LinkedHashMap<>();
         repository.documents().forEach(document -> documents
                 .computeIfAbsent(document.categoryCode() + "/" + document.typeCode(), key -> new ArrayList<>())
@@ -48,11 +57,14 @@ public class AppealFormPolicy {
         Map<String, FormCategory> categories = new LinkedHashMap<>();
         Map<String, FormAppealType> types = new LinkedHashMap<>();
         for (Row row : repository.rows(productCode)) {
+            if (Boolean.TRUE.equals(row.policyholderOnly()) && clientRole != null && clientRole != ContractRole.POLICYHOLDER) {
+                continue;
+            }
             FormCategory category = categories.computeIfAbsent(row.categoryCode(),
                     code -> new FormCategory(code, row.categoryLabel(), new ArrayList<>()));
             FormAppealType type = types.computeIfAbsent(row.categoryCode() + "/" + row.typeCode(), key -> {
                 FormAppealType created = new FormAppealType(row.typeCode(), row.typeLabel(), new ArrayList<>(),
-                        documents.getOrDefault(key, List.of()));
+                        documents.getOrDefault(key, List.of()), Boolean.TRUE.equals(row.policyholderOnly()));
                 category.types().add(created);
                 return created;
             });
@@ -75,6 +87,10 @@ public class AppealFormPolicy {
                         ? new IllegalArgumentException("Тип обращения недоступен для договора «"
                                 + (contract != null ? contract.getProductName() : productLabel(productCode)) + "»")
                         : new IllegalArgumentException("Недопустимый тип обращения для категории " + category));
+        if (appealType.policyholderOnly() && contract != null && contract.getClientRole() != ContractRole.POLICYHOLDER) {
+            throw new IllegalArgumentException("«" + appealType.label() + "» оформляет только страхователь, а по договору "
+                    + contract.getPolicyNumber() + " клиент: " + roleLabel(contract.getClientRole()));
+        }
 
         Map<String, String> details = new LinkedHashMap<>();
         List<String> missing = new ArrayList<>();
@@ -133,6 +149,15 @@ public class AppealFormPolicy {
                 .map(FormSchemaRepository.Product::label)
                 .findFirst()
                 .orElseThrow(() -> new IllegalArgumentException("Неизвестный вид страхования: " + code));
+    }
+
+    /** Тип оформляет только страхователь: для проверки сотрудника, если договор привязали позже. */
+    public boolean policyholderOnly(String category, String type) {
+        return find(schema(null), category, type).map(FormAppealType::policyholderOnly).orElse(false);
+    }
+
+    public static String roleLabel(ContractRole role) {
+        return role == null ? "участник с неизвестной ролью" : role.label();
     }
 
     private static Optional<FormAppealType> find(FormSchemaResponse schema, String category, String type) {

@@ -10,6 +10,7 @@ import ru.mtuci.appeals.domain.AppealChannel;
 import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealPriority;
 import ru.mtuci.appeals.domain.AppealStatus;
+import ru.mtuci.appeals.domain.ContractRole;
 import ru.mtuci.appeals.domain.AuthorType;
 import ru.mtuci.appeals.domain.ContractLink;
 import ru.mtuci.appeals.domain.DeadlineCounting;
@@ -96,7 +97,9 @@ public final class ApiModels {
             LocalDate validFrom,
             LocalDate validTo,
             LocalDate terminatedOn,
-            String status
+            String status,
+            // кем клиент приходится договору: страхователь, застрахованное лицо, выгодоприобретатель
+            ContractRole clientRole
     ) {
     }
 
@@ -381,8 +384,12 @@ public final class ApiModels {
     public record FormCategory(String code, String label, List<FormAppealType> types) {
     }
 
-    /** documents: что подсказать приложить (решение 42); подсказка, а не обязательный набор. */
-    public record FormAppealType(String code, String label, List<FormField> fields, List<String> documents) {
+    /**
+     * documents: что подсказать приложить (решение 42); подсказка, а не обязательный набор.
+     * policyholderOnly: обращение оформляет только страхователь (решение 43).
+     */
+    public record FormAppealType(String code, String label, List<FormField> fields, List<String> documents,
+                                 boolean policyholderOnly) {
     }
 
     /**

@@ -18,6 +18,7 @@ public class FormSchemaRepository {
             String categoryLabel,
             String typeCode,
             String typeLabel,
+            Boolean policyholderOnly,
             String fieldCode,
             String fieldLabel,
             String inputType,
@@ -61,7 +62,7 @@ public class FormSchemaRepository {
     public List<Row> rows(String productCode) {
         return jdbc.sql("""
                         select c.code as category_code, c.label as category_label,
-                               t.code as type_code, t.label as type_label,
+                               t.code as type_code, t.label as type_label, t.policyholder_only,
                                f.code as field_code, f.label as field_label,
                                f.input_type, f.hint, f.contract_attribute, tf.required
                         from appeal_category c

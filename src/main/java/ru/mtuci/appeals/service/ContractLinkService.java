@@ -143,7 +143,7 @@ public class ContractLinkService {
         });
         Selection selection = select(contractsClient.clientContracts(request.counterpartyId()), request);
         return (selection.matching().isEmpty() ? selection.all() : selection.matching()).stream()
-                .map(ExternalContract::toSnapshot)
+                .map(contract -> contract.toSnapshot(request.counterpartyId()))
                 .map(directoryService::toContract)
                 .toList();
     }
@@ -237,7 +237,7 @@ public class ContractLinkService {
 
     private void link(Appeal appeal, ExternalContract external, String how, String actor) {
         Instant now = Instant.now();
-        ContractSnapshot contract = external.toSnapshot();
+        ContractSnapshot contract = external.toSnapshot(appeal.getCounterpartyId());
         Map<String, String> details = new HashMap<>(readDetails(appeal.getDetailsJson()));
         details.putAll(formPolicy.contractDetails(appeal.getCategory(), appeal.getSubcategory(), contract));
         String requestedProduct = appeal.getRequestedProductCode();

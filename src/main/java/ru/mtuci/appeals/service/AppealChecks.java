@@ -3,6 +3,7 @@ package ru.mtuci.appeals.service;
 import org.springframework.stereotype.Component;
 import ru.mtuci.appeals.api.ApiModels.CheckResponse;
 import ru.mtuci.appeals.domain.Appeal;
+import ru.mtuci.appeals.domain.ContractRole;
 import ru.mtuci.appeals.domain.ContractSnapshot;
 
 import java.time.Duration;
@@ -29,6 +30,12 @@ public class AppealChecks {
             "TERMINATED", "прекращён досрочно"
     );
 
+    private final AppealFormPolicy formPolicy;
+
+    public AppealChecks(AppealFormPolicy formPolicy) {
+        this.formPolicy = formPolicy;
+    }
+
     public List<CheckResponse> run(Appeal appeal, Map<String, String> details, List<Appeal> clientAppeals) {
         List<CheckResponse> checks = new ArrayList<>();
         ContractSnapshot contract = appeal.getContract();
@@ -47,6 +54,10 @@ public class AppealChecks {
         checks.add(status == null
                 ? ok("CONTRACT_STATUS", "Договор действовал на момент обращения")
                 : warning("CONTRACT_STATUS", "На момент обращения договор " + status));
+
+        if (contract.getClientRole() != ContractRole.POLICYHOLDER) {
+            checks.add(clientRole(appeal, contract));
+        }
 
         List<String> repeats = clientAppeals.stream()
                 .filter(other -> !other.getId().equals(appeal.getId()))
@@ -86,6 +97,20 @@ public class AppealChecks {
                     + contract.getTerminatedOn().format(DAY));
         }
         return ok("COVERAGE", "Происшествие " + day + " в периоде действия договора");
+    }
+
+    /**
+     * Клиент не страхователь (решение 43). Форма не даёт ему выбрать тип, который оформляет только
+     * страхователь, но договор мог привязаться позже, уже после регистрации.
+     */
+    private CheckResponse clientRole(Appeal appeal, ContractSnapshot contract) {
+        String role = AppealFormPolicy.roleLabel(contract.getClientRole());
+        String category = appeal.getFinalCategory() != null ? appeal.getFinalCategory() : appeal.getCategory();
+        String type = appeal.getFinalCategory() != null ? appeal.getFinalSubcategory() : appeal.getSubcategory();
+        return formPolicy.policyholderOnly(category, type)
+                ? warning("CLIENT_ROLE", "Клиент в договоре: " + role
+                        + ". Такое обращение оформляет только страхователь, объясните клиенту порядок")
+                : ok("CLIENT_ROLE", "Клиент в договоре: " + role);
     }
 
     private static CheckResponse ok(String code, String message) {

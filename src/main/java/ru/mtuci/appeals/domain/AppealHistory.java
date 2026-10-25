@@ -2,6 +2,8 @@ package ru.mtuci.appeals.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -36,6 +38,11 @@ public class AppealHistory {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    /** В каком статусе осталось обращение после действия: из этого строится лента статусов для клиента. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_after", length = 40)
+    private AppealStatus statusAfter;
+
     protected AppealHistory() {
     }
 
@@ -45,6 +52,8 @@ public class AppealHistory {
         this.description = description;
         this.actor = actor;
         this.createdAt = createdAt;
+        // запись пишется после действия, поэтому статус обращения уже итоговый
+        this.statusAfter = appeal.getStatus();
     }
 
     public Long getId() {
@@ -65,5 +74,9 @@ public class AppealHistory {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public AppealStatus getStatusAfter() {
+        return statusAfter;
     }
 }

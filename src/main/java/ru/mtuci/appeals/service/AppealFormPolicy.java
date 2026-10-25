@@ -41,13 +41,18 @@ public class AppealFormPolicy {
 
     /** productCode == null — полная схема, например для подписей в рабочем месте сотрудника. */
     public FormSchemaResponse schema(String productCode) {
+        Map<String, List<String>> documents = new LinkedHashMap<>();
+        repository.documents().forEach(document -> documents
+                .computeIfAbsent(document.categoryCode() + "/" + document.typeCode(), key -> new ArrayList<>())
+                .add(document.label()));
         Map<String, FormCategory> categories = new LinkedHashMap<>();
         Map<String, FormAppealType> types = new LinkedHashMap<>();
         for (Row row : repository.rows(productCode)) {
             FormCategory category = categories.computeIfAbsent(row.categoryCode(),
                     code -> new FormCategory(code, row.categoryLabel(), new ArrayList<>()));
             FormAppealType type = types.computeIfAbsent(row.categoryCode() + "/" + row.typeCode(), key -> {
-                FormAppealType created = new FormAppealType(row.typeCode(), row.typeLabel(), new ArrayList<>());
+                FormAppealType created = new FormAppealType(row.typeCode(), row.typeLabel(), new ArrayList<>(),
+                        documents.getOrDefault(key, List.of()));
                 category.types().add(created);
                 return created;
             });

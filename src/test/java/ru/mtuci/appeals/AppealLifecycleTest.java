@@ -8,6 +8,7 @@ import ru.mtuci.appeals.api.ApiModels.AppealDetailResponse;
 import ru.mtuci.appeals.api.ApiModels.AppealSummaryResponse;
 import ru.mtuci.appeals.api.ApiModels.ChangeStatusRequest;
 import ru.mtuci.appeals.api.ApiModels.ErrorResponse;
+import ru.mtuci.appeals.api.ApiModels.HistoryResponse;
 import ru.mtuci.appeals.api.ApiModels.ResolveAppealRequest;
 import ru.mtuci.appeals.domain.AppealOutcome;
 import ru.mtuci.appeals.domain.AppealStatus;
@@ -45,6 +46,22 @@ class AppealLifecycleTest extends IntegrationTest {
 
         assertThat(answered.status()).isEqualTo(AppealStatus.IN_PROGRESS);
         assertThat(answered.nextStatuses()).containsExactly(AppealStatus.WAITING_CUSTOMER, AppealStatus.RESOLVED);
+    }
+
+    @Test
+    void historyRemembersStatusForClientTimeline() {
+        UUID appeal = routedClaim();
+        changeStatus(appeal, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
+        changeStatus(appeal, AppealStatus.WAITING_CUSTOMER, AppealDetailResponse.class);
+        as(ANNA).postForObject("/api/appeals/{id}/messages",
+                new AddMessageRequest("Фото повреждений приложила"), AppealDetailResponse.class, appeal);
+        resolve(appeal, AppealOutcome.SATISFIED, "Выплата 52 000 ₽ направлена на ваш счёт по условиям договора.",
+                AppealDetailResponse.class);
+
+        // по этим статусам кабинет клиента ставит даты шагов «принято», «в работе», «ответ дан»
+        assertThat(getAppeal(appeal).history()).extracting(HistoryResponse::statusAfter).containsSubsequence(
+                AppealStatus.PENDING_ROUTING, AppealStatus.ROUTED, AppealStatus.IN_PROGRESS,
+                AppealStatus.WAITING_CUSTOMER, AppealStatus.IN_PROGRESS, AppealStatus.RESOLVED);
     }
 
     @Test

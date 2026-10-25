@@ -573,6 +573,17 @@ function legalDeadlineInfo(appeal) {
  * Главное об обращении одной полосой под заголовком: сроки, статус, исполнитель, клиент и
  * сигналы риска. Сотрудник видит, что горит, не листая правую колонку.
  */
+/** Подсказка, какие документы приложить к обращению этого типа (решение 42). */
+function documentsHint(type, title, note) {
+    const documents = type?.documents || [];
+    if (!documents.length) return "";
+    return `<div class="documents-hint">
+        <strong>${escapeHtml(title)}</strong>
+        <ul>${documents.map(document => `<li>${escapeHtml(document)}</li>`).join("")}</ul>
+        <small>${escapeHtml(note)}</small>
+    </div>`;
+}
+
 function appealFacts(appeal, signals = []) {
     const legal = legalDeadlineInfo(appeal);
     const department = deadlineInfo(appeal);

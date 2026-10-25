@@ -52,6 +52,18 @@ class FormSchemaTest extends IntegrationTest {
     }
 
     @Test
+    void schemaSuggestsDocumentsForType() {
+        FormSchemaResponse schema = schema("CASCO");
+
+        // подсказка из справочника, по порядку; у типа без подсказки список пуст
+        assertThat(type(schema, "CLAIM", "AUTO").documents()).hasSize(3)
+                .first().asString().startsWith("Фото повреждений");
+        assertThat(type(schema(null), "COMPLAINT", "PRETENSION").documents())
+                .anyMatch(document -> document.contains("независимого эксперта"));
+        assertThat(type(schema(null), "OTHER", "GENERAL").documents()).isEmpty();
+    }
+
+    @Test
     void rejectsTypeNotAvailableForContractProduct() {
         int before = appealsOf(ANNA);
         CreateAppealRequest mortgageTypeOnCasco = new CreateAppealRequest(

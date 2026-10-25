@@ -113,6 +113,8 @@ function selectType(code) {
             <input name="detail.${escapeHtml(field.code)}" type="${INPUT_TYPES[field.inputType] || "text"}"
                    placeholder="${escapeHtml(field.hint || "")}" ${field.required ? "required" : ""}>
         </label>`).join("");
+    $("#documents-hint").innerHTML = documentsHint(schemaType(draft.schema, draft.category, code), "Что приложить",
+        "Если чего-то нет, отправляйте как есть: сотрудник попросит недостающее.");
 }
 
 $("#new-appeal").addEventListener("click", event => {
@@ -230,6 +232,8 @@ async function openAppeal(id) {
             </div>
             <div class="card-badges">${statusChip(appeal.status, CLIENT_STATUS)}</div>
         </div>
+        ${statusTimeline(appeal)}
+        ${pretensionNotice(appeal)}
         ${["NEEDS_CHOICE", "NOT_FOUND"].includes(appeal.contractLink) ? `
         <div class="notice">${appeal.contractLink === "NEEDS_CHOICE"
             ? "Уточните, по какому договору обращение: подходит несколько."
@@ -262,6 +266,59 @@ async function openAppeal(id) {
         loadCandidates(id, $("#client-candidates")).catch(error => showToast(error.message, true));
     }
     renderMyAppeals();
+}
+
+/**
+ * Лента статусов: что с обращением уже было и чего ждать, с датами. Даты берутся из журнала
+ * обработки: каждая запись помнит статус после действия.
+ */
+function statusTimeline(appeal) {
+    // журнал хранит момент времени, срок по закону хранится датой без времени
+    const day = value => new Intl.DateTimeFormat("ru-RU", {day: "numeric", month: "long"})
+        .format(new Date(/^\d{4}-\d{2}-\d{2}$/.test(value) ? `${value}T00:00:00` : value));
+    const first = status => appeal.history.find(item => item.statusAfter === status)?.createdAt;
+    const last = status => [...appeal.history].reverse().find(item => item.statusAfter === status)?.createdAt;
+    const answered = ["RESOLVED", "CLOSED"].includes(appeal.status);
+    const steps = [
+        {label: "Зарегистрировано", at: appeal.createdAt},
+        {label: "Принято отделом", at: first("ROUTED") || first("IN_PROGRESS")},
+        {label: "В работе", at: first("IN_PROGRESS")}
+    ];
+    if (appeal.status === "WAITING_CUSTOMER") {
+        steps.push({label: "Нужен ваш ответ", at: last("WAITING_CUSTOMER"), attention: true});
+    }
+    steps.push({label: "Ответ дан", at: answered ? appeal.resolvedAt || last("RESOLVED") : null,
+        note: !answered && appeal.legalDeadline ? `не позднее ${day(appeal.legalDeadline)}` : ""});
+    // текущий шаг: последний пройденный, а если ждём клиента, то этот шаг
+    const current = steps.findIndex(step => step.attention) >= 0
+        ? steps.findIndex(step => step.attention)
+        : steps.reduce((index, step, i) => step.at ? i : index, 0);
+    return `<ol class="status-line" aria-label="Ход рассмотрения">${steps.map((step, i) => {
+        const state = step.attention ? "attention" : i < current || (i === current && answered) ? "done" : i === current ? "current" : "upcoming";
+        return `<li class="${state}"${i === current ? ' aria-current="step"' : ""}>
+            <span class="status-dot" aria-hidden="true"></span>
+            <span class="status-step">${escapeHtml(step.label)}</span>
+            <small>${step.at && state !== "upcoming" ? day(step.at) : escapeHtml(step.note || "")}</small>
+        </li>`;
+    }).join("")}</ol>`;
+}
+
+/**
+ * У претензии клиенту объясняется его право: без ответа в срок или при несогласии он может
+ * обратиться к финансовому уполномоченному (Федеральный закон от 04.06.2018 № 123-ФЗ, ст. 16).
+ */
+function pretensionNotice(appeal) {
+    const category = appeal.finalCategory || appeal.category;
+    const type = appeal.finalSubcategory || appeal.subcategory;
+    if (category !== "COMPLAINT" || type !== "PRETENSION") return "";
+    const answered = ["RESOLVED", "CLOSED"].includes(appeal.status);
+    return `<div class="notice pretension-note">
+        ${answered
+            ? "Если вы не согласны с ответом на претензию, вы вправе обратиться к финансовому уполномоченному в сфере финансовых услуг."
+            : "Если мы не ответим в срок или вы не согласитесь с ответом, вы вправе обратиться к финансовому уполномоченному в сфере финансовых услуг."}
+        <small>Федеральный закон от 04.06.2018 № 123-ФЗ, статья 16. Обращение подаётся на сайте финансового
+            уполномоченного: finombudsman.ru</small>
+    </div>`;
 }
 
 async function afterContractLinked(id) {

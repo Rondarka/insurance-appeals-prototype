@@ -85,6 +85,8 @@ function selectType(code) {
             <input name="detail.${escapeHtml(field.code)}" type="${INPUT_TYPES[field.inputType] || "text"}"
                    placeholder="${escapeHtml(field.hint || "")}" ${field.required ? "required" : ""}>
         </label>`).join("");
+    $("#documents-hint").innerHTML = documentsHint(schemaType(op.schema, op.category, code), "Что понадобится от клиента",
+        "Подскажите клиенту: файлы он приложит в личном кабинете, ответив в переписке по обращению.");
 }
 
 $("#operator-appeal").addEventListener("click", event => {

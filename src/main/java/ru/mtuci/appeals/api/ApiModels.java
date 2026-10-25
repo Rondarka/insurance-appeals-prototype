@@ -292,7 +292,9 @@ public final class ApiModels {
             String action,
             String description,
             String actor,
-            Instant createdAt
+            Instant createdAt,
+            // статус после действия: из него лента статусов для клиента
+            AppealStatus statusAfter
     ) {
     }
 
@@ -379,7 +381,8 @@ public final class ApiModels {
     public record FormCategory(String code, String label, List<FormAppealType> types) {
     }
 
-    public record FormAppealType(String code, String label, List<FormField> fields) {
+    /** documents: что подсказать приложить (решение 42); подсказка, а не обязательный набор. */
+    public record FormAppealType(String code, String label, List<FormField> fields, List<String> documents) {
     }
 
     /**

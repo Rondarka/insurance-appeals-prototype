@@ -93,7 +93,8 @@ public class AppealViews {
                         item.getAction(),
                         item.getDescription(),
                         item.getActor(),
-                        item.getCreatedAt()
+                        item.getCreatedAt(),
+                        item.getStatusAfter()
                 ))
                 .toList();
 

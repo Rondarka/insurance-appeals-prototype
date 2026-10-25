@@ -33,6 +33,20 @@ public class FormSchemaRepository {
         this.jdbc = jdbc;
     }
 
+    /** Документ, который стоит приложить к обращению этого типа (решение 42). */
+    public record Document(String categoryCode, String typeCode, String label) {
+    }
+
+    public List<Document> documents() {
+        return jdbc.sql("""
+                        select category as category_code, type_code, label
+                        from appeal_type_document
+                        order by category, type_code, sort_order
+                        """)
+                .query(Document.class)
+                .list();
+    }
+
     /** Вид страхования из справочника подсистемы. */
     public record Product(String code, String label) {
     }

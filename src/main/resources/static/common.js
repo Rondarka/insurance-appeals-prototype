@@ -165,10 +165,57 @@ function renderUserBox() {
             <strong>${escapeHtml(me.name || "Пользователь")}</strong>
             <small>${escapeHtml(role + place)}</small>
         </span>
+        ${themeMenu()}
         <button class="btn ghost on-dark" type="button" id="logout-button">Выйти</button>
     `;
     document.querySelector("#logout-button").addEventListener("click", () => auth.logout());
 }
+
+/** Выбор темы оформления в шапке (решение 49); сама тема ставится в theme.js. */
+function themeMenu() {
+    if (!window.appTheme) return "";
+    const current = appTheme.current();
+    return `<details class="theme-menu">
+        <summary aria-label="Тема оформления" title="Тема оформления">
+            <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true">
+                <circle cx="9" cy="9" r="7.25" fill="none" stroke="currentColor" stroke-width="1.5"/>
+                <path d="M9 1.75a7.25 7.25 0 0 1 0 14.5z" fill="currentColor"/>
+            </svg>
+        </summary>
+        <div class="theme-options" role="radiogroup" aria-label="Тема оформления">
+            ${appTheme.THEMES.map(([code, label, swatch]) => `
+            <label><input type="radio" name="app-theme" value="${code}" ${code === current ? "checked" : ""}>
+                <span class="theme-swatch" style="background: ${swatch}" aria-hidden="true"></span>${label}</label>`).join("")}
+        </div>
+    </details>`;
+}
+
+document.addEventListener("change", event => {
+    if (event.target.name !== "app-theme") return;
+    appTheme.set(event.target.value);
+    event.target.closest("details").open = false;
+});
+
+// при открытии меню отметка сверяется с темой: её могли сменить в другой вкладке
+document.addEventListener("toggle", event => {
+    if (!event.target.classList?.contains("theme-menu") || !event.target.open) return;
+    const current = appTheme.current();
+    event.target.querySelectorAll("input[name=app-theme]").forEach(input => input.checked = input.value === current);
+}, true);
+
+// меню темы закрывается кликом мимо и клавишей Escape, как обычный выпадающий список
+document.addEventListener("click", event => {
+    document.querySelectorAll(".theme-menu[open]").forEach(menu => {
+        if (!menu.contains(event.target)) menu.open = false;
+    });
+});
+document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    document.querySelectorAll(".theme-menu[open]").forEach(menu => {
+        menu.open = false;
+        menu.querySelector("summary").focus();
+    });
+});
 
 // ---------- форматирование ----------
 

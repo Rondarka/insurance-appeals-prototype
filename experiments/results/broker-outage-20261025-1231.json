@@ -1,0 +1,53 @@
+{
+  "brokerDown": {
+    "registered": [
+      {
+        "status": 201,
+        "ms": 25,
+        "id": "a48fa661-4501-4268-9f2a-57c95de25358",
+        "appealStatus": "PENDING_ROUTING"
+      },
+      {
+        "status": 201,
+        "ms": 26,
+        "id": "e3e2c000-fd3d-447c-a1c1-ae68ddd1cf47",
+        "appealStatus": "PENDING_ROUTING"
+      },
+      {
+        "status": 201,
+        "ms": 41,
+        "id": "0ce63973-6eb0-4ca3-93a2-59bb7f9a1a32",
+        "appealStatus": "PENDING_ROUTING"
+      },
+      {
+        "status": 201,
+        "ms": 46,
+        "id": "dc04272e-d6e9-4b02-9e7e-5c4f9dcc2c42",
+        "appealStatus": "PENDING_ROUTING"
+      },
+      {
+        "status": 201,
+        "ms": 25,
+        "id": "d3e95920-5f01-43c4-8e84-8c646c3eab26",
+        "appealStatus": "PENDING_ROUTING"
+      }
+    ],
+    "outboxWaiting": 5,
+    "routedAfterBrokerStartS": 8.3,
+    "routedEntries": 5,
+    "appeals": 5
+  },
+  "poisonMessage": {
+    "deadBefore": 0,
+    "deadAfter": 3,
+    "inDeadAfterS": 4.1,
+    "deadRoutingKeys": [
+      "appeal.audit.failed",
+      "appeal.notifications.failed",
+      "appeal.routing.failed"
+    ],
+    "normalAppealStatus": 201,
+    "normalRoutedAfterS": 0.5,
+    "elapsedS": 4.7
+  }
+}

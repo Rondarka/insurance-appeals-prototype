@@ -1,0 +1,261 @@
+{
+  "startedAt": "2026-10-25T12:28:06",
+  "user": "petr",
+  "baseline": {
+    "cabinet": [
+      {
+        "ms": 26,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 31,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 8,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 8,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 32,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 10,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 9,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 8,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 7,
+        "status": 200,
+        "contractsUnavailable": false
+      },
+      {
+        "ms": 8,
+        "status": 200,
+        "contractsUnavailable": false
+      }
+    ],
+    "registered": [
+      {
+        "ms": 213,
+        "status": 201,
+        "id": "a7239321-df09-4dfc-9fb3-05dc242ce541",
+        "contractLink": "LINKED",
+        "message": null
+      },
+      {
+        "ms": 33,
+        "status": 201,
+        "id": "549e8c5c-713c-4bc5-a724-cd77e425a81c",
+        "contractLink": "LINKED",
+        "message": null
+      },
+      {
+        "ms": 32,
+        "status": 201,
+        "id": "bc68fba4-1761-42ae-a46c-df3b9d0a5523",
+        "contractLink": "LINKED",
+        "message": null
+      }
+    ]
+  },
+  "slow": {
+    "cabinet": [
+      {
+        "ms": 2212,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 2210,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 1212,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 18,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 15,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 15,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 15,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 15,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 4,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 13,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 28,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 15,
+        "status": 200,
+        "contractsUnavailable": true
+      }
+    ],
+    "registered": [
+      {
+        "ms": 40,
+        "status": 201,
+        "id": "f199c157-8e30-4229-9d2d-25c29c3b1bce",
+        "contractLink": "PENDING",
+        "message": null
+      },
+      {
+        "ms": 50,
+        "status": 201,
+        "id": "9f97382a-a75f-4499-aa4d-5eec1fffbd2d",
+        "contractLink": "PENDING",
+        "message": null
+      },
+      {
+        "ms": 26,
+        "status": 201,
+        "id": "8f242792-72ce-482b-bb2f-33466b73cf1f",
+        "contractLink": "PENDING",
+        "message": null
+      }
+    ],
+    "routedWithinS": 2.1,
+    "cabinetRecoveredAfterS": 28.2,
+    "contractsLinkedAfterS": 63.5
+  },
+  "down": {
+    "cabinet": [
+      {
+        "ms": 2233,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 1209,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 19,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 5,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 28,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 5,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 4,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 20,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 18,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 13,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 16,
+        "status": 200,
+        "contractsUnavailable": true
+      },
+      {
+        "ms": 16,
+        "status": 200,
+        "contractsUnavailable": true
+      }
+    ],
+    "registered": [
+      {
+        "ms": 39,
+        "status": 201,
+        "id": "8806fa6e-7e99-4055-91c7-fe7c2da2f603",
+        "contractLink": "PENDING",
+        "message": null
+      },
+      {
+        "ms": 24,
+        "status": 201,
+        "id": "2975fd73-ff0e-42d1-842d-de6342cd255e",
+        "contractLink": "PENDING",
+        "message": null
+      },
+      {
+        "ms": 61,
+        "status": 201,
+        "id": "09ca83c8-a5f5-4bfa-a4a5-8fdfa3210e67",
+        "contractLink": "PENDING",
+        "message": null
+      }
+    ],
+    "routedWithinS": 2.1,
+    "cabinetRecoveredAfterS": 28.3,
+    "contractsLinkedAfterS": 53.5
+  }
+}

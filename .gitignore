@@ -2,3 +2,5 @@ target/
 .idea/
 *.iml
 .vscode/
+backups/
+__pycache__/

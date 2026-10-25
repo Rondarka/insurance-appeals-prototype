@@ -104,6 +104,8 @@ services:
       ASSISTANT_MODEL: ${ASSISTANT_MODEL:-qwen2.5:7b-instruct}
       # антивирус для вложений (решение 39); пусто, значит проверка выключена
       ANTIVIRUS_HOST: ${ANTIVIRUS_HOST:-}
+      # метрики на отдельном порту, он не публикуется: их забирает только Prometheus (решение 47)
+      MANAGEMENT_SERVER_PORT: "8081"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     ports:
@@ -121,7 +123,54 @@ services:
       keycloak:
         condition: service_started
 
+  # Мониторинг (решение 47), поднимается по запросу:
+  #   docker compose --profile monitoring up -d
+  # Prometheus: http://localhost:19090, Grafana: http://localhost:13000 (панель открывается сразу)
+  prometheus:
+    image: prom/prometheus:v3.15.0
+    profiles: ["monitoring"]
+    command: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=7d"]
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "19090:9090"
+    depends_on:
+      - app
+
+  grafana:
+    image: grafana/grafana:13.2.3
+    profiles: ["monitoring"]
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin_dev
+      # смотреть панель можно без входа, менять нельзя
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/appeals.json
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "13000:3000"
+    depends_on:
+      - prometheus
+
+  # Нагрузочный тест, запускается вручную:
+  #   docker compose run --rm k6 run /scripts/appeals.js
+  k6:
+    image: grafana/k6:2.2.0
+    profiles: ["load"]
+    volumes:
+      - ./load:/scripts
+    environment:
+      APP_URL: http://app:8080
+      KEYCLOAK_URL: http://keycloak:8080
+
 volumes:
   postgres-data:
   rabbitmq-data:
   attachment-data:
+  prometheus-data:
+  grafana-data:

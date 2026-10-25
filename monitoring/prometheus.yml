@@ -1,0 +1,21 @@
+# Prometheus стенда (решение 47): метрики подсистемы и глубина очередей RabbitMQ.
+# Раз в 5 секунд, чтобы в нагрузочном тесте было видно динамику.
+global:
+  scrape_interval: 5s
+  evaluation_interval: 5s
+
+scrape_configs:
+  # порт управления 8081 не публикуется из Docker, его видит только внутренняя сеть
+  - job_name: appeals
+    metrics_path: /actuator/prometheus
+    static_configs:
+      - targets: ["app:8081"]
+
+  # плагин rabbitmq_prometheus: число сообщений в каждой очереди виртуального хоста appeals
+  - job_name: rabbitmq
+    metrics_path: /metrics/detailed
+    params:
+      family: [queue_coarse_metrics]
+      vhost: [appeals]
+    static_configs:
+      - targets: ["rabbitmq:15692"]

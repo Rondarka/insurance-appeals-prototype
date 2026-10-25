@@ -57,6 +57,22 @@ spring:
           # токен должен быть выпущен для подсистемы
           audiences: insurance-appeals
 
+# метрики (решение 47): в compose на отдельном порту 8081, который не публикуется наружу,
+# его читает только Prometheus во внутренней сети
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, prometheus
+  metrics:
+    tags:
+      application: insurance-appeals
+    distribution:
+      # гистограммы для p95 в Prometheus: время ответа API и задержка маршрутизации
+      percentiles-histogram:
+        http.server.requests: true
+        appeals.routing.lag: true
+
 server:
   port: 8080
 

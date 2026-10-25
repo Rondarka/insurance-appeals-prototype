@@ -124,6 +124,8 @@ public abstract class IntegrationTest {
         registry.add("appeals.assistant.model.open-duration", () -> "PT1S");
         registry.add("spring.security.oauth2.resourceserver.jwt.issuer-uri", () -> TestIdentityProvider.ISSUER);
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", TestIdentityProvider::jwkSetUri);
+        // в тестах Spring Boot выключает выгрузку метрик; MetricsTest проверяет её как в стенде (решение 47)
+        registry.add("management.prometheus.metrics.export.enabled", () -> "true");
     }
 
     /** Без токена: для проверок отказа. */

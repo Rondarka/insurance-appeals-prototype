@@ -852,6 +852,14 @@ details.more summary { cursor: pointer; color: var(--blue); font-weight: 600; }
 .engine-save { flex: 1 1 100%; display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
 .engine-save label { flex: 1 1 320px; max-width: 640px; }
 
+/* рабочее место и администрирование на экране уже 1280 px: в шапке остаются название,
+   вкладки и инициалы, имя и роль видны в подсказке на инициалах; иначе шапка шире экрана */
+@media (max-width: 1279px) {
+    .app-page .brand strong { white-space: nowrap; }
+    .app-page .brand small, .app-page .user-text { display: none; }
+    .app-page .topbar { gap: 20px; }
+}
+
 @media (max-width: 900px) {
     .client-layout { grid-template-columns: 1fr; }
     .summary-grid { grid-template-columns: 1fr; }

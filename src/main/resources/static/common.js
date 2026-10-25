@@ -67,7 +67,9 @@ const EVENT_LABELS = {
     APPEAL_CONTRACT_LINKED: "Договор привязан",
     APPEAL_CONTRACT_CHOICE_REQUIRED: "Нужно выбрать договор",
     APPEAL_SLA_BREACHING: "Срок по закону истекает",
-    APPEAL_SLA_BREACHED: "Срок по закону нарушен"
+    APPEAL_SLA_BREACHED: "Срок по закону нарушен",
+    APPEAL_ASSIGNED: "Назначен исполнитель",
+    CLIENT_NOTIFICATION_REQUESTED: "Запрошено уведомление клиенту"
 };
 
 /** Эскалация по сроку закона: только для сотрудников, клиенту не показывается. */
@@ -160,7 +162,7 @@ function renderUserBox() {
     const role = me.roles.map(item => ROLE_LABELS[item]).filter(Boolean).join(", ");
     const place = me.department ? ` · ${me.department.name}` : "";
     document.querySelector("#user-box").innerHTML = `
-        <span class="avatar">${escapeHtml(initials(me.name))}</span>
+        <span class="avatar" title="${escapeHtml((me.name || "Пользователь") + (role ? `, ${role}` : "") + place)}">${escapeHtml(initials(me.name))}</span>
         <span class="user-text">
             <strong>${escapeHtml(me.name || "Пользователь")}</strong>
             <small>${escapeHtml(role + place)}</small>

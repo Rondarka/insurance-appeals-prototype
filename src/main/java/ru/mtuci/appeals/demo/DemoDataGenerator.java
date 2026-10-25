@@ -58,11 +58,11 @@ import java.util.UUID;
  * Генератор демонстрационных обращений (решение 33). Обращения проходят тот же путь, что
  * настоящие, и на тех же правилах: форма проверяется схемой, срок по закону выбирает
  * справочник нормативов по производственному календарю, статусы меняются только разрешёнными
- * переходами. Даты — за последние месяцы; шаги, которые к «сейчас» ещё не наступили, не
+ * переходами. Даты: за последние месяцы; шаги, которые к «сейчас» ещё не наступили, не
  * выполняются, поэтому свежие обращения остаются в работе. События наружу не публикуются:
  * это прошлое, существующей системе о нём сообщать нечего.
  *
- * Клиенты и их договоры — вымышленные, сотрудники — из демонстрационного реалма и несколько
+ * Клиенты и их договоры вымышленные, сотрудники взяты из демонстрационного реалма, и несколько
  * демонстрационных. Генерация воспроизводима: при том же зерне получаются те же данные.
  */
 @Component
@@ -177,7 +177,7 @@ public class DemoDataGenerator {
         return removed;
     }
 
-    /** Создать count обращений за последние days дней; при том же seed — те же данные. */
+    /** Создать count обращений за последние days дней; при том же seed: те же данные. */
     public int generate(int count, int days, long seed) {
         Random random = new Random(seed);
         Instant now = Instant.now();
@@ -197,7 +197,7 @@ public class DemoDataGenerator {
         for (int i = 0; i < count; i++) {
             Instant createdAt = randomMoment(random, now, days);
             Customer customer = pick(random, customers);
-            // сначала вид обращения — по долям, затем продукт, для которого этот вид допустим
+            // сначала вид обращения: по долям, затем продукт, для которого этот вид допустим
             String typeKey = weighted(random, TYPE_WEIGHTS);
             Map<String, Integer> products = new LinkedHashMap<>();
             PRODUCT_WEIGHTS.forEach((code, weight) -> {
@@ -247,9 +247,9 @@ public class DemoDataGenerator {
         DeadlineNorm norm = normService.choose(category, type, contract.getProductCode(), details, registeredOn);
         LocalDate legalDeadline = calendar.deadline(registeredOn, norm.getTermDays(), norm.getCounting());
         appeal.applyNorm(norm, legalDeadline);
-        // идентификатор задан заранее — save() сливает и возвращает управляемый экземпляр, дальше работаем с ним
+        // идентификатор задан заранее: save() сливает и возвращает управляемый экземпляр, дальше работаем с ним
         appeal = appeals.save(appeal);
-        // сигналы в тексте клиента — как при обычной регистрации (решение 35)
+        // сигналы в тексте клиента: как при обычной регистрации (решение 35)
         appeals.flush();
         signals.record(appeal.getId(), subject + "\n" + description, createdAt);
         note(appeal, "CREATED", operator == null
@@ -271,7 +271,7 @@ public class DemoDataGenerator {
         note(appeal, "ROUTED", "Обращение автоматически направлено в отдел «" + department.getName() + "». SLA: "
                 + rule.getSlaHours() + " ч.", "Сервис маршрутизации", time.at);
 
-        // передача в другой отдел — типичная ошибка маршрутизации
+        // передача в другой отдел: типичная ошибка маршрутизации
         Staff worker = specialist(department, random);
         if (!take(appeal, worker, time, random)) {
             return number;
@@ -315,7 +315,7 @@ public class DemoDataGenerator {
             }
         }
 
-        // ответ по существу: обычно в срок, иногда с опозданием — для аналитики соблюдения сроков
+        // ответ по существу: обычно в срок, иногда с опозданием, для аналитики соблюдения сроков
         LocalDate deadline = appeal.getLegalDeadline();
         int span = Math.max(1, calendar.workingDaysAfter(registeredOn, deadline));
         double share = random.nextDouble();
@@ -330,7 +330,7 @@ public class DemoDataGenerator {
                 : (random.nextBoolean() ? AppealOutcome.EXPLAINED : AppealOutcome.REJECTED);
         String answer = pick(random, DemoTexts.ANSWERS.get(outcome))
                 .replace("{amount}", money(5_000 + random.nextInt(120) * 1_000));
-        // клиент иногда выбирает не тот тип — сотрудник исправляет его при ответе (решение 23)
+        // клиент иногда выбирает не тот тип: сотрудник исправляет его при ответе (решение 23)
         String[] finalType = CORRECTIONS.containsKey(typeKey) && random.nextDouble() < 0.25
                 ? CORRECTIONS.get(typeKey).split("/") : new String[]{category, type};
         appeal.resolve(outcome, finalType[0], finalType[1], time.at);
@@ -436,7 +436,7 @@ public class DemoDataGenerator {
             }
             String value = switch (field.code()) {
                 case "incidentDate" -> {
-                    // иногда — дата вне периода договора: проверка покрытия это покажет
+                    // иногда дата вне периода договора: проверка покрытия это покажет
                     LocalDate from = random.nextDouble() < 0.05 ? contract.getValidFrom().minusDays(20) : contract.getValidFrom();
                     long range = Math.max(1, Math.min(60, registeredOn.toEpochDay() - from.toEpochDay()));
                     yield registeredOn.minusDays(1 + random.nextInt((int) range)).toString();
@@ -499,7 +499,7 @@ public class DemoDataGenerator {
 
     // ---------- время ----------
 
-    /** День за последние days дней, ближе к сегодня — чаще; будни и рабочие часы — чаще. */
+    /** День за последние days дней; ближе к сегодня, в будни и в рабочие часы чаще. */
     private Instant randomMoment(Random random, Instant now, int days) {
         LocalDate today = LocalDate.ofInstant(now, zone);
         for (int attempt = 0; ; attempt++) {
@@ -603,7 +603,7 @@ public class DemoDataGenerator {
         return items.get(random.nextInt(items.size()));
     }
 
-    /** Взвешенный выбор; ключи сортируются — порядок Map.of не задан, а результат должен повторяться. */
+    /** Взвешенный выбор; ключи сортируются: порядок Map.of не задан, а результат должен повторяться. */
     private static String weighted(Random random, Map<String, Integer> weights) {
         int total = weights.values().stream().mapToInt(Integer::intValue).sum();
         int point = random.nextInt(total);

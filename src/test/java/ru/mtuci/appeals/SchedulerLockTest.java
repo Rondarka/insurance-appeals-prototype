@@ -15,7 +15,7 @@ import static org.awaitility.Awaitility.await;
 /**
  * Несколько экземпляров подсистемы (решение 36): плановую доставку событий выполняет тот,
  * у кого блокировка. Пока её держит «другой экземпляр», этот событие не отправляет;
- * блокировку отпустили — событие уходит, обращение маршрутизируется.
+ * блокировку отпустили: событие уходит, обращение маршрутизируется.
  */
 class SchedulerLockTest extends IntegrationTest {
 
@@ -32,7 +32,7 @@ class SchedulerLockTest extends IntegrationTest {
 
     @Test
     void onlyTheInstanceHoldingTheLockDeliversEvents() {
-        // доставка уже работала — строка блокировки есть
+        // доставка уже работала: строка блокировки есть
         await().atMost(Duration.ofSeconds(10)).until(() ->
                 jdbc.sql("select count(*) from shedlock where name = :name").param("name", RELAY).query(Long.class).single() == 1);
         jdbc.sql("""

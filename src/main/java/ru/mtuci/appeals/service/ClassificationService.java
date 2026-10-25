@@ -27,7 +27,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Ручная классификация (решение 31): для типа обращения нет правила маршрутизации —
+ * Ручная классификация (решение 31): если для типа обращения нет правила маршрутизации,
  * отдел выбирает руководитель. Обращение уходит туда так же, как при автоматической
  * маршрутизации: с целевым сроком отдела и событием appeal.routed.
  */
@@ -66,7 +66,7 @@ public class ClassificationService {
             throw new AccessDeniedException("Направить обращение в отдел может руководитель");
         }
         Appeal appeal = appealRepository.findById(id).orElseThrow(() -> new AppealNotFoundException(id));
-        // уже направленное в чужой отдел обращение руководитель не видит — для него его нет
+        // уже направленное в чужой отдел обращение руководитель не видит: для него его нет
         access.checkView(user, appeal);
         if (appeal.getStatus() != AppealStatus.NEEDS_CLASSIFICATION) {
             throw new IllegalStateException("Обращение уже направлено в отдел");
@@ -74,7 +74,7 @@ public class ClassificationService {
         Department department = departmentRepository.findByCode(departmentCode)
                 .orElseThrow(() -> new IllegalArgumentException("Неизвестный отдел: " + departmentCode));
 
-        // срок отдела — как при передаче: самый короткий из правил этого отдела
+        // срок отдела берётся как при передаче: самый короткий из правил этого отдела
         int slaHours = routingRuleRepository.findFirstByDepartmentCodeOrderBySlaHoursAsc(department.getCode())
                 .map(rule -> rule.getSlaHours())
                 .orElse(DEFAULT_SLA_HOURS);

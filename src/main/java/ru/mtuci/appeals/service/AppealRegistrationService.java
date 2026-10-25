@@ -195,7 +195,7 @@ public class AppealRegistrationService {
                     now
             ));
         }
-        // сигналы ссылаются на обращение — оно должно уже быть в базе
+        // сигналы ссылаются на обращение: оно должно уже быть в базе
         appealRepository.flush();
         signals.record(appeal.getId(), appeal.getSubject() + "\n" + appeal.getDescription(), now);
         historyRepository.save(new AppealHistory(

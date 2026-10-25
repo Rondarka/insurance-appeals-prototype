@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Подсказки на правилах — работают всегда, без модели: и как основной режим, и как резервный,
+ * Подсказки на правилах работают всегда, без модели: и как основной режим, и как резервный,
  * когда модель недоступна. Правила объяснимы: у каждой подсказки есть цитата, на которой она держится.
  */
 @Component
@@ -43,7 +43,7 @@ public class RulesEngine implements AssistantEngine {
         if (PRETENSION.equals(appeal.subcategory()) || !DISPUTE_CATEGORIES.contains(appeal.category())) {
             return Optional.empty();
         }
-        // тема часто повторяет текст — цитаты берём из текста, тема последней
+        // тема часто повторяет текст: цитаты берём из текста, тема последней
         String text = appeal.description()
                 + (appeal.clientMessages().isEmpty() ? "" : "\n" + String.join("\n", appeal.clientMessages()))
                 + "\n" + appeal.subject();
@@ -64,7 +64,7 @@ public class RulesEngine implements AssistantEngine {
         if (!isExplicit && indirect < 2) {
             return Optional.empty();
         }
-        // по порядку текста; близкие признаки в одной строке — одна цитата, а не две половины фразы
+        // по порядку текста; близкие признаки в одной строке: одна цитата, а не две половины фразы
         found.sort(Comparator.comparingInt(position -> position[0]));
         List<int[]> merged = new ArrayList<>();
         for (int[] position : found) {

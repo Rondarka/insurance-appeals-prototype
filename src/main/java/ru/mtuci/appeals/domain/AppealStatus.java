@@ -9,7 +9,7 @@ import java.util.List;
  */
 public enum AppealStatus {
     PENDING_ROUTING("Ожидает маршрутизации"),
-    /** Правила маршрутизации для типа нет — отдел выбирает руководитель (решение 31). */
+    /** Правила маршрутизации для типа нет: отдел выбирает руководитель (решение 31). */
     NEEDS_CLASSIFICATION("Ручная классификация"),
     ROUTED("Назначено отделу"),
     IN_PROGRESS("В работе"),
@@ -32,9 +32,9 @@ public enum AppealStatus {
             case PENDING_ROUTING, NEEDS_CLASSIFICATION, CLOSED -> List.of();
             case ROUTED -> List.of(IN_PROGRESS);
             case IN_PROGRESS -> List.of(WAITING_CUSTOMER, RESOLVED);
-            // клиент не ответил, но вопрос решён без него — можно закрыть и так
+            // клиент не ответил, но вопрос решён без него: можно закрыть и так
             case WAITING_CUSTOMER -> List.of(IN_PROGRESS, RESOLVED);
-            // клиент не согласен с решением — обращение возвращается в работу
+            // клиент не согласен с решением: обращение возвращается в работу
             case RESOLVED -> List.of(CLOSED, IN_PROGRESS);
         };
     }

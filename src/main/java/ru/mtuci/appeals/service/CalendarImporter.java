@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 
 /**
  * Загружает утверждённый производственный календарь из файлов вида
- * production-calendar-2027.csv (формат — в docs/integration-contract.md). Раз в год
+ * production-calendar-2027.csv (формат: в docs/integration-contract.md). Раз в год
  * в каталог кладётся новый файл, при старте подсистема подхватывает его.
  */
 @Component

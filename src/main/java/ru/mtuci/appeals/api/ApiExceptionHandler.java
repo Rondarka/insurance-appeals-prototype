@@ -26,7 +26,7 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(new ErrorResponse(message, Instant.now()));
     }
 
-    /** Сбой внешней системы — не ошибка клиента: 503, а не 400. */
+    /** Сбой внешней системы не ошибка клиента: 503, а не 400. */
     @ExceptionHandler(ContractSourceUnavailableException.class)
     ResponseEntity<ErrorResponse> handleContractSourceUnavailable(ContractSourceUnavailableException exception) {
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
@@ -40,7 +40,7 @@ public class ApiExceptionHandler {
                 .body(new ErrorResponse("Проверка файлов временно недоступна, попробуйте позже", Instant.now()));
     }
 
-    /** И отсутствующее, и чужое обращение — 404: не раскрываем, что оно существует. */
+    /** И на отсутствующее, и на чужое обращение ответ 404: не раскрываем, что оно существует. */
     @ExceptionHandler(AppealNotFoundException.class)
     ResponseEntity<ErrorResponse> handleNotFound(AppealNotFoundException exception) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
@@ -60,7 +60,7 @@ public class ApiExceptionHandler {
                 .body(new ErrorResponse(exception.getMessage(), Instant.now()));
     }
 
-    /** Обращение изменили одновременно — сотрудник или планировщик эскалации. */
+    /** Обращение изменили одновременно: сотрудник или планировщик эскалации. */
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ResponseEntity<ErrorResponse> handleConcurrentChange(OptimisticLockingFailureException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

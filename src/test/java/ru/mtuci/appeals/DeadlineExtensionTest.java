@@ -40,7 +40,7 @@ class DeadlineExtensionTest extends IntegrationTest {
 
         AppealDetailResponse extended = extend(SUPPORT_SUPERVISOR, appeal, 10, AppealDetailResponse.class).getBody();
 
-        // новый срок — 10 рабочих дней от прежнего по производственному календарю
+        // новый срок: 10 рабочих дней от прежнего по производственному календарю
         LocalDate expected = calendar.addWorkingDays(before, 10);
         assertThat(extended.legalDeadline()).isEqualTo(expected);
         assertThat(extended.deadlineExtendedDays()).isEqualTo(10);
@@ -71,7 +71,7 @@ class DeadlineExtensionTest extends IntegrationTest {
     void extensionIsLimitedByLaw() {
         UUID appeal = routedLoginProblem();
 
-        // больше 10 рабочих дней нельзя, второй раз — тоже
+        // больше 10 рабочих дней нельзя, второй раз тоже нельзя
         ResponseEntity<ErrorResponse> tooLong = extend(SUPPORT_SUPERVISOR, appeal, 11, ErrorResponse.class);
         assertThat(tooLong.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(tooLong.getBody().message()).contains("1–10");
@@ -84,7 +84,7 @@ class DeadlineExtensionTest extends IntegrationTest {
 
     @Test
     void normWithoutExtensionCannotBeExtended() {
-        // страховой случай по КАСКО — срок по правилам страхования, продление не предусмотрено
+        // страховой случай по КАСКО: срок по правилам страхования, продление не предусмотрено
         UUID claim = createAppeal(cascoClaim()).id();
         awaitRouted(claim);
 

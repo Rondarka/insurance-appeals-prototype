@@ -5,7 +5,7 @@ import ru.mtuci.appeals.domain.AppealOutcome;
 import java.util.List;
 import java.util.Map;
 
-/** Тексты демонстрационных обращений: темы, описания, ответы. {object}, {place}, {date}, {amount} — подстановки. */
+/** Тексты демонстрационных обращений: темы, описания, ответы с подстановками {object}, {place}, {date}, {amount}. */
 final class DemoTexts {
 
     private DemoTexts() {

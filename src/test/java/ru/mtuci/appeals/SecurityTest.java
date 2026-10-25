@@ -50,7 +50,7 @@ class SecurityTest extends IntegrationTest {
         AppealDetailResponse created = as(PETR).postForEntity("/api/appeals", petrClaim(),
                 AppealDetailResponse.class).getBody();
 
-        // имя — из токена: таблицы клиентов в подсистеме нет
+        // имя берётся из токена: таблицы клиентов в подсистеме нет
         assertThat(created.customerName()).isEqualTo("Пётр Иванов");
         assertThat(as(PETR).getForObject("/api/appeals", AppealSummaryResponse[].class))
                 .extracting(AppealSummaryResponse::id).contains(created.id());
@@ -81,7 +81,7 @@ class SecurityTest extends IntegrationTest {
 
         assertThat(bySupport.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(byClaims.getStatusCode()).isEqualTo(HttpStatus.OK);
-        // исполнитель — из токена, а не из тела запроса
+        // исполнитель: из токена, а не из тела запроса
         assertThat(byClaims.getBody().assignedEmployee()).isEqualTo("Сергей Лебедев");
     }
 

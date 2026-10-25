@@ -1,5 +1,5 @@
-// Аналитика обращений (решение 23): показатели по итоговому типу обращения, у каждого — какое
-// решение он поддерживает. Графики — SVG и CSS без библиотек; под каждым графиком те же числа таблицей.
+// Аналитика обращений (решение 23): показатели по итоговому типу обращения, у каждого подписано, какое
+// решение он поддерживает. Графики на SVG и CSS без библиотек; под каждым графиком те же числа таблицей.
 
 const an = {days: 180, product: "", data: null, products: [], loaded: false};
 
@@ -30,7 +30,7 @@ async function loadAnalytics() {
         an.loaded = true;
     }
     const body = $("#analytics-body");
-    // при обновлении прежние графики остаются, только бледнеют — без мигания и скачков
+    // при обновлении прежние графики остаются, только бледнеют: без мигания и скачков
     body.classList.add("loading");
     try {
         const query = new URLSearchParams({days: an.days});
@@ -163,7 +163,7 @@ function renderTypes(types, selected) {
 }
 
 /**
- * Горизонтальные полосы от общей базовой линии. Подпись и значение — строкой над полосой,
+ * Горизонтальные полосы от общей базовой линии. Подпись и значение: строкой над полосой,
  * чтобы у всех полос была одна ширина дорожки и длины сравнивались честно.
  */
 function bars(rows, max, note = () => "") {
@@ -193,8 +193,8 @@ function niceStep(max, ticks = 4) {
 
 /**
  * Линия на каждый вид страхования. Пять линий на одном графике сливаются, поэтому при всех
- * продуктах — отдельный малый график на каждый, с общей шкалой: высоты сравнимы между ними.
- * Текущая неделя ещё не закончилась — на графике её нет, иначе в конце ложный спад.
+ * продуктах у каждого отдельный малый график с общей шкалой: высоты сравнимы между ними.
+ * Текущая неделя ещё не закончилась: на графике её нет, иначе в конце ложный спад.
  */
 function renderWeekly() {
     const {weeks, weekly, to} = an.data;
@@ -303,7 +303,7 @@ function lineChart(container, weeks, series, peak, height, compact) {
 
 /**
  * Доля решённых позже срока по закону. На шкале «в срок» 0–100 % отделы с 91 и 97 % выглядят
- * одинаково — разница видна только в доле нарушений. Тревогу несут плитки и отметки «просрочено», не цвет полос.
+ * одинаково: разница видна только в доле нарушений. Тревогу несут плитки и отметки «просрочено», не цвет полос.
  */
 function renderDepartments(departments) {
     const violation = item => item.onTime.of ? Math.round((item.onTime.of - item.onTime.count) * 1000 / item.onTime.of) / 10 : null;
@@ -316,7 +316,7 @@ function renderDepartments(departments) {
             text: share == null ? "нет решённых" : late ? `${share.toLocaleString("ru-RU")} % · ${late} из ${item.onTime.of}` : "нарушений нет"
         };
     });
-    // шкала — до ближайших 5 %, а не до худшего отдела: иначе 9 % выглядит как полная полоса
+    // шкала до ближайших 5 %, а не до худшего отдела: иначе 9 % выглядит как полная полоса
     const scale = Math.max(5, Math.ceil(Math.max(...rows.map(row => row.value), 0) / 5) * 5);
     $("#departments-scale").textContent = `Шкала полос: от 0 до ${scale} % решённых позже срока.`;
     $("#analytics-departments").innerHTML = rows.length
@@ -385,7 +385,7 @@ tip.setAttribute("role", "status");
 tip.hidden = true;
 document.body.append(tip);
 
-/** Значение — крупно, подпись — следом; подписи вставляются как текст, не как разметка. */
+/** Значение крупно, подпись следом; подписи вставляются как текст, не как разметка. */
 function showTip(title, rows, anchor) {
     tip.replaceChildren();
     const head = document.createElement("div");
@@ -415,7 +415,7 @@ function hideTip() {
     tip.hidden = true;
 }
 
-// у полос подсказка — у каждой своя: сама полоса и есть цель наведения
+// у каждой полосы своя подсказка: сама полоса и есть цель наведения
 document.querySelector("#analytics-view").addEventListener("pointermove", event => {
     const mark = event.target.closest("[data-tip]");
     if (!mark) return;

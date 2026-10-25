@@ -1,13 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Учётная система договоров — интерфейс для подсистемы обработки обращений
+  title: Учётная система договоров: интерфейс для подсистемы обработки обращений
   version: 1.0.0
   description: |
     Что подсистема обработки обращений запрашивает у учётной системы договоров
-    страховой организации. Спецификацию реализует страховая — напрямую или тонким
+    страховой организации. Спецификацию реализует страховая: напрямую или тонким
     адаптером над своей учётной системой. В стенде её реализует заглушка WireMock.
 
-    Смысл полей и правила обработки ошибок — в docs/integration-contract.md.
+    Смысл полей и правила обработки ошибок описаны в docs/integration-contract.md.
 servers:
   - url: http://contracts-stub:8080
     description: заглушка учётной системы в стенде (docker compose)
@@ -21,7 +21,7 @@ paths:
       description: |
         Все договоры, где контрагент участвует в любой роли (страхователь, застрахованное
         лицо, выгодоприобретатель), включая истёкшие и прекращённые. Вызывается, когда
-        клиент открывает раздел обращений, — в интерактивном пути, поэтому подсистема
+        клиент открывает раздел обращений, в интерактивном пути, поэтому подсистема
         ждёт ответа не дольше 3 секунд.
       parameters:
         - $ref: '#/components/parameters/CounterpartyId'
@@ -111,7 +111,7 @@ components:
       name: counterpartyId
       in: path
       required: true
-      description: Идентификатор контрагента — тот же, что в поле counterparty_id токена клиента
+      description: Идентификатор контрагента: тот же, что в поле counterparty_id токена клиента
       schema: { type: string, format: uuid }
   responses:
     NotFound:
@@ -170,7 +170,7 @@ components:
           $ref: '#/components/schemas/ContractStatus'
         insuredSum:
           type: number
-          description: Страховая сумма, рубли. Для ОСАГО — лимит возмещения по имуществу
+          description: Страховая сумма, рубли. Для ОСАГО это лимит возмещения по имуществу
         deductible:
           type: number
           nullable: true
@@ -227,7 +227,7 @@ components:
         code:
           type: string
           enum: [CASCO, OSAGO, MORTGAGE, PROPERTY, LIFE]
-          description: Код продукта — разрез аналитики по продуктам
+          description: Код продукта: разрез аналитики по продуктам
         name:
           type: string
           description: Название для показа клиенту
@@ -235,7 +235,7 @@ components:
       type: string
       enum: [NOT_STARTED, ACTIVE, EXPIRED, TERMINATED]
       description: |
-        Состояние договора на сегодняшний день — для показа. Покрытие на дату события
+        Состояние договора на сегодняшний день: для показа. Покрытие на дату события
         определяется по датам, а не по статусу.
     Error:
       type: object

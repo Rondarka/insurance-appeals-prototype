@@ -33,7 +33,7 @@ import ru.mtuci.appeals.service.SettingsService;
 import java.util.List;
 import java.util.UUID;
 
-/** Настройки подсистемы — только администратору (решение 34). Доступ закрыт в SecurityConfig. */
+/** Настройки подсистемы: только администратору (решение 34). Доступ закрыт в SecurityConfig. */
 @RestController
 @RequestMapping("/api/admin")
 public class AdminController {
@@ -118,7 +118,7 @@ public class AdminController {
         return assistant.status();
     }
 
-    /** Показатели обращений за период (решение 23); product — вид страхования, пусто — все. */
+    /** Показатели обращений за период (решение 23); product: вид страхования, пусто означает все. */
     @GetMapping("/analytics")
     AnalyticsResponse analytics(@RequestParam(defaultValue = "180") int days,
                                 @RequestParam(required = false) String product) {

@@ -23,7 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class AssignmentTest extends IntegrationTest {
 
-    /** Сотрудники открыли рабочее место — подсистема знает их по токенам. */
+    /** Сотрудники открыли рабочее место: подсистема знает их по токенам. */
     @BeforeEach
     void staffLoggedIn() {
         for (var user : new TestIdentityProvider.TestUser[]{CLAIMS_SPECIALIST, CLAIMS_SUPERVISOR, SUPPORT_SPECIALIST}) {
@@ -77,12 +77,12 @@ class AssignmentTest extends IntegrationTest {
         UUID appeal = routedClaim();
         assertThat(summaryOf(CLAIMS_SPECIALIST, appeal).clientReplied()).isFalse();
 
-        // клиент дописал — ход за сотрудником
+        // клиент дописал: ход за сотрудником
         as(ANNA).postForObject("/api/appeals/{id}/messages", new AddMessageRequest("Прикладываю фото повреждений"),
                 AppealDetailResponse.class, appeal);
         assertThat(summaryOf(CLAIMS_SPECIALIST, appeal).clientReplied()).isTrue();
 
-        // сотрудник ответил — отметка снимается
+        // сотрудник ответил: отметка снимается
         as(CLAIMS_SPECIALIST).postForObject("/api/appeals/{id}/messages", new AddMessageRequest("Спасибо, фото получили"),
                 AppealDetailResponse.class, appeal);
         assertThat(summaryOf(CLAIMS_SPECIALIST, appeal).clientReplied()).isFalse();

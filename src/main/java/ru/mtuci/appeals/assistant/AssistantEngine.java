@@ -7,7 +7,7 @@ import java.util.Optional;
 
 /**
  * Точка подключения помощника сотрудника (решение 35): один контракт и для правил, и для
- * локальной модели. Какой движок работает — настройка администратора; модель недоступна —
+ * локальной модели. Какой движок работает, настраивает администратор; если модель недоступна,
  * отвечают правила. Подсказка только советует, решает сотрудник.
  */
 public interface AssistantEngine {
@@ -22,7 +22,7 @@ public interface AssistantEngine {
     Optional<TypeGuess> guessType(AppealText appeal);
 
     /**
-     * Черновик ответа по существу. Основа — шаблон, уже заполненный данными обращения и
+     * Черновик ответа по существу. Основа: шаблон, уже заполненный данными обращения и
      * договора; правила возвращают его как есть, модель дописывает по тексту обращения.
      */
     String draft(DraftInput input);
@@ -40,7 +40,7 @@ public interface AssistantEngine {
     record TypeGuess(String category, String subcategory, List<String> reasons) {
     }
 
-    /** filledTemplate — шаблон с данными; similarAnswers — как отвечали на похожие, имена клиентов скрыты. */
+    /** filledTemplate: шаблон с данными; similarAnswers: как отвечали на похожие, имена клиентов скрыты. */
     record DraftInput(AppealText appeal, AppealOutcome outcome, String filledTemplate, List<String> similarAnswers) {
     }
 }

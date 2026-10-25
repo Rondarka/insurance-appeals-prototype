@@ -12,7 +12,7 @@ import java.util.List;
 @Repository
 public class FormSchemaRepository {
 
-    /** Одна строка — одно поле типа обращения; у типа без полей поля пустые. */
+    /** Одна строка: одно поле типа обращения; у типа без полей поля пустые. */
     public record Row(
             String categoryCode,
             String categoryLabel,
@@ -58,7 +58,7 @@ public class FormSchemaRepository {
                 .list();
     }
 
-    /** productCode == null — все типы, иначе только допустимые для продукта договора. */
+    /** productCode == null: все типы, иначе только допустимые для продукта договора. */
     public List<Row> rows(String productCode) {
         return jdbc.sql("""
                         select c.code as category_code, c.label as category_label,

@@ -6,7 +6,7 @@ const GROUPS = [
     {key: "work", label: "В работе", statuses: ["IN_PROGRESS"]},
     {key: "waiting", label: "Ждут клиента", statuses: ["WAITING_CUSTOMER"]},
     {key: "done", label: "Решённые", statuses: ["RESOLVED", "CLOSED"]},
-    // правила маршрутизации нет — отдел выбирает руководитель (решение 31)
+    // правила маршрутизации нет: отдел выбирает руководитель (решение 31)
     {key: "classify", label: "Классификация", statuses: ["NEEDS_CLASSIFICATION"], supervisorOnly: true}
 ];
 
@@ -21,13 +21,13 @@ const ws = {
 const $ = selector => document.querySelector(selector);
 const isSupervisor = () => hasRole("SUPERVISOR");
 const isOpen = appeal => !["RESOLVED", "CLOSED"].includes(appeal.status);
-/** «Моё» — по идентификатору в IdP, а не по имени (решение 32). */
+/** «Моё»: по идентификатору в IdP, а не по имени (решение 32). */
 const isMine = appeal => appeal.assignedSubject === session.me.subject;
 
 startPage("/workspace.html", async () => {
     ws.departments = await api("/api/departments");
     ws.staff = await api("/api/staff").catch(() => []);
-    // специалисту — свои и новые, руководителю — весь отдел
+    // специалист видит свои и новые, руководитель видит весь отдел
     ws.scope = isSupervisor() ? "all" : "mine";
     document.querySelector('[data-tab="transfers"]').hidden = !isSupervisor();
     await loadQueue();
@@ -84,7 +84,7 @@ function attentionTasks() {
 /**
  * Счётчик дел в заголовке вкладки браузера и на вкладке «Сводка»: сотрудник видит, что
  * появилось новое, даже когда работает в другой программе. О новом обращении и ответе
- * клиента подсказывает всплывающее сообщение; previous — очередь до обновления.
+ * клиента подсказывает всплывающее сообщение; previous: очередь до обновления.
  */
 function announce(previous) {
     const count = attentionTasks().length;
@@ -102,14 +102,14 @@ function announce(previous) {
     }
 }
 
-/** Отпечаток обращения: изменился статус, переписка или история — значит, есть что показать. */
+/** Отпечаток обращения: если изменился статус, переписка или история, есть что показать. */
 const cardSignature = appeal => `${appeal.status}|${appeal.updatedAt}|${appeal.messages.length}|${appeal.history.length}|${appeal.attachments.length}`;
 
 function groupOf(status) {
     return GROUPS.find(group => group.statuses.includes(status));
 }
 
-/** Что видно в очереди: «Мои» — назначенные мне и новые без исполнителя; поиск — по номеру, теме, клиенту. */
+/** Что видно в очереди. «Мои»: назначенные мне и новые без исполнителя; поиск по номеру, теме, клиенту. */
 function visibleAppeals() {
     const text = ws.search.trim().toLowerCase();
     return ws.appeals
@@ -135,8 +135,8 @@ function renderQueue() {
     }).join("");
 
     const group = GROUPS.find(item => item.key === ws.group);
-    // сверху то, что сгорит первым: сначала эскалации по сроку закона; решённые — свежие сверху
-    // затем — где клиент грозит жалобой в Банк России, судом или финансовым уполномоченным
+    // сверху то, что сгорит первым: сначала эскалации по сроку закона; решённые идут свежими сверху
+    // затем: где клиент грозит жалобой в Банк России, судом или финансовым уполномоченным
     const urgency = appeal => ({BREACHED: 0, AT_RISK: 1}[appeal.escalationLevel] ?? (riskSignal(appeal) ? 2 : 3));
     const items = visible
         .filter(appeal => group.statuses.includes(appeal.status))
@@ -168,7 +168,7 @@ $("#queue-search").addEventListener("input", event => {
     renderQueue();
 });
 
-/** Перейти в очередь к нужной группе — из сводки. */
+/** Перейти в очередь к нужной группе: из сводки. */
 async function jumpToQueue(group, scope, appealId) {
     ws.group = group;
     if (scope) ws.scope = scope;
@@ -181,7 +181,7 @@ async function jumpToQueue(group, scope, appealId) {
 
 // ---------- сводка «Мой день» ----------
 
-/** Почему обращение требует внимания сейчас — по убыванию срочности. */
+/** Почему обращение требует внимания сейчас: по убыванию срочности. */
 function attentionReason(appeal) {
     if (appeal.status === "NEEDS_CLASSIFICATION") return {rank: 0, tone: "late", text: "нужно выбрать отдел"};
     if (appeal.escalationLevel === "BREACHED" || isLegallyOverdue(appeal)) return {rank: 1, tone: "late", text: "нарушен срок по закону"};
@@ -250,7 +250,7 @@ function renderSummary() {
         </div>`;
 }
 
-/** Руководителю — кто чем занят и что ждёт его решения. */
+/** Руководителю: кто чем занят и что ждёт его решения. */
 function renderDepartmentLoad(open) {
     const rows = new Map();
     ws.staff.forEach(member => rows.set(member.id, {name: member.fullName, items: []}));
@@ -284,7 +284,7 @@ function renderDepartmentLoad(open) {
         </section>`;
 }
 
-/** Специалисту — его обращения. */
+/** Специалисту: его обращения. */
 function renderMyStats() {
     const mine = ws.appeals.filter(isMine);
     const stat = (label, value) => `<li><span>${label}</span><strong>${value}</strong></li>`;
@@ -352,7 +352,7 @@ function finalTypeOptions(appeal) {
     return session.schema.categories.map(category => `<optgroup label="${escapeHtml(category.label)}">${category.types
         .map(type => {
             const value = `${category.code}/${type.code}`;
-            // сотрудник принял подсказку «похоже на претензию» — итоговый тип уже выбран
+            // сотрудник принял подсказку «похоже на претензию»: итоговый тип уже выбран
             const chosen = ws.finalTypeHint[appeal.id] || acceptedHintType(appeal) || `${appeal.category}/${appeal.subcategory}`;
             const selected = value === chosen ? " selected" : "";
             return `<option value="${value}"${selected}>${escapeHtml(type.label)}</option>`;
@@ -373,7 +373,7 @@ function actionLabel(target, current) {
 function renderCard(appeal) {
     const canWork = appeal.department?.code === session.me.department?.code;
     const pending = appeal.transfers.find(item => item.status === "PENDING");
-    // «ждём клиента» — не отдельная кнопка, а способ отправить ответ
+    // «ждём клиента»: не отдельная кнопка, а способ отправить ответ
     const steps = appeal.nextStatuses.filter(status => status !== "WAITING_CUSTOMER");
     const canTransfer = canWork && !pending && ["ROUTED", "IN_PROGRESS", "WAITING_CUSTOMER"].includes(appeal.status);
 
@@ -503,7 +503,7 @@ $("#card").addEventListener("toggle", event => {
     }
 }, true);
 
-/** Продлить срок по закону может руководитель отдела — один раз и пока срок не истёк. */
+/** Продлить срок по закону может руководитель отдела: один раз и пока срок не истёк. */
 const canExtend = appeal => appeal.norm?.maxExtensionDays > 0 && !appeal.deadlineExtendedDays
     && !["RESOLVED", "CLOSED"].includes(appeal.status) && !isLegallyOverdue(appeal);
 
@@ -637,7 +637,7 @@ $("#card").addEventListener("submit", async event => {
             });
             showToast(`Направлено в отдел «${result.departmentName}»`);
             if (result.departmentCode !== session.me.department?.code) {
-                // обращение ушло в чужой отдел — в своей очереди его больше нет
+                // обращение ушло в чужой отдел: в своей очереди его больше нет
                 ws.openedId = null;
                 $("#card").innerHTML = emptyState("Обращение не выбрано", "Выберите обращение в списке слева");
                 await loadQueue();
@@ -673,7 +673,7 @@ async function afterContractLinked(id) {
 async function refreshOpened() {
     await loadQueue();
     const opened = ws.appeals.find(appeal => appeal.id === ws.openedId);
-    // обращение ушло в другую группу — переключаемся вслед за ним
+    // обращение ушло в другую группу: переключаемся вслед за ним
     if (opened) ws.group = groupOf(opened.status).key;
     await openCard(ws.openedId);
 }
@@ -747,7 +747,7 @@ function renderAssistant(appeal, box = $(`#assistant-${appeal.id}`)) {
         : `<p class="muted small-text">Помощник: сигналов в тексте клиента нет, похожих решённых обращений пока нет.</p>`;
 }
 
-/** Подсказку о типе приняли раньше, в другой сессии, — тип берётся из сохранённого решения. */
+/** Подсказку о типе приняли раньше, в другой сессии: тип берётся из сохранённого решения. */
 function acceptedHintType(appeal) {
     const advice = ws.advice?.id === appeal.id ? ws.advice.data : null;
     return advice?.typeHint && advice.decisions.TYPE_HINT === "ACCEPTED"
@@ -759,7 +759,7 @@ async function assistantFeedback(kind, decision) {
     ws.advice.data.decisions[kind] = decision;
 }
 
-/** Действия помощника меняют только свой блок — написанный ответ в форме не теряется. */
+/** Действия помощника меняют только свой блок: написанный ответ в форме не теряется. */
 async function assistantClick(button) {
     const appeal = await api(`/api/appeals/${ws.openedId}`);
     const action = button.dataset.assistant;
@@ -830,7 +830,7 @@ const cal = {month: null, scope: null};
 const isoDay = date => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 const addDays = (date, days) => new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 
-/** Последний день срока: по закону, а у старых обращений без норматива — срок отдела. */
+/** Последний день срока: по закону, а у старых обращений без норматива берётся срок отдела. */
 function dueDay(appeal) {
     if (appeal.legalDeadline) return appeal.legalDeadline;
     return appeal.deadlineAt ? isoDay(new Date(appeal.deadlineAt)) : null;
@@ -844,7 +844,7 @@ function dueTone(day, today) {
 async function loadCalendar() {
     const now = new Date();
     if (!cal.month) cal.month = new Date(now.getFullYear(), now.getMonth(), 1);
-    // специалисту — свои обращения, руководителю — весь отдел
+    // специалист видит свои обращения, руководитель видит весь отдел
     if (!cal.scope) cal.scope = isSupervisor() ? "department" : "mine";
     document.querySelectorAll("[data-scope]").forEach(item => item.classList.toggle("active", item.dataset.scope === cal.scope));
     $("#calendar-title").textContent = `${MONTHS[cal.month.getMonth()]} ${cal.month.getFullYear()}`;
@@ -969,7 +969,7 @@ $("#transfers").addEventListener("submit", async event => {
     }
 });
 
-/** Обновление в фоне — не трогая начатый ответ. */
+/** Обновление в фоне: не трогая начатый ответ. */
 /**
  * Обновление в фоне. Перерисовывает только изменившееся: иначе раз в 10 секунд пропадали бы
  * раскрытые условия договора, а клик в момент перерисовки терялся.

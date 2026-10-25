@@ -15,7 +15,7 @@ public interface AppealMessageRepository extends JpaRepository<AppealMessage, Lo
 
     List<AppealMessage> findByAppealIdOrderByCreatedAtAsc(UUID appealId);
 
-    /** Из этих обращений — те, где последнее сообщение написал автор указанного типа. */
+    /** Из этих обращений: те, где последнее сообщение написал автор указанного типа. */
     @Query("""
             select m.appeal.id from AppealMessage m
             where m.appeal.id in :appeals

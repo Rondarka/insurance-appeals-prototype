@@ -32,9 +32,9 @@ import java.util.Map;
 
 /**
  * Обращения как источник сведений о продуктах и процессах (решение 23). Все показатели
- * строятся по представлению appeal_facts — одна строка на обращение — и по итоговому типу,
+ * строятся по представлению appeal_facts (одна строка на обращение) и по итоговому типу,
  * который сотрудник подтверждает при ответе. Каждый показатель поддерживает конкретное
- * решение руководителя; какое — подсказано в интерфейсе рядом с ним.
+ * решение руководителя; какое именно, подсказывает интерфейс рядом с показателем.
  *
  * Период выравнивается на понедельник, чтобы первая неделя в динамике была полной.
  */
@@ -119,7 +119,7 @@ public class AnalyticsService {
                 .single();
     }
 
-    /** Доли продуктов — от всех обращений периода: откуда приходит нагрузка, а не какой продукт хуже. */
+    /** Доли продуктов от всех обращений периода: откуда приходит нагрузка, а не какой продукт хуже. */
     private List<ShareItem> products(Filter filter) {
         List<Object[]> rows = jdbc.sql("""
                         select f.product, p.label, count(*) as n
@@ -152,7 +152,7 @@ public class AnalyticsService {
         return shares(rows);
     }
 
-    /** Поступление по неделям — линия на каждый продукт; пустые недели — нули, а не пропуски. */
+    /** Поступление по неделям, линия на каждый продукт; пустые недели дают нули, а не пропуски. */
     private List<WeekSeries> weekly(Filter filter, List<LocalDate> weeks) {
         Map<String, WeekSeries> series = new LinkedHashMap<>();
         Map<LocalDate, Integer> index = new HashMap<>();
@@ -180,7 +180,7 @@ public class AnalyticsService {
         return List.copyOf(series.values());
     }
 
-    /** Доля решённых в срок по закону — по подразделениям: где не справляются. */
+    /** Доля решённых в срок по закону по подразделениям: где не справляются. */
     private List<DepartmentOnTime> departments(Filter filter) {
         return jdbc.sql("""
                         select d.code, d.name,
@@ -200,7 +200,7 @@ public class AnalyticsService {
                 .list();
     }
 
-    /** Одобренные передачи «откуда → куда»: устойчивый поток — признак ошибочного правила маршрутизации. */
+    /** Одобренные передачи «откуда → куда»; устойчивый поток говорит об ошибочном правиле маршрутизации. */
     private List<TransferFlow> transfers(Filter filter) {
         return jdbc.sql("""
                         select s.name as source, t.name as target, count(*) as n

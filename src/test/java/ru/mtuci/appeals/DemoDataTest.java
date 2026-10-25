@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Генератор демонстрационных данных (решение 33): обращения согласованы так же, как
- * настоящие, — договор, норматив, срок, итог у решённых, даты не из будущего.
+ * настоящие: договор, норматив, срок, итог у решённых, даты не из будущего.
  */
 class DemoDataTest extends IntegrationTest {
 
@@ -36,16 +36,16 @@ class DemoDataTest extends IntegrationTest {
 
         assertThat(created).isEqualTo(40);
         assertThat(count("select count(*) from appeal where demo")).isEqualTo(40);
-        // у каждого — договор, норматив, срок по закону, отдел и история
+        // у каждого: договор, норматив, срок по закону, отдел и история
         assertThat(count("select count(*) from appeal where demo and (contract_id is null or norm_id is null or legal_deadline is null)")).isZero();
         assertThat(count("select count(*) from appeal a where demo and not exists (select 1 from appeal_history h where h.appeal_id = a.id)")).isZero();
-        // решённые — с итогом, датой и ответом сотрудника; ничего из будущего
+        // решённые: с итогом, датой и ответом сотрудника; ничего из будущего
         assertThat(count("select count(*) from appeal where demo and status in ('RESOLVED', 'CLOSED') and (outcome is null or resolved_at is null)")).isZero();
         assertThat(count("""
                 select count(*) from appeal a where demo and status in ('RESOLVED', 'CLOSED')
                   and not exists (select 1 from appeal_message m where m.appeal_id = a.id and m.author_type = 'EMPLOYEE')""")).isZero();
         assertThat(count("select count(*) from appeal where demo and (created_at > now() or updated_at > now() or resolved_at > now() or resolved_at < created_at)")).isZero();
-        // есть и закрытые, и открытые обращения — очередь не пустая
+        // есть и закрытые, и открытые обращения: очередь не пустая
         List<String> statuses = jdbc.sql("select distinct status from appeal where demo").query(String.class).list();
         assertThat(statuses).contains("RESOLVED").containsAnyOf("ROUTED", "IN_PROGRESS", "WAITING_CUSTOMER");
     }

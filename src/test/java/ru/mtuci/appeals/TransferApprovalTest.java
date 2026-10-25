@@ -57,7 +57,7 @@ class TransferApprovalTest extends IntegrationTest {
         UUID appeal = routedToSupport();
         TransferRequestResponse transfer = requestTransferToClaims(appeal);
 
-        // специалист принимающего отдела — не руководитель
+        // специалист принимающего отдела: не руководитель
         ResponseEntity<ErrorResponse> bySpecialist = review(transfer.id(), CLAIMS_SPECIALIST, true,
                 ErrorResponse.class);
         // руководитель, но исходного отдела, а не принимающего
@@ -77,7 +77,7 @@ class TransferApprovalTest extends IntegrationTest {
         TransferRequestResponse reviewed = review(transfer.id(), CLAIMS_SUPERVISOR, true,
                 TransferRequestResponse.class).getBody();
 
-        // кто действовал — из токена: идентификатор IdP и имя на момент действия, справочника нет
+        // кто действовал, берётся из токена: идентификатор IdP и имя на момент действия, справочника нет
         assertThat(reviewed.requestedBy().id()).isEqualTo(SUPPORT_SPECIALIST.subject());
         assertThat(reviewed.requestedBy().fullName()).isEqualTo(SUPPORT_SPECIALIST.name());
         assertThat(reviewed.reviewedBy().fullName()).isEqualTo(CLAIMS_SUPERVISOR.name());

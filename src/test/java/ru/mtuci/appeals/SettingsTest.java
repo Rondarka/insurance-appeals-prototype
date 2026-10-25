@@ -32,7 +32,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Настройки администратора (решение 34): правила маршрутизации и нормативы меняются без
  * программиста, но срок отдела не может быть длиннее срока по закону, и каждое изменение
- * попадает в журнал. Меняется правило отдельного типа — после теста оно удаляется.
+ * попадает в журнал. Меняется правило отдельного типа: после теста оно удаляется.
  */
 class SettingsTest extends IntegrationTest {
 
@@ -53,7 +53,7 @@ class SettingsTest extends IntegrationTest {
     void rulesShowLimitsSetByLaw() {
         RoutingSettingsResponse settings = as(ADMIN).getForObject("/api/admin/routing-rules", RoutingSettingsResponse.class);
 
-        // общий срок ответа — 15 раб. дн., претензия — тоже 15; страховые случаи — 20 дней; минус 2 дня запаса
+        // общий срок ответа 15 раб. дн., у претензии тоже 15, у страховых случаев 20 дней; минус 2 дня запаса
         assertThat(rule(settings, "TECHNICAL", "GENERAL").maxSlaHours()).isEqualTo(13 * 24);
         assertThat(rule(settings, "COMPLAINT", "GENERAL").maxSlaHours()).isEqualTo(13 * 24);
         assertThat(rule(settings, "CLAIM", "GENERAL").maxSlaHours()).isEqualTo(18 * 24);
@@ -62,7 +62,7 @@ class SettingsTest extends IntegrationTest {
 
     @Test
     void adminChangesRuleWithinLawAndChangeIsAudited() {
-        put(new SaveRoutingRuleRequest("TECHNICAL", UPLOAD, "SUPPORT", AppealPriority.HIGH, 24, "Файлы — частая причина жалоб"),
+        put(new SaveRoutingRuleRequest("TECHNICAL", UPLOAD, "SUPPORT", AppealPriority.HIGH, 24, "Файлы: частая причина жалоб"),
                 RoutingSettingsResponse.class);
         put(new SaveRoutingRuleRequest("TECHNICAL", UPLOAD, "SUPPORT", AppealPriority.HIGH, 36, "Уточнили норматив отдела"),
                 RoutingSettingsResponse.class);
@@ -93,7 +93,7 @@ class SettingsTest extends IntegrationTest {
 
     @Test
     void ruleSavedBeforeLawCannotOutliveLegalDeadline() {
-        // правило, заведённое до проверки, — срок отдела всё равно не позже срока по закону
+        // у правила, заведённого до проверки, срок отдела всё равно не позже срока по закону
         long departmentId = jdbc.sql("select id from department where code = 'SUPPORT'").query(Long.class).single();
         jdbc.sql("insert into routing_rule (category, subcategory, department_id, priority, sla_hours) "
                         + "values ('TECHNICAL', :type, :department, 'NORMAL', 2000)")
@@ -122,7 +122,7 @@ class SettingsTest extends IntegrationTest {
         LocalDate from = today.plusDays(30);
         NormVersionResponse[] norms = as(ADMIN).postForObject("/api/admin/norms", norm(from), NormVersionResponse[].class);
 
-        // прежняя версия действует до дня перед новой, новая — со ссылкой на акт
+        // прежняя версия действует до дня перед новой, новая идёт со ссылкой на акт
         NormVersionResponse previous = Arrays.stream(norms)
                 .filter(item -> item.code().equals("GENERAL") && item.validTo() != null).findFirst().orElseThrow();
         NormVersionResponse next = Arrays.stream(norms)

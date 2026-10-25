@@ -27,11 +27,11 @@ public class DirectoryService {
         this.departmentRepository = departmentRepository;
     }
 
-    /** Профиль по токену: клиенту — его договоры, сотруднику — его подразделение. */
+    /** Профиль по токену с договорами клиента или подразделением сотрудника. */
     public MeResponse me(CurrentUser user) {
-        // рабочее место открывается с /api/me — тут сотрудник и попадает в список своего отдела
+        // рабочее место открывается с /api/me: тут сотрудник и попадает в список своего отдела
         staffService.remember(user);
-        // учётная система лежит — кабинет всё равно открывается, обращение подаётся по виду страхования
+        // учётная система лежит: кабинет всё равно открывается, обращение подаётся по виду страхования
         List<ContractResponse> contracts = List.of();
         boolean contractsUnavailable = false;
         if (user.isClient()) {
@@ -55,7 +55,7 @@ public class DirectoryService {
         );
     }
 
-    /** Договоры клиента из учётной системы — по сети, поэтому без транзакции базы. */
+    /** Договоры клиента из учётной системы: по сети, поэтому без транзакции базы. */
     public List<ContractResponse> contractsOf(UUID counterpartyId) {
         return contractsClient.clientContracts(counterpartyId).stream()
                 .map(contract -> contract.toSnapshot(counterpartyId))

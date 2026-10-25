@@ -3,7 +3,7 @@
 // клиенту статусы называются по-своему: «нужен ваш ответ», а не «ждём клиента»
 const CLIENT_STATUS = {
     PENDING_ROUTING: "Регистрируется",
-    // отдел выбирает руководитель — для клиента обращение всё ещё регистрируется
+    // отдел выбирает руководитель: для клиента обращение всё ещё регистрируется
     NEEDS_CLASSIFICATION: "Регистрируется",
     ROUTED: "Принято",
     IN_PROGRESS: "В работе",
@@ -54,7 +54,7 @@ function renderContracts() {
 }
 
 /**
- * Учётная система договоров не ответила — клиенту не отказываем: он выбирает вид страхования,
+ * Учётная система договоров не ответила, но клиенту не отказываем: он выбирает вид страхования,
  * а договор подсистема подберёт сама, когда система заработает (решение 29).
  */
 async function renderProducts() {
@@ -86,7 +86,7 @@ async function selectContract(id) {
     const contract = session.me.contracts.find(item => item.id === id);
     if (!contract) return;
     draft.contractId = id;
-    // вид — на случай, если учётная система откажет в момент отправки
+    // вид: на случай, если учётная система откажет в момент отправки
     draft.productCode = contract.productCode;
     document.querySelectorAll("[data-contract]").forEach(item =>
         item.classList.toggle("selected", item.dataset.contract === id));
@@ -109,7 +109,7 @@ function selectCategory(code) {
 function selectType(code) {
     draft.type = code;
     document.querySelectorAll("[data-type]").forEach(item => item.classList.toggle("selected", item.dataset.type === code));
-    // поля договора сервер подставит сам — клиент их не вводит
+    // поля договора сервер подставит сам: клиент их не вводит
     const fields = (schemaType(draft.schema, draft.category, code)?.fields || []).filter(field => !field.contractAttribute);
     $("#fields").innerHTML = fields.map(field => `
         <label>${escapeHtml(field.label)}
@@ -347,7 +347,7 @@ $("#appeal-view").addEventListener("submit", async event => {
     }
 });
 
-/** Обновление в фоне — не трогая начатое сообщение. */
+/** Обновление в фоне: не трогая начатое сообщение. */
 async function refresh() {
     await loadMyAppeals().catch(() => {});
     if (openedId && !hasDraft($("#client-reply"))) await openAppeal(openedId).catch(() => {});

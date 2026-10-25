@@ -21,7 +21,7 @@ import static org.awaitility.Awaitility.await;
 
 /**
  * Ручная классификация (решение 31): тип обращения появился в справочнике раньше правила
- * маршрутизации. Обращение не теряется в очереди «мёртвых» писем — отдел выбирает руководитель.
+ * маршрутизации. Обращение не теряется в очереди «мёртвых» писем: отдел выбирает руководитель.
  */
 class ManualClassificationTest extends IntegrationTest {
 
@@ -38,7 +38,7 @@ class ManualClassificationTest extends IntegrationTest {
         assertThat(waiting.legalDeadline()).isNotNull();
         assertThat(waiting.history()).extracting(HistoryResponse::action).contains("CLASSIFICATION_REQUIRED");
 
-        // руководитель любого отдела видит его в своей очереди, специалист — нет
+        // руководитель любого отдела видит его в своей очереди, специалист не видит
         assertThat(as(SUPPORT_SUPERVISOR).getForObject("/api/appeals", AppealSummaryResponse[].class))
                 .extracting(AppealSummaryResponse::id).contains(appeal);
         assertThat(as(SUPPORT_SPECIALIST).getForEntity("/api/appeals/{id}", String.class, appeal).getStatusCode())
@@ -80,7 +80,7 @@ class ManualClassificationTest extends IntegrationTest {
                 "Вопрос о страховом агенте", "Агент оформил полис, но не выдал квитанцию об оплате.");
     }
 
-    /** Как будто администратор завёл новую категорию и тип, а правило маршрутизации — ещё нет. */
+    /** Как будто администратор завёл новую категорию и тип, а правило маршрутизации: ещё нет. */
     private void prepareSchema() {
         jdbc.sql("insert into appeal_category (code, label, sort_order) values ('PARTNER', 'Работа агентов', 90) "
                 + "on conflict do nothing").update();

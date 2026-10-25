@@ -21,8 +21,8 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Эскалация по сроку закона (решение 14): за 2 рабочих дня до срока — «срок истекает»,
- * после срока — «срок нарушен». Проход планировщика вызывается с нужной датой.
+ * Эскалация по сроку закона (решение 14): за 2 рабочих дня до срока ставится «срок истекает»,
+ * после срока «срок нарушен». Проход планировщика вызывается с нужной датой.
  */
 class EscalationTest extends IntegrationTest {
 
@@ -37,11 +37,11 @@ class EscalationTest extends IntegrationTest {
         UUID appeal = routedLoginProblem();
         LocalDate deadline = getAppeal(appeal).legalDeadline();
 
-        // за 3 рабочих дня — ещё рано
+        // за 3 рабочих дня: ещё рано
         escalation.scan(workingDaysBefore(deadline, 3));
         assertThat(getAppeal(appeal).escalationLevel()).isEqualTo(EscalationLevel.NONE);
 
-        // за 2 рабочих дня — предупреждение, повторный проход ничего не дублирует
+        // за 2 рабочих дня: предупреждение, повторный проход ничего не дублирует
         escalation.scan(workingDaysBefore(deadline, 2));
         escalation.scan(workingDaysBefore(deadline, 2));
 
@@ -94,7 +94,7 @@ class EscalationTest extends IntegrationTest {
                 AppealDetailResponse.class, appeal);
         escalation.scan(warningDay);
 
-        // новый срок далеко — снова предупреждать не о чем
+        // новый срок далеко: снова предупреждать не о чем
         assertThat(getAppeal(appeal).escalationLevel()).isEqualTo(EscalationLevel.NONE);
     }
 

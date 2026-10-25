@@ -38,7 +38,7 @@ import static org.awaitility.Awaitility.await;
 
 /**
  * Основа интеграционных тестов: приложение целиком против настоящих PostgreSQL и RabbitMQ
- * и заглушки учётной системы договоров — в контейнерах тех же версий, что в compose.yaml.
+ * и заглушки учётной системы договоров: в контейнерах тех же версий, что в compose.yaml.
  * Заглушка отвечает по тем же файлам stubs/contracts, что и в стенде. Контейнеры поднимаются один раз на весь
  * прогон и общие для всех тестовых классов; схему и справочные данные создаёт Flyway.
  *
@@ -51,7 +51,7 @@ import static org.awaitility.Awaitility.await;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 public abstract class IntegrationTest {
 
-    // контрагенты и договоры — из заглушки учётной системы (stubs/contracts)
+    // контрагенты и договоры: из заглушки учётной системы (stubs/contracts)
     protected static final UUID ANNA_COUNTERPARTY = UUID.fromString("11111111-1111-1111-1111-111111111111");
     protected static final UUID PETR_COUNTERPARTY = UUID.fromString("19999999-9999-9999-9999-999999999999");
     protected static final UUID CASCO_CONTRACT = UUID.fromString("22222222-2222-2222-2222-222222222222");
@@ -61,7 +61,7 @@ public abstract class IntegrationTest {
     protected static final TestUser PETR = TestUser.client(
             "c0a00001-0000-0000-0000-000000000002", "Пётр Иванов", "petr@example.ru", PETR_COUNTERPARTY);
 
-    // сотрудники — только из токена: идентификатор IdP, имя, роль и подразделение (решение 22)
+    // сотрудники берутся только из токена: идентификатор IdP, имя, роль и подразделение (решение 22)
     protected static final TestUser SUPPORT_SPECIALIST = TestUser.employee(
             UUID.fromString("31111111-1111-1111-1111-111111111111"), "Елена Соколова", "SPECIALIST", "SUPPORT");
     protected static final TestUser SUPPORT_SUPERVISOR = TestUser.employee(
@@ -115,7 +115,7 @@ public abstract class IntegrationTest {
         registry.add("appeals.contracts.circuit.open-duration", () -> "PT2S");
         registry.add("appeals.contracts.base-url",
                 () -> "http://" + CONTRACTS_STUB.getHost() + ":" + CONTRACTS_STUB.getMappedPort(8080));
-        // локальная модель помощника — поддельная, как поставщик идентификации (решение 35)
+        // локальная модель помощника: поддельная, как поставщик идентификации (решение 35)
         registry.add("appeals.assistant.model.base-url", TestLocalModel::baseUrl);
         registry.add("appeals.attachments.antivirus.host", () -> "localhost");
         registry.add("appeals.attachments.antivirus.port", TestAntivirus::port);
@@ -126,7 +126,7 @@ public abstract class IntegrationTest {
         registry.add("spring.security.oauth2.resourceserver.jwt.jwk-set-uri", TestIdentityProvider::jwkSetUri);
     }
 
-    /** Без токена — для проверок отказа. */
+    /** Без токена: для проверок отказа. */
     @Autowired
     protected TestRestTemplate rest;
 
@@ -150,7 +150,7 @@ public abstract class IntegrationTest {
     /** Правило заглушки, которым «кладётся» учётная система: важнее всех остальных. */
     private static final String OUTAGE_MAPPING = "0e7a6e00-0000-4000-8000-000000000503";
 
-    /** Учётная система договоров недоступна: на любой запрос — 503, пока не вызван contractsSourceUp. */
+    /** Учётная система договоров недоступна: на любой запрос 503, пока не вызван contractsSourceUp. */
     protected void contractsSourceDown() {
         String mapping = """
                 {"id": "%s", "priority": 1,
@@ -172,13 +172,13 @@ public abstract class IntegrationTest {
         assertThat(RABBIT.execInContainer("rabbitmqctl", "start_app").getExitCode()).isZero();
     }
 
-    /** Система вернулась, и цепь сброшена — следующий тест начинает с чистого листа. */
+    /** Система вернулась, и цепь сброшена: следующий тест начинает с чистого листа. */
     protected void contractsSourceUp() {
         contractsSourceRecovers();
         contractsClient.circuitBreaker().reset();
     }
 
-    /** Система вернулась, а подсистема узнаёт об этом сама — через пробные вызовы цепи. */
+    /** Система вернулась, а подсистема узнаёт об этом сама: через пробные вызовы цепи. */
     protected void contractsSourceRecovers() {
         contractsStubAdmin().delete("/__admin/mappings/" + OUTAGE_MAPPING);
     }
@@ -207,7 +207,7 @@ public abstract class IntegrationTest {
         return response.getBody();
     }
 
-    /** Обращение глазами его автора — Анны: все тестовые обращения создаёт она. */
+    /** Обращение глазами его автора, Анны: все тестовые обращения создаёт она. */
     protected AppealDetailResponse getAppeal(UUID id) {
         return as(ANNA).getForObject("/api/appeals/{id}", AppealDetailResponse.class, id);
     }

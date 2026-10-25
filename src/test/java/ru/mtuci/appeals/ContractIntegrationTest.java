@@ -53,7 +53,7 @@ class ContractIntegrationTest extends IntegrationTest {
 
     @Test
     void clientContractsComeFromAccountingSystem() {
-        // договоры клиента из токена — без идентификатора в запросе
+        // договоры клиента из токена: без идентификатора в запросе
         MeResponse me = as(ANNA).getForObject("/api/me", MeResponse.class);
 
         // все договоры клиента, включая истёкший, досрочно прекращённый и чужой, где она застрахована

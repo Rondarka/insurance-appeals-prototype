@@ -24,7 +24,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Файлы в переписке: сотрудник запрашивает документ — клиент досылает его ответом,
+ * Файлы в переписке: сотрудник запрашивает документ, клиент досылает его ответом,
  * сотрудник может приложить к сообщению расчёт или письмо.
  */
 class MessageAttachmentTest extends IntegrationTest {
@@ -39,7 +39,7 @@ class MessageAttachmentTest extends IntegrationTest {
                 message("Справку из управляющей компании прикладываю", "spravka-uk.pdf", "application/pdf", PDF),
                 AppealDetailResponse.class, appeal);
 
-        // ответ клиента возвращает обращение в работу, файл — в его сообщении и в общем списке
+        // ответ клиента возвращает обращение в работу, файл виден в его сообщении и в общем списке
         MessageResponse reply = last(answered);
         assertThat(answered.status()).isEqualTo(AppealStatus.IN_PROGRESS);
         assertThat(reply.authorType()).isEqualTo(AuthorType.CLIENT);
@@ -110,7 +110,7 @@ class MessageAttachmentTest extends IntegrationTest {
                 .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         assertThat(as(SUPPORT_SPECIALIST).postForEntity("/api/appeals/{id}/messages", file, String.class, appeal)
                 .getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        // к самому обращению файлы прикладывает только клиент, сотрудник — в сообщении
+        // к самому обращению файлы прикладывает только клиент, сотрудник прикладывает их к сообщению
         assertThat(as(CLAIMS_SPECIALIST).postForEntity("/api/appeals/{id}/attachments",
                 files("file.pdf", PDF), String.class, appeal).getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
         assertThat(getAppeal(appeal).attachments()).isEmpty();

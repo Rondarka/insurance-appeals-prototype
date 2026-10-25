@@ -12,7 +12,7 @@ import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
-/** Дни производственного календаря за период — для календаря сроков на рабочем месте. */
+/** Дни производственного календаря за период: для календаря сроков на рабочем месте. */
 @RestController
 @RequestMapping("/api/calendar")
 public class CalendarController {

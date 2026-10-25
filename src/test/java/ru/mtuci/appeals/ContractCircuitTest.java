@@ -15,7 +15,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 /**
- * Защита вызовов учётной системы (решение 30): серия сбоев размыкает цепь — подсистема
+ * Защита вызовов учётной системы (решение 30): серия сбоев размыкает цепь, и подсистема
  * перестаёт обращаться к системе и сразу работает в резервном режиме; когда система
  * вернулась, цепь замыкается сама после пробных вызовов. Ответ 404 сбоем не считается.
  */
@@ -30,7 +30,7 @@ class ContractCircuitTest extends IntegrationTest {
     void repeatedFailuresOpenCircuitAndSourceIsLeftAlone() {
         contractsSourceDown();
 
-        // клиент несколько раз открывает кабинет — каждый раз резервный режим
+        // клиент несколько раз открывает кабинет: каждый раз резервный режим
         for (int i = 0; i < 5; i++) {
             assertThat(as(ANNA).getForObject("/api/me", MeResponse.class).contractsUnavailable()).isTrue();
         }
@@ -52,7 +52,7 @@ class ContractCircuitTest extends IntegrationTest {
 
         contractsSourceRecovers();
 
-        // после паузы пробные вызовы проходят — договоры снова в кабинете
+        // после паузы пробные вызовы проходят: договоры снова в кабинете
         await().atMost(Duration.ofSeconds(15)).pollInterval(Duration.ofMillis(500))
                 .until(() -> !as(ANNA).getForObject("/api/me", MeResponse.class).contractsUnavailable());
         await().atMost(Duration.ofSeconds(5)).until(() -> {
@@ -63,7 +63,7 @@ class ContractCircuitTest extends IntegrationTest {
 
     @Test
     void unknownContractIsNotAnOutage() {
-        // «договора нет» — нормальный ответ, цепь из-за него не размыкается
+        // «договора нет»: нормальный ответ, цепь из-за него не размыкается
         for (int i = 0; i < 6; i++) {
             assertThat(as(ANNA).postForEntity("/api/appeals", new CreateAppealRequest(UUID.randomUUID(), null, null,
                     "TECHNICAL", "LOGIN", Map.of("systemSection", "Личный кабинет", "device", "Android, Chrome",

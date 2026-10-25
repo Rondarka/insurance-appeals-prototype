@@ -61,7 +61,7 @@ public class RoutingConsumer {
                         appeal.getCategory(), "GENERAL"));
         Instant now = Instant.now();
         if (found.isEmpty()) {
-            // схема формы — данные (решение 24): новый тип мог появиться раньше правила для него.
+            // схема формы хранится данными (решение 24): новый тип мог появиться раньше правила для него.
             // Повтор не поможет, а в очередь «мёртвых» писем обращение уходить не должно (решение 31)
             appeal.requireClassification();
             historyRepository.save(new AppealHistory(

@@ -66,7 +66,7 @@ public class TransferService {
     @Transactional
     public TransferRequestResponse create(CurrentUser user, UUID appealId, CreateTransferRequest request) {
         Appeal appeal = findAppeal(appealId);
-        // передать можно только обращение своего подразделения — подразделение из токена
+        // передать можно только обращение своего подразделения: подразделение из токена
         access.checkWork(user, appeal);
         String employeeName = staffName(user);
         Department source = appeal.getDepartment();
@@ -109,7 +109,7 @@ public class TransferService {
                 Map.of(
                         "fromDepartment", source.getCode(),
                         "toDepartment", target.getCode(),
-                        // в событии — идентификатор сотрудника, а не ФИО: персональные данные наружу не уходят
+                        // в событии идентификатор сотрудника, а не ФИО: персональные данные наружу не уходят
                         "requestedBy", user.subject()
                 )
         ));
@@ -134,7 +134,7 @@ public class TransferService {
                 .orElseThrow(() -> new IllegalArgumentException(
                         "Запрос передачи не найден или уже рассмотрен"));
 
-        // роль и подразделение — из токена: согласует только руководитель принимающего подразделения
+        // роль и подразделение берутся из токена: согласует только руководитель принимающего подразделения
         if (!user.isSupervisor()
                 || !transfer.getTargetDepartment().getCode().equals(user.requireDepartment())) {
             throw new AccessDeniedException(
@@ -213,7 +213,7 @@ public class TransferService {
                 .orElseThrow(() -> new AppealNotFoundException(id));
     }
 
-    /** Имя сотрудника — из токена на момент действия, как имя клиента в обращении. */
+    /** Имя сотрудника: из токена на момент действия, как имя клиента в обращении. */
     private static String staffName(CurrentUser user) {
         return Objects.requireNonNullElse(user.name(), user.subject());
     }

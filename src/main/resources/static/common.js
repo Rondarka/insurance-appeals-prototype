@@ -70,7 +70,7 @@ const EVENT_LABELS = {
     APPEAL_SLA_BREACHED: "Срок по закону нарушен"
 };
 
-/** Эскалация по сроку закона — только для сотрудников, клиенту не показывается. */
+/** Эскалация по сроку закона: только для сотрудников, клиенту не показывается. */
 const ESCALATION_LABELS = {AT_RISK: "срок по закону истекает", BREACHED: "срок по закону нарушен"};
 
 const COUNTING_LABELS = {
@@ -103,11 +103,11 @@ async function api(path, options = {}) {
         const error = await response.json().catch(() => ({message: "Ошибка запроса"}));
         throw new Error(error.message || "Ошибка запроса");
     }
-    // 204 — действие выполнено, отвечать нечем
+    // 204: действие выполнено, отвечать нечем
     return response.status === 204 ? null : response.json();
 }
 
-/** Каждой роли — своя страница. Чужую страницу открыть можно, но она перенаправит. */
+/** Каждой роли: своя страница. Чужую страницу открыть можно, но она перенаправит. */
 function homeFor(me) {
     if (me.roles.includes("ADMIN")) return "/admin.html";
     if (me.roles.includes("CLIENT")) return "/client.html";
@@ -145,7 +145,7 @@ function loadingState(text = "Загрузка") {
     return `<div class="state loading-state" role="status"><span class="spinner" aria-hidden="true"></span>${escapeHtml(text)}…</div>`;
 }
 
-/** Ошибка загрузки; reload — показать кнопку «Повторить», которая перезагружает страницу. */
+/** Ошибка загрузки; reload: показать кнопку «Повторить», которая перезагружает страницу. */
 function errorState(text, reload = false) {
     return `<div class="state error-state"><p class="state-title">${escapeHtml(text)}</p>${
         reload ? `<button type="button" class="btn" data-reload>Повторить</button>` : ""}</div>`;
@@ -225,7 +225,7 @@ function deadlinePill(appeal) {
     return `<span class="pill ${info.tone}" title="Срок ответа: ${formatDateTime(appeal.deadlineAt)}">${escapeHtml(info.text)}</span>`;
 }
 
-/** Срок по закону — граница, а не целевой срок отдела (решение 20). */
+/** Срок по закону: граница, а не целевой срок отдела (решение 20). */
 function isLegallyOverdue(appeal) {
     if (!appeal.legalDeadline || ["RESOLVED", "CLOSED"].includes(appeal.status)) return false;
     return new Date(`${appeal.legalDeadline}T23:59:59`) < new Date();
@@ -301,7 +301,7 @@ function typeLabel(category, type) {
 }
 
 function fieldLabel(key) {
-    // insuredObject — атрибут обращений, созданных до схемы формы
+    // insuredObject: атрибут обращений, созданных до схемы формы
     if (key === "insuredObject") return "Объект страхования";
     const field = session.schema.categories
         .flatMap(category => category.types)
@@ -317,11 +317,11 @@ function formatDetailValue(key, value) {
 // ---------- части карточки обращения ----------
 
 /**
- * Переписка: описание обращения — первое сообщение клиента. Свои сообщения справа.
- * viewer — CLIENT или EMPLOYEE: с чьей стороны смотрим.
+ * Переписка: описание обращения идёт первым сообщением клиента. Свои сообщения справа.
+ * viewer: CLIENT или EMPLOYEE, с чьей стороны смотрим.
  */
 function renderThread(appeal, viewer) {
-    // первое сообщение — само обращение, с файлами из его формы
+    // первое сообщение: само обращение, с файлами из его формы
     const items = [
         {
             authorType: "CLIENT", authorName: appeal.customerName, body: appeal.description, createdAt: appeal.createdAt,
@@ -379,17 +379,17 @@ document.addEventListener("change", event => {
         : FILE_HINT;
 });
 
-/** Текст и файлы ответа одним запросом. null — если отправлять нечего. */
+/** Текст и файлы ответа одним запросом. null: если отправлять нечего. */
 function replyFormData(form) {
     const data = new FormData(form);
-    // пустое поле файла браузер всё равно кладёт в форму — убираем его
+    // пустое поле файла браузер всё равно кладёт в форму: убираем его
     const files = data.getAll("files").filter(file => file.size > 0);
     data.delete("files");
     files.forEach(file => data.append("files", file));
     return String(data.get("body") || "").trim() || files.length ? data : null;
 }
 
-/** Начатый ответ — текст или выбранные файлы: фоновое обновление его не стирает. */
+/** Начатый ответ (текст или выбранные файлы) фоновое обновление не стирает. */
 function hasDraft(container) {
     if (!container) return false;
     return [...container.querySelectorAll("textarea")].some(item => item.value.trim())
@@ -420,7 +420,7 @@ function renderChecks(appeal) {
 
 const money = value => value == null ? "нет" : `${Number(value).toLocaleString("ru-RU")} ₽`;
 
-/** Условия договора — из учётной системы в момент запроса. */
+/** Условия договора: из учётной системы в момент запроса. */
 function renderTerms(terms) {
     return `
         <dl class="kv terms">
@@ -467,7 +467,7 @@ async function loadTerms(appealId, target) {
     }
 }
 
-/** Блоки «Договор» и «История клиента» — общие для сотрудника и администратора. */
+/** Блоки «Договор» и «История клиента»: общие для сотрудника и администратора. */
 // ---------- договор, привязанный позже (решение 29) ----------
 
 const CONTRACT_LINK_TEXT = {
@@ -506,7 +506,7 @@ async function loadCandidates(appealId, target) {
         </button>`).join("")}</div>` : `<p class="muted">В учётной системе у клиента нет договоров</p>`;
 }
 
-// после привязки страница перерисовывает обращение сама — afterContractLinked у каждой своя
+// после привязки страница перерисовывает обращение сама: afterContractLinked у каждой своя
 document.addEventListener("click", event => {
     const linkNow = event.target.closest("[data-link-now]");
     const load = event.target.closest("[data-load-candidates]");

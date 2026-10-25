@@ -33,7 +33,7 @@ public class Appeal {
     @Column(name = "customer_email", nullable = false, length = 254)
     private String customerEmail;
 
-    /** Клиент — контрагент учётной системы, идентификатор из токена IdP. */
+    /** Клиент: контрагент учётной системы, идентификатор из токена IdP. */
     @Column(name = "counterparty_id", nullable = false)
     private UUID counterpartyId;
 
@@ -77,11 +77,11 @@ public class Appeal {
     @Column(name = "assigned_at")
     private Instant assignedAt;
 
-    /** Целевой срок отдела — из правила маршрутизации, его ставит себе компания. */
+    /** Целевой срок отдела: из правила маршрутизации, его ставит себе компания. */
     @Column(name = "deadline_at")
     private Instant deadlineAt;
 
-    /** Применённый норматив и срок по нему — граница, установленная законом (решение 20). */
+    /** Применённый норматив и срок по нему: граница, установленная законом (решение 20). */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "norm_id")
     private DeadlineNorm norm;
@@ -182,7 +182,7 @@ public class Appeal {
     }
 
     /**
-     * Учётная система недоступна: договор подберём позже по тому, что указал клиент —
+     * Учётная система недоступна, поэтому договор подберём позже по тому, что указал клиент:
      * договор из списка, вид страхования, номер (решение 29).
      */
     public void awaitContract(UUID requestedContractId, String productCode, String policyNumber, Instant now) {
@@ -213,7 +213,7 @@ public class Appeal {
         this.updatedAt = now;
     }
 
-    /** Подходит несколько договоров или ни одного — выбирает человек. */
+    /** Подходит несколько договоров или ни одного: выбирает человек. */
     public void requireContractChoice(ContractLink reason, Instant now) {
         if (reason != ContractLink.NEEDS_CHOICE && reason != ContractLink.NOT_FOUND) {
             throw new IllegalArgumentException("Не причина для выбора договора: " + reason);
@@ -228,7 +228,7 @@ public class Appeal {
         this.contractLinkNextAt = nextAttempt;
     }
 
-    /** Вид страхования: по договору, а пока договор не привязан — указанный клиентом. */
+    /** Вид страхования по договору, а пока договор не привязан, указанный клиентом. */
     public String getProductCode() {
         return contract != null ? contract.getProductCode() : requestedProductCode;
     }
@@ -240,7 +240,7 @@ public class Appeal {
 
     /**
      * Продление срока по закону: только если норматив его допускает, не больше чем на
-     * допустимое число рабочих дней, один раз и пока срок не истёк — задним числом не продлить.
+     * допустимое число рабочих дней, один раз и пока срок не истёк: задним числом не продлить.
      * Новую дату считает производственный календарь.
      */
     public void extendLegalDeadline(int days, LocalDate newDeadline, String reason, LocalDate today, Instant now) {
@@ -265,15 +265,15 @@ public class Appeal {
         this.legalDeadline = newDeadline;
         this.deadlineExtendedDays = days;
         this.deadlineExtensionReason = reason;
-        // срок отодвинут — прежняя эскалация больше не актуальна, планировщик оценит заново
+        // срок отодвинут: прежняя эскалация больше не актуальна, планировщик оценит заново
         this.escalationLevel = EscalationLevel.NONE;
         this.escalatedAt = null;
         this.updatedAt = now;
     }
 
     /**
-     * Эскалация по сроку закона: уровень только растёт, вместе с ним растёт приоритет —
-     * «срок истекает» не ниже высокого, «срок нарушен» — критический. Клиенту это не видно,
+     * Эскалация по сроку закона: уровень только растёт, вместе с ним растёт приоритет.
+     * «Срок истекает» поднимает его не ниже высокого, «срок нарушен» до критического. Клиенту это не видно,
      * поэтому дата изменения обращения не трогается.
      *
      * @return false, если обращение уже на этом уровне или выше
@@ -301,7 +301,7 @@ public class Appeal {
 
     /**
      * Срок отдела не позже конца дня срока по закону (решение 34): правило маршрутизации
-     * проверяется при сохранении, а здесь — страховка на случай продления, передачи и
+     * проверяется при сохранении, а здесь: страховка на случай продления, передачи и
      * обращений, зарегистрированных до изменения правил.
      */
     public Instant withinLegalDeadline(Instant departmentDeadline, ZoneId zone) {
@@ -329,14 +329,14 @@ public class Appeal {
         this.updatedAt = now;
     }
 
-    /** Сотрудник меняет статус только по разрешённым переходам — см. {@link AppealStatus#next()}. */
+    /** Сотрудник меняет статус только по разрешённым переходам: см. {@link AppealStatus#next()}. */
     public void changeStatus(AppealStatus status, String employeeSubject, String employeeName, Instant now) {
         if (status == AppealStatus.RESOLVED) {
             throw new IllegalStateException("Решить обращение можно только ответом клиенту по существу");
         }
         checkTransition(status);
         if (this.status == AppealStatus.RESOLVED && status == AppealStatus.IN_PROGRESS) {
-            // клиент не согласен с решением — прежний итог больше не действует;
+            // клиент не согласен с решением: прежний итог больше не действует;
             // при закрытии итог остаётся: это и есть результат рассмотрения
             this.outcome = null;
             this.resolvedAt = null;
@@ -344,7 +344,7 @@ public class Appeal {
             this.finalSubcategory = null;
         }
         this.status = status;
-        // взял в работу — стал исполнителем
+        // взял в работу: стал исполнителем
         if (status == AppealStatus.IN_PROGRESS && employeeSubject != null) {
             assign(employeeSubject, employeeName, now);
         }
@@ -364,7 +364,7 @@ public class Appeal {
         this.assignedAt = null;
     }
 
-    /** Решение — это ответ клиенту по существу с итогом; ответ сохраняет сервис. */
+    /** Решение означает ответ клиенту по существу с итогом; ответ сохраняет сервис. */
     public void resolve(AppealOutcome outcome, Instant now) {
         resolve(outcome, category, subcategory, now);
     }

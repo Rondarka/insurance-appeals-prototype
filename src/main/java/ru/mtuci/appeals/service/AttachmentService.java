@@ -88,7 +88,7 @@ public class AttachmentService {
 
     /**
      * Файлы из формы обращения: клиент прикладывает их сразу после отправки. Дослать документ
-     * позже — сообщением в переписке ({@link #attach}), чтобы сотрудник видел, к чему он.
+     * позже: сообщением в переписке ({@link #attach}), чтобы сотрудник видел, к чему он.
      */
     @Transactional
     public List<AttachmentResponse> store(CurrentUser user, UUID appealId, List<MultipartFile> files) {
@@ -134,7 +134,7 @@ public class AttachmentService {
 
     /**
      * Сохраняет проверенные файлы обращения или его сообщения (messageId). Если транзакция
-     * откатится — например, не сохранилось само сообщение, — файлы удаляются и с диска.
+     * откатится (например, не сохранилось само сообщение), файлы удаляются и с диска.
      */
     public List<AppealAttachment> attach(Appeal appeal, Long messageId, List<CheckedFile> files, String actor) {
         if (files.isEmpty()) {

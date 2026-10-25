@@ -22,7 +22,7 @@ public class AppealAttachment {
     @JoinColumn(name = "appeal_id", nullable = false)
     private Appeal appeal;
 
-    /** Сообщение, с которым пришёл файл; у файлов из формы обращения — null. */
+    /** Сообщение, с которым пришёл файл; у файлов из формы обращения: null. */
     @Column(name = "message_id")
     private Long messageId;
 

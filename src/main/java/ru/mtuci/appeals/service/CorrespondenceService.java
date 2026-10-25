@@ -64,7 +64,7 @@ public class CorrespondenceService {
     @Transactional
     public AppealDetailResponse addMessage(CurrentUser user, UUID id, String body, List<MultipartFile> files) {
         Appeal appeal = findAppeal(id);
-        // клиент пишет в своё обращение, сотрудник — в обращение своего подразделения
+        // клиент пишет в своё обращение, сотрудник пишет в обращение своего подразделения
         AuthorType authorType;
         if (user.isClient()) {
             access.checkView(user, appeal);
@@ -114,7 +114,7 @@ public class CorrespondenceService {
                 Map.of("authorType", authorType.name(), "attachments", Integer.toString(accepted.size()))
         ));
 
-        // клиент ответил на запрос — обращение снова в работе, без участия сотрудника
+        // клиент ответил на запрос: обращение снова в работе, без участия сотрудника
         if (authorType == AuthorType.CLIENT && appeal.getStatus() == AppealStatus.WAITING_CUSTOMER) {
             appeal.changeStatus(AppealStatus.IN_PROGRESS, null, null, now);
             historyRepository.save(new AppealHistory(

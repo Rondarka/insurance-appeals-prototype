@@ -3,7 +3,7 @@ package ru.mtuci.appeals.assistant;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/** Цитата вокруг найденного фрагмента — сотрудник сразу видит, почему сработала подсказка. */
+/** Цитата вокруг найденного фрагмента: сотрудник сразу видит, почему сработала подсказка. */
 final class Excerpts {
 
     static final int FLAGS = Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE | Pattern.UNICODE_CHARACTER_CLASS;
@@ -17,7 +17,7 @@ final class Excerpts {
         return around(text, match.start(), match.end());
     }
 
-    /** Не выходит за строку — тема и текст обращения не склеиваются — и не режет слова пополам. */
+    /** Не выходит за строку (тема и текст обращения не склеиваются) и не режет слова пополам. */
     static String around(String text, int matchStart, int matchEnd) {
         int lineStart = text.lastIndexOf('\n', Math.max(0, matchStart - 1)) + 1;
         int lineEnd = text.indexOf('\n', matchEnd);

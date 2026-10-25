@@ -9,10 +9,10 @@ import java.util.UUID;
 
 /**
  * Кто делает запрос. Берётся только из проверенного токена поставщика идентификации
- * (решение 22): подставить чужой идентификатор в запрос нельзя — его там нет.
+ * (решение 22): подставить чужой идентификатор в запрос нельзя, его там нет.
  *
- * @param counterpartyId идентификатор контрагента в учётной системе — у клиентов
- * @param departmentCode код подразделения — у сотрудников
+ * @param counterpartyId идентификатор контрагента в учётной системе: у клиентов
+ * @param departmentCode код подразделения: у сотрудников
  */
 public record CurrentUser(
         String subject,
@@ -53,7 +53,7 @@ public record CurrentUser(
         return roles.contains("ADMIN");
     }
 
-    /** Клиент без counterparty_id — ошибка настройки IdP, а не повод взять идентификатор из запроса. */
+    /** Клиент без counterparty_id: ошибка настройки IdP, а не повод взять идентификатор из запроса. */
     public UUID requireCounterparty() {
         if (!isClient() || counterpartyId == null) {
             throw new AccessDeniedException("В токене нет идентификатора контрагента");

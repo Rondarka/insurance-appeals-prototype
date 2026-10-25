@@ -73,7 +73,7 @@ public class AppealService {
     }
 
     @Transactional(readOnly = true)
-    /** Клиенту — его обращения, сотруднику — очередь его подразделения, администратору — все. */
+    /** Список обращений по роли: свои у клиента, очередь подразделения у сотрудника, все у администратора. */
     public List<AppealSummaryResponse> list(CurrentUser user, AppealStatus status, String departmentCode) {
         Specification<Appeal> spec;
         if (user.isAdmin()) {
@@ -88,7 +88,7 @@ public class AppealService {
             boolean supervisor = user.isSupervisor();
             spec = (root, query, cb) -> {
                 Predicate own = cb.equal(root.join("department", JoinType.LEFT).get("code"), ownDepartment);
-                // руководителю — ещё и обращения, которые ждут ручной классификации (решение 31)
+                // руководителю: ещё и обращения, которые ждут ручной классификации (решение 31)
                 return supervisor ? cb.or(own, cb.equal(root.get("status"), AppealStatus.NEEDS_CLASSIFICATION)) : own;
             };
         }
@@ -97,7 +97,7 @@ public class AppealService {
         }
 
         List<Appeal> appeals = appealRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "createdAt"));
-        // одним запросом: в каких обращениях последним написал клиент — ход за сотрудником
+        // одним запросом: в каких обращениях последним написал клиент, то есть ход за сотрудником
         Set<UUID> clientReplied = appeals.isEmpty() ? Set.of()
                 : messageRepository.findWithLastMessageBy(appeals.stream().map(Appeal::getId).toList(), AuthorType.CLIENT);
         // клиенту сигналы не показываются: это внутренняя оценка его обращения
@@ -126,8 +126,8 @@ public class AppealService {
     }
 
     /**
-     * Условия договора обращения — из учётной системы в момент запроса. Доступ — как к самому
-     * обращению; сетевой вызов — вне транзакции базы.
+     * Условия договора обращения из учётной системы в момент запроса. Доступ такой же, как к самому
+     * обращению; сетевой вызов: вне транзакции базы.
      */
     public ContractTermsResponse contractTerms(CurrentUser user, UUID id) {
         Appeal linked = transactionTemplate.execute(transaction -> {
@@ -151,7 +151,7 @@ public class AppealService {
         );
     }
 
-    /** Другие обращения того же клиента — краткие сведения; открыть можно только доступные. */
+    /** Другие обращения того же клиента: краткие сведения; открыть можно только доступные. */
     @Transactional(readOnly = true)
     public List<RelatedAppealResponse> related(CurrentUser user, UUID id) {
         Appeal appeal = findAppeal(id);
@@ -185,7 +185,7 @@ public class AppealService {
     @Transactional(readOnly = true)
     public List<EventAuditResponse> recentEvents() {
         List<EventAudit> events = eventAuditRepository.findAllByOrderByReceivedAtDesc(PageRequest.of(0, 50));
-        // в журнале — номер обращения, а не его технический идентификатор
+        // в журнале: номер обращения, а не его технический идентификатор
         Map<UUID, String> numbers = new HashMap<>();
         appealRepository.findAllById(events.stream().map(EventAudit::getAppealId).filter(Objects::nonNull).toList())
                 .forEach(appeal -> numbers.put(appeal.getId(), appeal.getPublicNumber()));

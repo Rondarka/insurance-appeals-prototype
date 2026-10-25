@@ -45,7 +45,7 @@ class AnalyticsTest extends IntegrationTest {
         assertThat(after.summary().resolvedOnTime().count() - before.summary().resolvedOnTime().count()).isEqualTo(1);
         assertThat(after.summary().typeCorrected().count() - before.summary().typeCorrected().count()).isEqualTo(1);
 
-        // показатели — по итоговому типу, а расхождение видно отдельной строкой
+        // показатели: по итоговому типу, а расхождение видно отдельной строкой
         assertThat(count(after.types(), "TECHNICAL/PERSONAL_ACCOUNT") - count(before.types(), "TECHNICAL/PERSONAL_ACCOUNT"))
                 .isEqualTo(1);
         assertThat(count(after.types(), "TECHNICAL/LOGIN") - count(before.types(), "TECHNICAL/LOGIN")).isEqualTo(1);
@@ -55,14 +55,14 @@ class AnalyticsTest extends IntegrationTest {
         assertThat(support.onTime().count() - department(before, "SUPPORT").onTime().count()).isEqualTo(1);
         assertThat(support.open() - department(before, "SUPPORT").open()).isEqualTo(1);
 
-        // обращения сегодняшние — прирост в последней неделе линии КАСКО
+        // обращения сегодняшние: прирост в последней неделе линии КАСКО
         WeekSeries casco = after.weekly().get(0);
         assertThat(casco.code()).isEqualTo("CASCO");
         assertThat(after.weekly()).hasSize(1);
         assertThat(lastWeek(after) - lastWeek(before)).isEqualTo(2);
         assertThat(after.weeks().get(0).getDayOfWeek()).isEqualTo(java.time.DayOfWeek.MONDAY);
 
-        // доли продуктов — от всех обращений, фильтр продукта их не сужает
+        // доли продуктов: от всех обращений, фильтр продукта их не сужает
         assertThat(after.products()).extracting(ShareItem::code).contains("CASCO");
         assertThat(after.products().stream().mapToLong(item -> item.rate().count()).sum())
                 .isGreaterThanOrEqualTo(after.summary().received());
@@ -74,7 +74,7 @@ class AnalyticsTest extends IntegrationTest {
         startWork(appeal);
         assertThat(resolve(appeal, "TECHNICAL", "NO_SUCH_TYPE").getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
 
-        // без итогового типа — исходный подтверждён
+        // без итогового типа: исходный подтверждён
         assertThat(resolve(appeal, null, null).getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(getAppeal(appeal).finalSubcategory()).isEqualTo("LOGIN");
 

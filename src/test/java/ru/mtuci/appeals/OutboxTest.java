@@ -19,7 +19,7 @@ import static org.awaitility.Awaitility.await;
 
 /**
  * Transactional outbox (решение 3): событие сохраняется в одной транзакции с изменением
- * обращения и доставляется в RabbitMQ отдельно — недоступный брокер не мешает принять
+ * обращения и доставляется в RabbitMQ отдельно: недоступный брокер не мешает принять
  * обращение и не теряет событие.
  */
 class OutboxTest extends IntegrationTest {
@@ -55,7 +55,7 @@ class OutboxTest extends IntegrationTest {
             status.setRollbackOnly();
         });
 
-        // изменение откатилось — события тоже нет: о несуществующем обращении никто не узнает
+        // изменение откатилось, события тоже нет: о несуществующем обращении никто не узнает
         assertThat(outboxEvents(appeal, "APPEAL_CREATED")).isZero();
     }
 
@@ -64,7 +64,7 @@ class OutboxTest extends IntegrationTest {
         brokerDown();
         UUID appeal;
         try {
-            // брокер лежит — клиент этого не замечает: обращение принято, событие ждёт в outbox
+            // брокер лежит, а клиент этого не замечает: обращение принято, событие ждёт в outbox
             appeal = createAppeal(loginProblem()).id();
             await().atMost(Duration.ofSeconds(10)).until(() -> attempts(appeal) > 0);
             assertThat(getAppeal(appeal).status()).isEqualTo(AppealStatus.PENDING_ROUTING);
@@ -73,7 +73,7 @@ class OutboxTest extends IntegrationTest {
             brokerUp();
         }
 
-        // брокер вернулся — событие доставлено, обращение маршрутизировано, ничего не потеряно
+        // брокер вернулся: событие доставлено, обращение маршрутизировано, ничего не потеряно
         AppealDetailResponse routed = await().atMost(Duration.ofSeconds(60)).pollInterval(Duration.ofSeconds(1))
                 .until(() -> getAppeal(appeal), item -> item.status() != AppealStatus.PENDING_ROUTING);
         assertThat(routed.department().code()).isEqualTo("SUPPORT");

@@ -35,7 +35,7 @@ public class AssistantController {
         return assistant.advice(user, id);
     }
 
-    /** type — итоговый тип из формы ответа, «CATEGORY/TYPE»; пусто — тип обращения. */
+    /** type: итоговый тип из формы ответа, «CATEGORY/TYPE»; пусто, если берётся тип обращения. */
     @GetMapping("/draft")
     DraftResponse draft(CurrentUser user, @PathVariable UUID id, @RequestParam AppealOutcome outcome,
                         @RequestParam(required = false) String type) {

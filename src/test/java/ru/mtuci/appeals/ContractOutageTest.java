@@ -21,7 +21,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Учётная система договоров недоступна — обращение всё равно принимается (решение 29).
+ * Учётная система договоров недоступна: обращение всё равно принимается (решение 29).
  * Клиент указывает вид страхования, договор подсистема подбирает сама, когда система вернётся.
  */
 class ContractOutageTest extends IntegrationTest {
@@ -43,7 +43,7 @@ class ContractOutageTest extends IntegrationTest {
     void appealIsAcceptedAndRoutedWhileSourceIsDown() {
         contractsSourceDown();
 
-        // кабинет открывается, договоров нет — клиент выбирает вид страхования
+        // кабинет открывается, договоров нет: клиент выбирает вид страхования
         MeResponse me = as(ANNA).getForObject("/api/me", MeResponse.class);
         assertThat(me.contractsUnavailable()).isTrue();
         assertThat(me.contracts()).isEmpty();
@@ -63,7 +63,7 @@ class ContractOutageTest extends IntegrationTest {
         linker.linkPending();
         assertThat(getAppeal(created.id()).contractLink()).isEqualTo(ContractLink.PENDING);
 
-        // система вернулась — сотрудник не ждёт следующей попытки
+        // система вернулась: сотрудник не ждёт следующей попытки
         contractsSourceUp();
         AppealDetailResponse linked = as(CLAIMS_SPECIALIST).postForObject(
                 "/api/appeals/{id}/contract/link", null, AppealDetailResponse.class, created.id());
@@ -97,7 +97,7 @@ class ContractOutageTest extends IntegrationTest {
 
         linker.linkPending();
 
-        // ДТП до продления — убыток по прошлогоднему полису, а не по действующему
+        // ДТП до продления: убыток по прошлогоднему полису, а не по действующему
         assertThat(getAppeal(appeal).contract().policyNumber()).isEqualTo("ОСАГО-2025-118204");
     }
 
@@ -111,7 +111,7 @@ class ContractOutageTest extends IntegrationTest {
         linker.linkPending();
         assertThat(getAppeal(appeal).contractLink()).isEqualTo(ContractLink.NEEDS_CHOICE);
 
-        // два действующих КАСКО — выбор за клиентом, и только из его договоров
+        // два действующих КАСКО: выбор за клиентом, и только из его договоров
         ContractResponse[] candidates = as(ANNA).getForObject(
                 "/api/appeals/{id}/contract-candidates", ContractResponse[].class, appeal);
         assertThat(candidates).extracting(ContractResponse::policyNumber)
@@ -132,11 +132,11 @@ class ContractOutageTest extends IntegrationTest {
     @Test
     void policyNumberOrChosenContractNeedNoQuestions() {
         contractsSourceDown();
-        // номер — в свободной форме; договор, выбранный до сбоя, — как есть
+        // номер в свободной форме; договор, выбранный до сбоя, берётся как есть
         UUID byNumber = createAppeal(loginQuestion("CASCO", "каско 2026 007310")).id();
         UUID byChosen = createAppeal(new CreateAppealRequest(CASCO_CONTRACT, "CASCO", null, "TECHNICAL", "LOGIN",
                 LOGIN_DETAILS, "Не могу войти", "Код из SMS не принимается.")).id();
-        // маршрутизация меняет обращение параллельно — ждём её, чтобы проход не отложил привязку
+        // маршрутизация меняет обращение параллельно: ждём её, чтобы проход не отложил привязку
         awaitRouted(byNumber);
         awaitRouted(byChosen);
         contractsSourceUp();

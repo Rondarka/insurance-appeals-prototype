@@ -18,7 +18,7 @@ import java.util.regex.Pattern;
 
 /**
  * Сигналы в тексте клиента (решение 35): грозит жалобой в Банк России или судом, упоминает
- * финансового уполномоченного, требует выплату с суммой. Признаки — справочник text_signal,
+ * финансового уполномоченного, требует выплату с суммой. Признаки: справочник text_signal,
  * как схема формы. Сигналы ищутся в тексте обращения и в каждом сообщении клиента и
  * сохраняются с цитатой: очередь поднимает такие обращения, не перечитывая переписку.
  */
@@ -86,7 +86,7 @@ public class SignalDetector {
     private List<Rule> rules() {
         List<Rule> loaded = rules;
         if (loaded == null) {
-            // справочник меняется только миграцией — достаточно прочитать один раз
+            // справочник меняется только миграцией: достаточно прочитать один раз
             loaded = jdbc.sql("select code, pattern from text_signal order by sort_order")
                     .query((rs, row) -> new Rule(rs.getString("code"), Pattern.compile(rs.getString("pattern"), Excerpts.FLAGS)))
                     .list();

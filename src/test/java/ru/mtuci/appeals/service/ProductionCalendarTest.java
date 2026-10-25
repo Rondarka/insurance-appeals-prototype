@@ -18,7 +18,7 @@ import static ru.mtuci.appeals.domain.DeadlineCounting.CALENDAR_EXCEPT_HOLIDAYS;
 import static ru.mtuci.appeals.domain.DeadlineCounting.WORKING_DAYS;
 
 /**
- * Счёт сроков по настоящим файлам календаря из каталога calendar/. Самое трудное место —
+ * Счёт сроков по настоящим файлам календаря из каталога calendar/. Самое трудное место:
  * новогодние праздники: обращение, поступившее 25.12.2026, считается через 31.12
  * (перенесённый выходной) и праздники 1–8 января 2027 года.
  */
@@ -39,19 +39,19 @@ class ProductionCalendarTest {
 
     @Test
     void fifteenWorkingDaysSkipNewYearHolidays() {
-        // 4015-1, ст. 6.2: 28, 29, 30 декабря, затем с 11 января — 15-й рабочий день 26 января
+        // 4015-1, ст. 6.2: 28, 29, 30 декабря, затем с 11 января; 15-й рабочий день 26 января
         assertThat(calendar.deadline(date("2026-12-25"), 15, WORKING_DAYS)).isEqualTo(date("2027-01-26"));
     }
 
     @Test
     void calendarDaysEndingOnDayOffMoveToNextWorkday() {
-        // 123-ФЗ, ст. 16 ч. 2 п. 2: 30-й день — воскресенье 24 января, срок — понедельник 25-го
+        // 123-ФЗ, ст. 16 ч. 2 п. 2: 30-й день выпадает на воскресенье 24 января, срок переносится на понедельник 25-го
         assertThat(calendar.deadline(date("2026-12-25"), 30, CALENDAR_DAYS)).isEqualTo(date("2027-01-25"));
     }
 
     @Test
     void osagoCountsWeekendsButNotHolidays() {
-        // 40-ФЗ, ст. 12 п. 21: выходные считаются (в том числе 31.12), праздники 1–8 января — нет
+        // 40-ФЗ, ст. 12 п. 21: выходные считаются (в том числе 31.12), праздники 1–8 января не считаются
         assertThat(calendar.deadline(date("2026-12-25"), 20, CALENDAR_EXCEPT_HOLIDAYS)).isEqualTo(date("2027-01-22"));
     }
 

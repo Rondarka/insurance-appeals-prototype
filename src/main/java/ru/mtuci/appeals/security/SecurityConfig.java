@@ -14,8 +14,8 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import java.util.List;
 
 /**
- * Подсистема — OAuth2 Resource Server (решение 22): никого не аутентифицирует сама, а
- * проверяет токен поставщика идентификации — подпись, издателя, аудиторию и срок
+ * Подсистема работает как OAuth2 Resource Server (решение 22): никого не аутентифицирует сама, а
+ * проверяет токен поставщика идентификации: подпись, издателя, аудиторию и срок
  * (настройки в application.yml). Роли берутся из поля roles токена.
  */
 @Configuration
@@ -26,7 +26,7 @@ public class SecurityConfig implements WebMvcConfigurer {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // токен приходит в заголовке, cookie-сессии нет — подделывать межсайтовый запрос нечем
+                // токен приходит в заголовке, cookie-сессии нет: подделывать межсайтовый запрос нечем
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -38,7 +38,7 @@ public class SecurityConfig implements WebMvcConfigurer {
                                 "/api/appeals/*/assign")
                         .hasRole("SUPERVISOR")
                         .requestMatchers("/api/staff").hasAnyRole("SPECIALIST", "SUPERVISOR")
-                        // подсказки помощника и сигналы — внутренняя информация отдела (решение 35)
+                        // подсказки помощника и сигналы: внутренняя информация отдела (решение 35)
                         .requestMatchers("/api/appeals/*/assistant", "/api/appeals/*/assistant/**").hasAnyRole(EMPLOYEE)
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         // оператор контакт-центра регистрирует обращения со слов клиента (решение 38)

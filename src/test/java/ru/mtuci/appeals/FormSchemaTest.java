@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 /**
- * Схема формы — справочник подсистемы (решение 24): интерфейс строит форму по схеме,
+ * Схема формы входит в справочник подсистемы (решение 24): интерфейс строит форму по схеме,
  * сервер проверяет обращение по ней же.
  */
 class FormSchemaTest extends IntegrationTest {

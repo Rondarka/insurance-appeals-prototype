@@ -22,9 +22,9 @@ public class AppealAccess {
     }
 
     /**
-     * Клиент видит свои обращения, сотрудник — обращения своего подразделения,
-     * руководитель — ещё и те, что ждут его решения о передаче в его подразделение,
-     * администратор — все.
+     * Клиент видит свои обращения, сотрудник видит обращения своего подразделения,
+     * руководитель видит ещё и те, что ждут его решения о передаче в его подразделение,
+     * администратор видит все.
      */
     public boolean canView(CurrentUser user, Appeal appeal) {
         if (user.isAdmin()) {
@@ -36,7 +36,7 @@ public class AppealAccess {
         if (inDepartment(user, appeal)) {
             return true;
         }
-        // обращение без отдела ждёт ручной классификации — его видят руководители всех отделов
+        // обращение без отдела ждёт ручной классификации: его видят руководители всех отделов
         if (user.isSupervisor() && appeal.getStatus() == AppealStatus.NEEDS_CLASSIFICATION) {
             return true;
         }
@@ -50,7 +50,7 @@ public class AppealAccess {
         }
     }
 
-    /** Работать с обращением — менять статус, отвечать, передавать — может сотрудник его подразделения. */
+    /** Работать с обращением (менять статус, отвечать, передавать) может сотрудник его подразделения. */
     public void checkWork(CurrentUser user, Appeal appeal) {
         checkView(user, appeal);
         if (!inDepartment(user, appeal)) {

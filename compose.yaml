@@ -43,7 +43,7 @@ services:
     ports:
       - "18081:8080"
 
-  # Поставщик идентификации страховой: в стенде — Keycloak, реалм из keycloak/insurer-realm.json
+  # Поставщик идентификации страховой; в стенде это Keycloak, реалм из keycloak/insurer-realm.json
   keycloak:
     image: quay.io/keycloak/keycloak:26.7.5
     command: ["start-dev", "--import-realm"]
@@ -96,7 +96,7 @@ services:
       IDP_ISSUER_URI: http://localhost:18082/realms/insurer
       IDP_JWK_SET_URI: http://keycloak:8080/realms/insurer/protocol/openid-connect/certs
       CALENDAR_PATH: /data/calendar
-      # демонстрационные обращения за полгода — один раз, если их ещё нет (решение 33)
+      # демонстрационные обращения за полгода: один раз, если их ещё нет (решение 33)
       APPEALS_DEMO_ENABLED: "true"
       # локальная модель помощника на компьютере со стендом, например Ollama (решение 35);
       # включает администратор на вкладке «Правила», без модели подсказки дают правила

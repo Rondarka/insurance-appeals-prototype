@@ -40,7 +40,7 @@ public class AppealFormPolicy {
         this.repository = repository;
     }
 
-    /** productCode == null — полная схема, например для подписей в рабочем месте сотрудника. */
+    /** productCode == null: полная схема, например для подписей в рабочем месте сотрудника. */
     public FormSchemaResponse schema(String productCode) {
         return schema(productCode, null);
     }
@@ -78,7 +78,7 @@ public class AppealFormPolicy {
 
     /**
      * Проверяет обращение по схеме и возвращает его атрибуты. Поля договора подставляет
-     * сервер — клиент не может их подменить; поля, которых нет в схеме типа, отбрасываются.
+     * сервер: клиент не может их подменить; поля, которых нет в схеме типа, отбрасываются.
      */
     public Map<String, String> details(String category, String type, String productCode, ContractSnapshot contract,
                                        Map<String, String> submitted) {
@@ -96,7 +96,7 @@ public class AppealFormPolicy {
         List<String> missing = new ArrayList<>();
         for (FormField field : appealType.fields()) {
             if (field.contractAttribute() != null && contract == null) {
-                // договор ещё не привязан — поле заполнится при привязке (решение 29)
+                // договор ещё не привязан: поле заполнится при привязке (решение 29)
                 continue;
             }
             String value = field.contractAttribute() != null
@@ -118,7 +118,7 @@ public class AppealFormPolicy {
         return details;
     }
 
-    /** Поля договора для типа обращения — когда договор привязывается позже регистрации. */
+    /** Поля договора для типа обращения: когда договор привязывается позже регистрации. */
     public Map<String, String> contractDetails(String category, String type, ContractSnapshot contract) {
         Map<String, String> values = new LinkedHashMap<>();
         find(schema(null), category, type).ifPresent(appealType -> appealType.fields().stream()
@@ -136,7 +136,7 @@ public class AppealFormPolicy {
         return find(schema(null), category, type).isPresent();
     }
 
-    /** Виды страхования — для выбора, когда договоры клиента загрузить не удалось. */
+    /** Виды страхования: для выбора, когда договоры клиента загрузить не удалось. */
     public List<ProductResponse> products() {
         return repository.products().stream()
                 .map(product -> new ProductResponse(product.code(), product.label()))

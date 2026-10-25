@@ -28,7 +28,7 @@ class RulesEngineTest {
         Optional<TypeGuess> guess = rules.guessType(text("PAYMENT", "INCORRECT_AMOUNT",
                 "Не согласен с перерасчётом, требую пересчитать премию по договору."));
         assertThat(guess).isPresent();
-        // оба признака в одной фразе — одна цитата, а не две пересекающиеся
+        // оба признака в одной фразе: одна цитата, а не две пересекающиеся
         assertThat(guess.get().reasons()).singleElement().asString()
                 .contains("Не согласен", "требую пересчитать");
     }

@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Нормативный срок назначается при регистрации по справочнику (решения 20, 21):
- * зависит от типа обращения, продукта договора и — у претензии — от даты нарушения.
+ * зависит от типа обращения, продукта договора, а у претензии ещё и от даты нарушения.
  */
 class DeadlineNormTest extends IntegrationTest {
 
@@ -50,7 +50,7 @@ class DeadlineNormTest extends IntegrationTest {
 
     @Test
     void cascoClaimFollowsInsuranceRules() {
-        // ст. 6.2 на заявления о выплате не распространяется — срок по правилам страхования
+        // ст. 6.2 на заявления о выплате не распространяется: срок по правилам страхования
         assertThat(createAppeal(cascoClaim()).norm().code()).isEqualTo("INSURANCE_RULES");
     }
 
@@ -59,7 +59,7 @@ class DeadlineNormTest extends IntegrationTest {
         AppealDetailResponse recent = createAppeal(pretension(today().minusDays(10)));
         AppealDetailResponse old = createAppeal(pretension(today().minusDays(200)));
 
-        // 123-ФЗ, ст. 16 ч. 2: не старше 180 дней — 15 рабочих, иначе 30 календарных
+        // 123-ФЗ, ст. 16 ч. 2: если нарушению не больше 180 дней, срок 15 рабочих, иначе 30 календарных
         assertThat(recent.norm().code()).isEqualTo("PRETENSION_FAST");
         assertThat(recent.legalDeadline()).isEqualTo(calendar.deadline(today(), 15, DeadlineCounting.WORKING_DAYS));
         assertThat(old.norm().code()).isEqualTo("PRETENSION");

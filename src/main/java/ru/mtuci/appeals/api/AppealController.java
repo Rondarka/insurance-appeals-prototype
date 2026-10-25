@@ -151,7 +151,7 @@ public class AppealController {
         return appeal;
     }
 
-    /** Условия договора обращения — из учётной системы, на момент запроса. */
+    /** Условия договора обращения: из учётной системы, на момент запроса. */
     @GetMapping("/appeals/{id}/contract")
     ContractTermsResponse contractTerms(CurrentUser user, @PathVariable UUID id) {
         return appealService.contractTerms(user, id);
@@ -172,7 +172,7 @@ public class AppealController {
         return transferService.create(user, id, request);
     }
 
-    /** Запросы на передачу в подразделение руководителя — подразделение из токена. */
+    /** Запросы на передачу в подразделение руководителя: подразделение из токена. */
     @GetMapping("/transfer-requests")
     List<TransferRequestResponse> transferRequests(CurrentUser user) {
         return transferService.pendingForDepartment(user);
@@ -220,7 +220,7 @@ public class AppealController {
         return integrations;
     }
 
-    /** Виды страхования — когда договоры клиента загрузить не удалось. */
+    /** Виды страхования: когда договоры клиента загрузить не удалось. */
     @GetMapping("/products")
     List<ProductResponse> products() {
         return formPolicy.products();
@@ -248,7 +248,7 @@ public class AppealController {
         return appealService.get(user, id);
     }
 
-    /** Сотрудники своего отдела — для назначения исполнителя (решение 32). */
+    /** Сотрудники своего отдела: для назначения исполнителя (решение 32). */
     @GetMapping("/staff")
     List<StaffMemberResponse> staff(CurrentUser user) {
         return staffService.department(user.requireDepartment());
@@ -328,7 +328,7 @@ public class AppealController {
         return appealService.departments();
     }
 
-    /** Без productCode — полная схема, с ним — только типы, допустимые для продукта договора. */
+    /** Без productCode отдаётся полная схема, с ним только типы, допустимые для продукта договора. */
     @GetMapping("/form-schema")
     FormSchemaResponse formSchema(@RequestParam(required = false) String productCode,
                                   @RequestParam(required = false) ContractRole clientRole) {

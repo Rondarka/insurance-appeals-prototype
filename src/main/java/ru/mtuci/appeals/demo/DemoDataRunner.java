@@ -7,7 +7,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 /**
- * На стенде — наполнить подсистему демонстрационными обращениями, если их ещё нет
+ * На стенде: наполнить подсистему демонстрационными обращениями, если их ещё нет
  * (appeals.demo.enabled). После загрузки календаря и нормативов: ApplicationReadyEvent
  * наступает, когда все ApplicationRunner отработали.
  */

@@ -25,7 +25,7 @@ import java.util.UUID;
 /**
  * Поставщик идентификации для тестов: подписывает токены своим ключом и отдаёт открытый
  * ключ по HTTP, как Keycloak. Подсистема проверяет токены той же конфигурацией, что в
- * эксплуатации, — подпись, издатель, аудитория, срок. Проверяются правила подсистемы,
+ * эксплуатации: подпись, издатель, аудитория, срок. Проверяются правила подсистемы,
  * а не настройка Keycloak: её проверяет вход в стенде.
  */
 final class TestIdentityProvider {
@@ -36,7 +36,7 @@ final class TestIdentityProvider {
     private static final RSAKey KEY = generateKey("test-key");
     private static final HttpServer SERVER = startKeyServer();
 
-    /** Пользователь IdP: у клиента есть counterpartyId, у сотрудника — подразделение. */
+    /** Пользователь IdP: у клиента есть counterpartyId, у сотрудника подразделение. */
     record TestUser(String subject, String name, String email, List<String> roles,
                     UUID counterpartyId, String department) {
 
@@ -64,7 +64,7 @@ final class TestIdentityProvider {
         return sign(user, audience, KEY);
     }
 
-    /** Токен с правильными полями, но подписанный чужим ключом — подделка. */
+    /** Токен с правильными полями, но подписанный чужим ключом: подделка. */
     static String forgedToken(TestUser user) {
         return sign(user, AUDIENCE, generateKey("test-key"));
     }

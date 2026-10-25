@@ -19,14 +19,14 @@ import java.util.function.Supplier;
  * Адаптер к учётной системе договоров страховой. Единственное место, где подсистема
  * знает, как устроен внешний интерфейс; остальной код работает с {@link ExternalContract}.
  *
- * 404 — это ответ «договора нет», а не сбой. Всё остальное, что не 2xx, и отсутствие
- * ответа — сбой источника: {@link ContractSourceUnavailableException}.
+ * 404 означает «договора нет», а не сбой. Всё остальное, что не 2xx, и отсутствие
+ * ответа считаются сбоем источника: {@link ContractSourceUnavailableException}.
  *
  * Вызовы защищены (решение 30). Цепь одна на всю учётную систему: если из последних
  * вызовов слишком многие закончились сбоем, она размыкается, и подсистема какое-то время
- * не обращается к системе вовсе — сразу работает в резервном режиме, не заставляя клиента
+ * не обращается к системе вовсе: сразу работает в резервном режиме, не заставляя клиента
  * ждать таймаута и не добивая лежащую систему. Повторы разведены по путям: в кабинете
- * человек ждёт ответа — короткий таймаут и один быстрый повтор; в фоне повторов внутри нет,
+ * человек ждёт ответа: короткий таймаут и один быстрый повтор; в фоне повторов внутри нет,
  * паузы между попытками задаёт фоновая привязка договора. Повторяются только таймаут,
  * отсутствие соединения и 5xx: ответ 4xx повтор не исправит.
  */
@@ -54,7 +54,7 @@ public class ContractsClient {
                 .failureRateThreshold(circuit.failureRateThreshold())
                 .waitDurationInOpenState(circuit.openDuration())
                 .permittedNumberOfCallsInHalfOpenState(2)
-                // сбоем считается только недоступность; ответ 4xx — ошибка запроса, а не состояние системы
+                // сбоем считается только недоступность; ответ 4xx: ошибка запроса, а не состояние системы
                 .recordException(ContractsClient::isOutage)
                 .build());
         this.interactiveRetry = Retry.of("contracts-interactive", RetryConfig.custom()
@@ -89,12 +89,12 @@ public class ContractsClient {
         return interactive(() -> fetchClientContracts(counterpartyId));
     }
 
-    /** То же для фоновой привязки: без повтора внутри — там никто не ждёт. */
+    /** То же для фоновой привязки, но без повтора внутри: там никто не ждёт. */
     public List<ExternalContract> clientContractsInBackground(UUID counterpartyId) {
         return guarded(() -> fetchClientContracts(counterpartyId));
     }
 
-    /** Состояние цепи — для администрирования и проверок. */
+    /** Состояние цепи: для администрирования и проверок. */
     public CircuitBreaker circuitBreaker() {
         return circuitBreaker;
     }
@@ -113,7 +113,7 @@ public class ContractsClient {
         }
     }
 
-    /** Таймаут, нет соединения или 5xx. Разомкнутая цепь — не повод повторять. */
+    /** Таймаут, нет соединения или 5xx. Разомкнутая цепь: не повод повторять. */
     private static boolean isOutage(Throwable exception) {
         return exception instanceof ContractSourceUnavailableException unavailable
                 && (unavailable.getStatus() == 0 || unavailable.getStatus() >= 500);

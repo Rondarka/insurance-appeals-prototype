@@ -44,9 +44,9 @@ import java.util.UUID;
  * недоступна, обращение принимается с видом страхования, который выбрал клиент. Клиент
  * известен из токена, поэтому, когда система вернётся, подсистема сама загрузит его договоры
  * и подберёт подходящий: по договору из списка, по номеру, по виду и дате происшествия.
- * Подходит один — привязывает, несколько — выбирает клиент, а если он не ответил — сотрудник.
+ * Если подходит один договор, привязывает его; если несколько, выбирает клиент, а если он не ответил, сотрудник.
  *
- * Сетевые вызовы — вне транзакции базы, как и при регистрации.
+ * Сетевые вызовы: вне транзакции базы, как и при регистрации.
  */
 @Service
 public class ContractLinkService {
@@ -98,8 +98,8 @@ public class ContractLinkService {
 
     /**
      * Фоновый проход: обращения, у которых подошло время попытки. Если учётная система всё ещё
-     * недоступна, проход останавливается на первом же обращении — нет смысла добивать её
-     * запросами по каждому, — а пауза до следующей попытки растёт: 1, 2, 4… минут, не больше часа.
+     * недоступна, проход останавливается на первом же обращении: нет смысла добивать её
+     * запросами по каждому, а пауза до следующей попытки растёт: 1, 2, 4… минут, не больше часа.
      */
     @Scheduled(initialDelayString = "${appeals.contract-link.initial-delay}",
             fixedDelayString = "${appeals.contract-link.interval}")
@@ -112,12 +112,12 @@ public class ContractLinkService {
                 postpone(id);
                 return;
             } catch (OptimisticLockingFailureException exception) {
-                // обращение изменили параллельно — попробуем на следующем проходе
+                // обращение изменили параллельно: попробуем на следующем проходе
             }
         }
     }
 
-    /** «Привязать сейчас» — сотрудник отдела не ждёт фоновой попытки. Сбой системы — ему 503. */
+    /** «Привязать сейчас»: сотрудник отдела не ждёт фоновой попытки. При сбое системы он получает 503. */
     public void linkNow(CurrentUser user, UUID id) {
         transactions.executeWithoutResult(status -> {
             Appeal appeal = find(id);
@@ -134,7 +134,7 @@ public class ContractLinkService {
         }
     }
 
-    /** Договоры на выбор: подходящие по виду и дате, а если таких нет — все договоры клиента. */
+    /** Договоры на выбор: подходящие по виду и дате, а если таких нет, все договоры клиента. */
     public List<ContractResponse> candidates(CurrentUser user, UUID id) {
         Request request = transactions.execute(status -> {
             Appeal appeal = find(id);
@@ -148,7 +148,7 @@ public class ContractLinkService {
                 .toList();
     }
 
-    /** Выбор договора клиентом или сотрудником отдела — только из договоров этого клиента. */
+    /** Выбор договора клиентом или сотрудником отдела: только из договоров этого клиента. */
     public void choose(CurrentUser user, UUID id, UUID contractId) {
         UUID counterpartyId = transactions.execute(status -> {
             Appeal appeal = find(id);
@@ -182,7 +182,7 @@ public class ContractLinkService {
         if (request == null) {
             return;
         }
-        // сотрудник в «Привязать сейчас» ждёт ответа, фоновый проход — нет
+        // сотрудник в «Привязать сейчас» ждёт ответа, фоновый проход не ждёт
         List<ExternalContract> contracts = "Подсистема".equals(actor)
                 ? contractsClient.clientContractsInBackground(request.counterpartyId())
                 : contractsClient.clientContracts(request.counterpartyId());
@@ -201,10 +201,10 @@ public class ContractLinkService {
     }
 
     /**
-     * Какие договоры клиента подходят. Сначала — договор, который клиент успел выбрать, затем
-     * номер, если он его указал. Иначе — договоры указанного вида, действовавшие на дату
-     * происшествия: так отсекается прошлогодний полис. Без даты — действующие. Если сужение
-     * ничего не оставило, подходят все договоры этого вида — проверки покажут расхождение.
+     * Какие договоры клиента подходят. Сначала: договор, который клиент успел выбрать, затем
+     * номер, если он его указал. Иначе: договоры указанного вида, действовавшие на дату
+     * происшествия: так отсекается прошлогодний полис. Без даты берутся действующие. Если сужение
+     * ничего не оставило, подходят все договоры этого вида: проверки покажут расхождение.
      */
     static Selection select(List<ExternalContract> contracts, Request request) {
         if (request.contractId() != null) {
@@ -246,7 +246,7 @@ public class ContractLinkService {
                 "Договор привязан " + how + ": " + contract.getPolicyNumber() + " · " + contract.getProductName(),
                 actor, now));
 
-        // клиент мог ошибиться видом страхования — тогда срок считается по виду договора
+        // клиент мог ошибиться видом страхования: тогда срок считается по виду договора
         if (!contract.getProductCode().equals(requestedProduct) && appeal.getDeadlineExtendedDays() == 0) {
             LocalDate registeredOn = LocalDate.ofInstant(appeal.getCreatedAt(), zone);
             DeadlineNorm norm = normService.choose(appeal.getCategory(), appeal.getSubcategory(),
@@ -294,11 +294,11 @@ public class ContractLinkService {
                 appeal.postponeContractLink(Instant.now().plus(pause.compareTo(maxBackoff) > 0 ? maxBackoff : pause));
             });
         } catch (OptimisticLockingFailureException exception) {
-            // обращение изменили параллельно — попытка просто повторится на следующем проходе
+            // обращение изменили параллельно: попытка просто повторится на следующем проходе
         }
     }
 
-    /** Выбирает договор клиент — в своём обращении, сотрудник — в обращении своего отдела. */
+    /** Договор выбирает клиент в своём обращении или сотрудник в обращении своего отдела. */
     private void checkChoice(CurrentUser user, Appeal appeal) {
         if (user.isClient()) {
             access.checkView(user, appeal);
@@ -362,7 +362,7 @@ public class ContractLinkService {
         }
     }
 
-    /** matching — подходящие договоры, all — все договоры клиента. */
+    /** matching: подходящие договоры, all: все договоры клиента. */
     record Selection(List<ExternalContract> matching, List<ExternalContract> all) {
     }
 }

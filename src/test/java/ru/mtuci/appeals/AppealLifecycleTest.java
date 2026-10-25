@@ -85,7 +85,7 @@ class AppealLifecycleTest extends IntegrationTest {
         resolve(closed, AppealOutcome.SATISFIED, "Выплата 40 000 ₽ направлена на ваш счёт по условиям договора.", AppealDetailResponse.class);
         changeStatus(closed, AppealStatus.CLOSED, AppealDetailResponse.class);
 
-        // закрытие — не пересмотр: итог остаётся результатом рассмотрения
+        // закрытие не пересмотр: итог остаётся результатом рассмотрения
         assertThat(getAppeal(closed).outcome()).isEqualTo(AppealOutcome.SATISFIED);
         assertThat(getAppeal(closed).resolvedAt()).isNotNull();
 
@@ -94,7 +94,7 @@ class AppealLifecycleTest extends IntegrationTest {
         resolve(reopened, AppealOutcome.REJECTED, "Событие не является страховым случаем по условиям договора.", AppealDetailResponse.class);
         changeStatus(reopened, AppealStatus.IN_PROGRESS, AppealDetailResponse.class);
 
-        // клиент не согласен — прежний итог больше не действует
+        // клиент не согласен: прежний итог больше не действует
         assertThat(getAppeal(reopened).outcome()).isNull();
     }
 
@@ -134,7 +134,7 @@ class AppealLifecycleTest extends IntegrationTest {
         assertThat(support).extracting(AppealSummaryResponse::id).contains(login).doesNotContain(claim);
         assertThat(as(ADMIN).getForEntity("/api/appeals/{id}", String.class, claim).getStatusCode())
                 .isEqualTo(HttpStatus.OK);
-        // смотреть может всё, работать с обращениями — нет
+        // смотреть может всё, а работать с обращениями не может
         assertThat(as(ADMIN).postForEntity("/api/appeals/{id}/status",
                 new ChangeStatusRequest(AppealStatus.IN_PROGRESS), String.class, claim).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);

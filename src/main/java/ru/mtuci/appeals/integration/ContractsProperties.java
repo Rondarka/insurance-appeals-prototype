@@ -11,7 +11,7 @@ import java.time.Duration;
 @ConfigurationProperties(prefix = "appeals.contracts")
 public record ContractsProperties(String baseUrl, Duration timeout, Circuit circuit, RetrySettings retry) {
 
-    /** Из последних slidingWindow вызовов (не меньше minimumCalls) сбоем закончились failureRateThreshold % — цепь размыкается на openDuration. */
+    /** Из последних slidingWindow вызовов (не меньше minimumCalls) сбоем закончились failureRateThreshold %: цепь размыкается на openDuration. */
     public record Circuit(int slidingWindow, int minimumCalls, float failureRateThreshold, Duration openDuration) {
     }
 

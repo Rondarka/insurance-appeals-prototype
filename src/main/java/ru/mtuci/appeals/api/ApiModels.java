@@ -31,7 +31,7 @@ public final class ApiModels {
 
     /** Кто клиент, подсистема узнаёт из токена, поэтому идентификатора клиента в запросе нет. */
     /**
-     * contractId — договор из списка. Если список договоров загрузить не удалось, клиент
+     * contractId: договор из списка. Если список договоров загрузить не удалось, клиент
      * указывает вид страхования (productCode) и, по желанию, номер договора (решение 29).
      * productCode передаётся и вместе с договором: на случай, если учётная система
      * откажет в момент отправки.
@@ -71,7 +71,7 @@ public final class ApiModels {
     ) {
     }
 
-    /** finalCategory и finalSubcategory — итоговый тип, если клиент выбрал не тот; пусто — тип подтверждён. */
+    /** finalCategory и finalSubcategory: итоговый тип, если клиент выбрал не тот; пусто, если тип подтверждён. */
     public record ResolveAppealRequest(
             @NotNull AppealOutcome outcome,
             @NotBlank @Size(min = 20, max = 5000) String answer,
@@ -80,14 +80,14 @@ public final class ApiModels {
     ) {
     }
 
-    /** Автор сообщения — тот, чей токен: клиент или сотрудник. */
+    /** Автор сообщения определяется по токену: клиент или сотрудник. */
     public record AddMessageRequest(@NotBlank @Size(max = 5000) String body) {
     }
 
     public record DepartmentResponse(Long id, String code, String name, String description) {
     }
 
-    /** insuranceType — название продукта для показа, productCode — его код из учётной системы. */
+    /** Название продукта для показа (insuranceType) и его код из учётной системы (productCode). */
     public record ContractResponse(
             UUID id,
             String policyNumber,
@@ -104,8 +104,8 @@ public final class ApiModels {
     }
 
     /**
-     * Условия договора — по запросу сотрудника из учётной системы, всегда актуальные.
-     * current — договор сейчас; в обращении хранится его снимок на момент регистрации.
+     * Условия договора: по запросу сотрудника из учётной системы, всегда актуальные.
+     * current: договор сейчас; в обращении хранится его снимок на момент регистрации.
      */
     public record ContractTermsResponse(
             ContractResponse current,
@@ -120,11 +120,11 @@ public final class ApiModels {
     public record CoverageResponse(String code, String name) {
     }
 
-    /** Проверка, сделанная подсистемой: level — OK или WARNING. */
+    /** Проверка, сделанная подсистемой; level равен OK или WARNING. */
     public record CheckResponse(String code, String level, String message) {
     }
 
-    /** Другое обращение того же клиента. canOpen — можно ли открыть его карточку. */
+    /** Другое обращение того же клиента. canOpen: можно ли открыть его карточку. */
     public record RelatedAppealResponse(
             UUID id,
             String publicNumber,
@@ -141,8 +141,8 @@ public final class ApiModels {
     }
 
     /**
-     * Текущий пользователь по токену. У клиента — договоры из учётной системы,
-     * у сотрудника — подразделение.
+     * Текущий пользователь по токену. У клиента: договоры из учётной системы,
+     * у сотрудника: подразделение.
      */
     public record MeResponse(
             String subject,
@@ -160,10 +160,10 @@ public final class ApiModels {
     }
 
     /**
-     * Состояние внешней системы глазами подсистемы (решение 30): CLOSED — работает,
-     * OPEN — обращения приостановлены, HALF_OPEN — пробные вызовы после паузы; для доставки
-     * событий OK или DELAYED — события дольше минуты ждут отправки в брокер (pending — сколько).
-     * failureRate — доля сбоев среди последних вызовов, %; -1 — вызовов пока мало или неприменимо.
+     * Состояние внешней системы глазами подсистемы (решение 30). CLOSED: работает,
+     * OPEN: обращения приостановлены, HALF_OPEN: пробные вызовы после паузы. Для доставки
+     * событий OK или DELAYED, если события дольше минуты ждут отправки в брокер (pending: сколько их).
+     * failureRate: доля сбоев среди последних вызовов, %; -1, если вызовов пока мало или показатель неприменим.
      */
     public record IntegrationStatusResponse(String code, String name, String state, float failureRate, long pending) {
     }
@@ -176,7 +176,7 @@ public final class ApiModels {
 
     // ---------- настройки администратора (решение 34) ----------
 
-    /** Правило маршрутизации и предел срока отдела по закону. subcategory GENERAL — все типы категории. */
+    /** Правило маршрутизации и предел срока отдела по закону. subcategory GENERAL: все типы категории. */
     public record RoutingRuleResponse(String category, String categoryLabel, String subcategory, String typeLabel,
                                       String departmentCode, String departmentName, String priority, int slaHours,
                                       int maxSlaHours, String legalLimit) {
@@ -204,7 +204,7 @@ public final class ApiModels {
                                       LocalDate validFrom, LocalDate validTo) {
     }
 
-    /** Новая версия норматива — со ссылкой на акт и датой начала действия. */
+    /** Новая версия норматива: со ссылкой на акт и датой начала действия. */
     public record NewNormVersionRequest(
             @NotBlank String code,
             @Min(1) @Max(365) int termDays,
@@ -270,7 +270,7 @@ public final class ApiModels {
             EscalationLevel escalationLevel,
             ContractLink contractLink,
             AppealOutcome outcome,
-            // последнее сообщение в переписке — от клиента: ход за сотрудником
+            // последнее сообщение в переписке от клиента: ход за сотрудником
             boolean clientReplied,
             // сигналы в тексте клиента: грозит жалобой, судом, требует выплату (решение 35)
             List<SignalBadge> signals,
@@ -311,7 +311,7 @@ public final class ApiModels {
     ) {
     }
 
-    /** messageId — сообщение, с которым пришёл файл; null — файл из формы обращения. */
+    /** messageId: сообщение, с которым пришёл файл; null, если файл из формы обращения. */
     public record AttachmentResponse(
             UUID id,
             Long messageId,
@@ -393,7 +393,7 @@ public final class ApiModels {
     }
 
     /**
-     * inputType — TEXT, DATE или NUMBER. contractAttribute заполнен, если значение
+     * inputType: TEXT, DATE или NUMBER. contractAttribute заполнен, если значение
      * подставляет сервер из договора: такое поле клиенту не показывают.
      */
     public record FormField(
@@ -440,7 +440,7 @@ public final class ApiModels {
 
     // ---------- помощник сотрудника (решение 35) ----------
 
-    /** risk — грозит спором или проверкой: такие обращения поднимаются в очереди. */
+    /** risk: обращение грозит спором или проверкой, такие поднимаются в очереди. */
     public record SignalBadge(String code, String label, boolean risk) {
     }
 
@@ -458,7 +458,7 @@ public final class ApiModels {
                                         LocalDate resolvedOn, long resolutionDays, String answer) {
     }
 
-    /** engine — кто подсказывает; notice — почему подсказки дают правила, хотя выбрана модель. */
+    /** engine: кто подсказывает; notice: почему подсказки дают правила, хотя выбрана модель. */
     public record AssistantAdviceResponse(String engine, String notice, List<SignalResponse> signals,
                                           TypeHintResponse typeHint, List<SimilarAppealResponse> similar,
                                           Map<String, String> decisions) {
@@ -485,7 +485,7 @@ public final class ApiModels {
 
     // ---------- аналитика (решение 23) ----------
 
-    /** Доля в процентах с одним знаком; база — от чего она посчитана, чтобы 100 % из 2 не путать со 100 % из 200. */
+    /** Доля в процентах с одним знаком; база: от чего она посчитана, чтобы 100 % из 2 не путать со 100 % из 200. */
     public record Rate(long count, long of, Double percent) {
 
         public static Rate of(long count, long base) {
@@ -519,7 +519,7 @@ public final class ApiModels {
     public record AssistantUsage(String kind, String source, long shown, Rate accepted, long rejected) {
     }
 
-    /** from выровнен на понедельник; product — выбранный вид страхования или null — все. */
+    /** from выровнен на понедельник; product: выбранный вид страхования или null, если все. */
     public record AnalyticsResponse(LocalDate from, LocalDate to, String product, AnalyticsSummary summary,
                                     List<ShareItem> products, List<ShareItem> types, List<LocalDate> weeks,
                                     List<WeekSeries> weekly, List<DepartmentOnTime> departments,

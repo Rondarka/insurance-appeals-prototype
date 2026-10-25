@@ -50,11 +50,11 @@ import java.util.regex.Pattern;
 /**
  * Помощник сотрудника (решение 35): что заметить в тексте клиента, не претензия ли это,
  * как решали похожие обращения и черновик ответа. Работает на правилах и поиске, по выбору
- * администратора — на локальной модели; модель недоступна — отвечают правила, как кабинет
+ * администратора на локальной модели; если модель недоступна, отвечают правила, как кабинет
  * работает без учётной системы. Каждая показанная подсказка учитывается вместе с решением
  * сотрудника: по доле принятых видно, приносит ли помощник пользу.
  *
- * Обращения к модели — вне транзакции базы: модель может думать десятки секунд.
+ * Обращения к модели идут вне транзакции базы: модель может думать десятки секунд.
  */
 @Service
 public class AssistantService {
@@ -104,7 +104,7 @@ public class AssistantService {
         this.zone = ZoneId.of(timezone);
     }
 
-    /** Подсказки по обращению — сотруднику его отдела. */
+    /** Подсказки по обращению: сотруднику его отдела. */
     public AssistantAdviceResponse advice(CurrentUser user, UUID id) {
         Snapshot appeal = snapshot(user, id);
         AssistantEngine engine = engine();
@@ -115,7 +115,7 @@ public class AssistantService {
             shown(id, TYPE_HINT, guess.source(), user);
         }
         if (!similar.isEmpty()) {
-            // похожие ищет полнотекстовый поиск базы — это всегда правила
+            // похожие ищет полнотекстовый поиск базы: это всегда правила
             shown(id, SIMILAR, AssistantEngine.RULES, user);
         }
         return new AssistantAdviceResponse(engine.source(), guess.degraded() ? DEGRADED : null, signals.of(id),
@@ -159,7 +159,7 @@ public class AssistantService {
         }
     }
 
-    /** Кто сейчас подсказывает и в каком состоянии модель — для администратора. */
+    /** Кто сейчас подсказывает и в каком состоянии модель: для администратора. */
     public AssistantSettingsResponse status() {
         var circuit = model.circuitBreaker();
         return new AssistantSettingsResponse(settings.assistantEngine(), model.modelName(), model.baseUrl(),
@@ -172,7 +172,7 @@ public class AssistantService {
         return AssistantEngine.LOCAL_MODEL.equals(settings.assistantEngine()) ? model : rules;
     }
 
-    /** Модель недоступна или ответила не по формату — тот же вопрос задаётся правилам. */
+    /** Модель недоступна или ответила не по формату: тот же вопрос задаётся правилам. */
     private <T> Result<T> run(AssistantEngine engine, Function<AssistantEngine, T> call) {
         if (engine != rules) {
             try {
@@ -221,7 +221,7 @@ public class AssistantService {
 
     // ---------- подсказки ----------
 
-    /** Какой срок по закону был бы у обращения как у претензии — от типа зависят срок и продление. */
+    /** Какой срок по закону был бы у обращения как у претензии: от типа зависят срок и продление. */
     private TypeHintResponse typeHint(Snapshot appeal, TypeGuess guess, String source) {
         LocalDate registeredOn = LocalDate.ofInstant(appeal.createdAt(), zone);
         DeadlineNorm norm = normService.choose(guess.category(), guess.subcategory(), appeal.productCode(),
@@ -302,7 +302,7 @@ public class AssistantService {
     private record Template(String title, String body) {
     }
 
-    /** {…} — данные обращения и договора; чего нет, остаётся в […] — допишет сотрудник. */
+    /** {…}: данные обращения и договора; чего нет, остаётся в […], это допишет сотрудник. */
     private String fill(String body, Snapshot appeal) {
         Map<String, String> values = new LinkedHashMap<>();
         values.put("{клиент}", appeal.customerName());

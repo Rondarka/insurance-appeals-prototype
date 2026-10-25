@@ -46,7 +46,7 @@ const auth = (() => {
             refresh: data.refresh_token,
             idToken: data.id_token || tokens?.idToken
         };
-        // обновить токен за 30 секунд до истечения; не вышло — войти заново
+        // обновить токен за 30 секунд до истечения; не вышло: войти заново
         window.clearTimeout(refreshTimer);
         refreshTimer = window.setTimeout(
             () => refresh().catch(login),

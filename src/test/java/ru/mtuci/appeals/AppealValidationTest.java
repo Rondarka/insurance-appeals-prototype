@@ -12,7 +12,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Серверная проверка формы: некорректное обращение отклоняется до сохранения, интерфейсу
- * не доверяем. Проверки договора — в {@link ContractIntegrationTest}.
+ * не доверяем. Проверки договора: в {@link ContractIntegrationTest}.
  */
 class AppealValidationTest extends IntegrationTest {
 

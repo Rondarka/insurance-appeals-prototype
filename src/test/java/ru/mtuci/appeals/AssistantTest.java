@@ -59,7 +59,7 @@ class AssistantTest extends IntegrationTest {
                 "Искренне надеюсь на помощь. Если не почините вход, напишу жалобу в Банк России."));
 
         AppealSummaryResponse queued = queueItem(SUPPORT_SPECIALIST, id);
-        // «искренне» — не иск: признаки ищутся по словам, а не по буквам
+        // «искренне» не «иск»: признаки ищутся по словам, а не по буквам
         assertThat(queued.signals()).extracting(SignalBadge::code).containsExactly("REGULATOR");
         assertThat(queued.signals().get(0).risk()).isTrue();
 
@@ -71,7 +71,7 @@ class AssistantTest extends IntegrationTest {
         assertThat(advice.signals().get(1).excerpt()).contains("1 500 руб");
         assertThat(advice.signals().get(0).hint()).isNotBlank();
 
-        // клиенту — ни сигналов, ни подсказок: это внутренняя оценка его обращения
+        // клиенту не показываются ни сигналы, ни подсказки: это внутренняя оценка его обращения
         assertThat(queueItem(ANNA, id).signals()).isEmpty();
         assertThat(as(ANNA).getForEntity("/api/appeals/{id}/assistant", String.class, id).getStatusCode())
                 .isEqualTo(HttpStatus.FORBIDDEN);
@@ -155,7 +155,7 @@ class AssistantTest extends IntegrationTest {
         assertThat(draft.source()).isEqualTo("LOCAL_MODEL");
         assertThat(draft.text()).startsWith(TestLocalModel.DRAFT_PREFIX);
 
-        // модель упала — подсказки дают правила, сотрудник видит почему
+        // модель упала: подсказки дают правила, сотрудник видит почему
         TestLocalModel.available(false);
         AssistantAdviceResponse degraded = advice(CLAIMS_SPECIALIST, id);
         assertThat(degraded.notice()).contains("правила");

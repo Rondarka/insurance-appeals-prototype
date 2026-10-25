@@ -63,6 +63,25 @@ public class RabbitConfig {
                 .build();
     }
 
+    /** В эксплуатации обменник объявляет CDI; объявление идемпотентно, в стенде его делает подсистема. */
+    @Bean
+    TopicExchange cdiExchange() {
+        return new TopicExchange(RabbitTopology.CDI_EXCHANGE, true, false);
+    }
+
+    @Bean
+    Queue counterpartyQueue() {
+        return QueueBuilder.durable(RabbitTopology.COUNTERPARTY_QUEUE)
+                .deadLetterExchange(RabbitTopology.DEAD_LETTER_EXCHANGE)
+                .deadLetterRoutingKey("appeal.counterparty-merges.failed")
+                .build();
+    }
+
+    @Bean
+    Binding counterpartyBinding(Queue counterpartyQueue, TopicExchange cdiExchange) {
+        return BindingBuilder.bind(counterpartyQueue).to(cdiExchange).with("counterparty.merged");
+    }
+
     @Bean
     Queue deadLetterQueue() {
         return QueueBuilder.durable(RabbitTopology.DEAD_LETTER_QUEUE).build();

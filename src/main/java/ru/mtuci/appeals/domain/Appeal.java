@@ -196,6 +196,12 @@ public class Appeal {
         this.contractLinkNextAt = now;
     }
 
+    /** CDI объединил карточки клиента: обращение переходит на основную (решение 44). */
+    public void moveToCounterparty(UUID masterId, Instant now) {
+        this.counterpartyId = masterId;
+        this.updatedAt = now;
+    }
+
     public void linkContract(ContractSnapshot contract, String detailsJson, Instant now) {
         if (contractLink == ContractLink.LINKED) {
             throw new IllegalStateException("Договор уже привязан");

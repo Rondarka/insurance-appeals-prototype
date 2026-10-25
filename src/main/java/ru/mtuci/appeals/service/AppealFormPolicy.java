@@ -46,8 +46,8 @@ public class AppealFormPolicy {
     }
 
     /**
-     * clientRole — кем клиент приходится выбранному договору. Не страхователю не показываются
-     * типы, которые оформляет только страхователь (решение 43); null — роль не известна.
+     * clientRole: кем клиент приходится выбранному договору. Не страхователю не показываются
+     * типы, которые оформляет только страхователь (решение 43); null, если роль не известна.
      */
     public FormSchemaResponse schema(String productCode, ContractRole clientRole) {
         Map<String, List<String>> documents = new LinkedHashMap<>();

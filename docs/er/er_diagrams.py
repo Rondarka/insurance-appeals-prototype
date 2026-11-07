@@ -104,6 +104,74 @@ def legend(svg, y):
                     "трезубец: «много»; пунктир: связь по коду без внешнего ключа.", 14)
 
 
+if os.environ.get("FIGURES") == "drawio":
+    # Те же диаграммы файлом draw.io: таблицы как таблицы draw.io, связи в нотации ER draw.io.
+    # Запуск: FIGURES=drawio python docs/er/er_diagrams.py <папка>
+
+    class Svg:  # noqa: F811
+        def __init__(self, width, height):
+            self.w, self.h, self.cells, self.n = width, height, [], 1
+
+        def _id(self):
+            self.n += 1
+            return f"c{self.n}"
+
+        def _vertex(self, x, y, w, h, value, style, parent="1"):
+            cid = self._id()
+            self.cells.append(f'<mxCell id="{cid}" value="{html.escape(value)}" style="{style}" vertex="1" parent="{parent}">'
+                              f'<mxGeometry x="{x:.1f}" y="{y:.1f}" width="{w:.1f}" height="{h:.1f}" as="geometry"/></mxCell>')
+            return cid
+
+        def text(self, x, y, value, size=14, weight="normal", anchor="start", top=False):
+            w, h = len(value) * size * 0.55 + 12, size * 1.4
+            left = x if anchor == "start" else (x - w / 2 if anchor == "middle" else x - w)
+            align = {"start": "left", "middle": "center", "end": "right"}[anchor]
+            self._vertex(left, y - h / 2, w, h, html.escape(value),
+                         f"text;html=1;strokeColor=none;fillColor=none;align={align};verticalAlign=middle;"
+                         f"fontFamily=Times New Roman;fontSize={size};fontStyle={1 if weight == 'bold' else 0};")
+
+        def table(self, x, y, w, name, rows):
+            h = HEADER + len(rows) * ROW + 8
+            parent = self._vertex(x, y, w, h, html.escape(name),
+                                  "swimlane;html=1;startSize=30;horizontal=1;collapsible=0;fillColor=#e6e6e6;"
+                                  "swimlaneFillColor=#ffffff;strokeColor=#000000;strokeWidth=1.6;"
+                                  "fontFamily=Times New Roman;fontSize=15;fontStyle=1;")
+            cell = "text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontFamily=Times New Roman;"
+            for i, (key, columns) in enumerate(rows):
+                top = HEADER + 4 + ROW * i
+                if key:
+                    self._vertex(6, top, 44, ROW, html.escape(key), cell + "fontSize=12;fontStyle=1;", parent)
+                self._vertex(50, top, w - 56, ROW, html.escape(columns), cell + "fontSize=14;", parent)
+            return y + h
+
+        def edge(self, points, dash=False):
+            (sx, sy), (tx, ty) = points[0], points[-1]
+            middle = "".join(f'<mxPoint x="{x:.1f}" y="{y:.1f}"/>' for x, y in points[1:-1])
+            bends = f'<Array as="points">{middle}</Array>' if middle else ""
+            style = ("edgeStyle=none;rounded=0;html=1;startArrow=ERone;endArrow=ERmany;startFill=0;endFill=0;"
+                     f"startSize=12;endSize=12;strokeColor=#000000;strokeWidth=1.4;{'dashed=1;' if dash else ''}")
+            self.cells.append(f'<mxCell id="{self._id()}" style="{style}" edge="1" parent="1"><mxGeometry relative="1" as="geometry">'
+                              f'<mxPoint x="{sx:.1f}" y="{sy:.1f}" as="sourcePoint"/><mxPoint x="{tx:.1f}" y="{ty:.1f}" as="targetPoint"/>'
+                              f'{bends}</mxGeometry></mxCell>')
+
+        def save(self, name):
+            path = os.path.join(OUT, os.path.splitext(name)[0] + ".drawio")
+            with open(path, "w", encoding="utf-8") as f:
+                f.write(f'<mxfile host="app.diagrams.net"><diagram name="{html.escape(os.path.splitext(name)[0])}" id="d1">'
+                        f'<mxGraphModel grid="0" page="1" pageWidth="{self.w}" pageHeight="{self.h}" background="#ffffff">'
+                        f'<root><mxCell id="0"/><mxCell id="1" parent="0"/>{"".join(self.cells)}</root></mxGraphModel>'
+                        f'</diagram></mxfile>\n')
+            print("draw.io:", path)
+
+    def entity(svg, x, y, w, name, rows):  # noqa: F811
+        return svg.table(x, y, w, name, rows)
+
+    def relation(svg, points, dash=False, label=None, label_at=None):  # noqa: F811
+        svg.edge(points, dash)
+        if label:
+            svg.text(label_at[0], label_at[1], label, 13)
+
+
 # ---------- 1. обращение и связанные с ним данные ----------
 a = Svg(1720, 1000)
 entity(a, 640, 40, 260, "department (отдел)", [("PK", "id"), ("UK", "code"), ("", "name, description")])

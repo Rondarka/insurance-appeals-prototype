@@ -298,7 +298,7 @@ dead-letter срабатывает на отклонение без возвра
 
 ## Схема базы
 
-Тридцать таблиц и представление для аналитики:
+Тридцать таблиц и представление для аналитики (подробно, с ER-диаграммами: [database.md](database.md)):
 
 ```
 appeal >──── department           (counterparty_id: клиент из токена, своей таблицы нет)
@@ -349,7 +349,7 @@ data_retention                          (через сколько лет пос
 Статусы обращения:
 
 ```
-PENDING_ROUTING → ROUTED → IN_PROGRESS → WAITING_CUSTOMER → RESOLVED → CLOSED
+PENDING_ROUTING → (NEEDS_CLASSIFICATION) → ROUTED → IN_PROGRESS → WAITING_CUSTOMER → RESOLVED → CLOSED
 ```
 
 `PENDING_ROUTING` существует только из-за событийной архитектуры: см. decisions.md,

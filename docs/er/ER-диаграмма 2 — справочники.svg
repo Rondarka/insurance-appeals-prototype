@@ -1,0 +1,156 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1640" height="920" viewBox="0 0 1640 920">
+<rect width="1640" height="920" fill="#fff"/>
+<rect x="20" y="40" width="250" height="101" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="20" y="40" width="250" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="145.0" y="56.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">department (отдел)</text>
+<text x="28" y="84.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="70" y="84.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">id</text>
+<text x="28" y="105.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">UK</text>
+<text x="70" y="105.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">code</text>
+<text x="70" y="126.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">name, description</text>
+<rect x="330" y="40" width="270" height="143" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="330" y="40" width="270" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="465.0" y="56.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">routing_rule (правило)</text>
+<text x="338" y="84.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="380" y="84.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">id</text>
+<text x="338" y="105.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="380" y="105.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category</text>
+<text x="380" y="126.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">subcategory</text>
+<text x="338" y="147.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="380" y="147.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">department_id</text>
+<text x="380" y="168.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">priority, sla_hours</text>
+<rect x="660" y="40" width="260" height="101" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="660" y="40" width="260" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="790.0" y="56.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal_category (категория)</text>
+<text x="668" y="84.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="710" y="84.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">code</text>
+<text x="710" y="105.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">label</text>
+<text x="710" y="126.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">sort_order</text>
+<rect x="20" y="290" width="250" height="122" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="20" y="290" width="250" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="145.0" y="306.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">form_field (поле формы)</text>
+<text x="28" y="334.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="70" y="334.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">code</text>
+<text x="70" y="355.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">label, input_type</text>
+<text x="70" y="376.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">hint</text>
+<text x="70" y="397.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">contract_attribute</text>
+<rect x="330" y="290" width="270" height="101" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="330" y="290" width="270" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="465.0" y="306.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal_type_field</text>
+<text x="338" y="334.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK FK</text>
+<text x="380" y="334.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category, type_code</text>
+<text x="338" y="355.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK FK</text>
+<text x="380" y="355.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">field_code</text>
+<text x="380" y="376.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">required, sort_order</text>
+<rect x="660" y="290" width="260" height="122" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="660" y="290" width="260" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="790.0" y="306.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal_type (тип обращения)</text>
+<text x="668" y="334.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK FK</text>
+<text x="710" y="334.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category</text>
+<text x="668" y="355.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="710" y="355.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">code</text>
+<text x="710" y="376.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">label, sort_order</text>
+<text x="710" y="397.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">policyholder_only</text>
+<rect x="1010" y="290" width="270" height="122" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="1010" y="290" width="270" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="1145.0" y="306.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal_type_norm</text>
+<text x="1018" y="334.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="1060" y="334.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category, type_code</text>
+<text x="1060" y="355.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">product_code</text>
+<text x="1060" y="376.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">norm_code</text>
+<text x="1060" y="397.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">priority</text>
+<rect x="1340" y="290" width="290" height="143" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="1340" y="290" width="290" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="1485.0" y="306.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">deadline_norm (норматив)</text>
+<text x="1348" y="334.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="1390" y="334.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">id</text>
+<text x="1348" y="355.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">UK</text>
+<text x="1390" y="355.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">code, valid_from</text>
+<text x="1390" y="376.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">title, term_days, counting</text>
+<text x="1390" y="397.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">max_extension_days, condition</text>
+<text x="1390" y="418.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">legal_basis, valid_to</text>
+<rect x="330" y="560" width="270" height="80" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="330" y="560" width="270" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="465.0" y="576.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal_type_product</text>
+<text x="338" y="604.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK FK</text>
+<text x="380" y="604.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category, type_code</text>
+<text x="338" y="625.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="380" y="625.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">product_code</text>
+<rect x="660" y="560" width="260" height="122" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="660" y="560" width="260" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="790.0" y="576.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">answer_template (шаблон)</text>
+<text x="668" y="604.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="710" y="604.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">id</text>
+<text x="668" y="625.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="710" y="625.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category, subcategory</text>
+<text x="710" y="646.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">outcome</text>
+<text x="710" y="667.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">title, body</text>
+<rect x="1010" y="560" width="300" height="143" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="1010" y="560" width="300" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="1160.0" y="576.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal (обращение)</text>
+<text x="1018" y="604.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="1060" y="604.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">id</text>
+<text x="1018" y="625.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="1060" y="625.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category</text>
+<text x="1018" y="646.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="1060" y="646.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">final_category, final_subcategory</text>
+<text x="1018" y="667.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">FK</text>
+<text x="1060" y="667.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">requested_product_code</text>
+<text x="1060" y="688.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">остальное: на первой диаграмме</text>
+<rect x="1360" y="560" width="240" height="80" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="1360" y="560" width="240" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="1480.0" y="576.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">insurance_product (вид)</text>
+<text x="1368" y="604.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="1410" y="604.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">code</text>
+<text x="1410" y="625.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">label, sort_order</text>
+<rect x="330" y="760" width="270" height="101" fill="#fff" stroke="#000" stroke-width="1.6"/>
+<rect x="330" y="760" width="270" height="30" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+<text x="465.0" y="776.0" font-family="Times New Roman, serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle">appeal_type_document</text>
+<text x="338" y="804.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK FK</text>
+<text x="380" y="804.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">category, type_code</text>
+<text x="338" y="825.5" font-family="Times New Roman, serif" font-size="12" font-weight="bold" text-anchor="start" dominant-baseline="middle">PK</text>
+<text x="380" y="825.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">sort_order</text>
+<text x="380" y="846.5" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">label</text>
+<path d="M270.0,100.0 L330.0,100.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M660.0,100.0 L600.0,100.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M790.0,141.0 L790.0,290.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M270.0,340.0 L330.0,340.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M660.0,340.0 L600.0,340.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M920.0,340.0 L1010.0,340.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M1340.0,340.0 L1333.0,340.0 M1328.0,340.0 L1321.0,340.0 M1316.0,340.0 L1309.0,340.0 M1304.0,340.0 L1297.0,340.0 M1292.0,340.0 L1285.0,340.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M660.0,395.0 L630.0,395.0 L630.0,600.0 L600.0,600.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M690.0,412.0 L690.0,520.0 L645.0,520.0 L645.0,810.0 L600.0,810.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M790.0,412.0 L790.0,560.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M920.0,395.0 L960.0,395.0 L960.0,646.0 L1010.0,646.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M920.0,120.0 L980.0,120.0 L980.0,625.0 L1010.0,625.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M1480.0,640.0 L1480.0,667.0 L1310.0,667.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<text x="20" y="900.0" font-family="Times New Roman, serif" font-size="14" font-weight="normal" text-anchor="start" dominant-baseline="middle">Обозначения: PK первичный ключ, FK внешний ключ, UK уникальный ключ; черта у таблицы: «один», трезубец: «много»; пунктир: связь по коду без внешнего ключа.</text>
+<path d="M279.0,107.0 L279.0,93.0" stroke="#000" stroke-width="1.6"/>
+<path d="M316.0,100.0 L330.0,92.0 M316.0,100.0 L330.0,108.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M651.0,93.0 L651.0,107.0" stroke="#000" stroke-width="1.6"/>
+<path d="M614.0,100.0 L600.0,108.0 M614.0,100.0 L600.0,92.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M783.0,150.0 L797.0,150.0" stroke="#000" stroke-width="1.6"/>
+<path d="M790.0,276.0 L798.0,290.0 M790.0,276.0 L782.0,290.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M279.0,347.0 L279.0,333.0" stroke="#000" stroke-width="1.6"/>
+<path d="M316.0,340.0 L330.0,332.0 M316.0,340.0 L330.0,348.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M651.0,333.0 L651.0,347.0" stroke="#000" stroke-width="1.6"/>
+<path d="M614.0,340.0 L600.0,348.0 M614.0,340.0 L600.0,332.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M929.0,347.0 L929.0,333.0" stroke="#000" stroke-width="1.6"/>
+<path d="M996.0,340.0 L1010.0,332.0 M996.0,340.0 L1010.0,348.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M1331.0,333.0 L1331.0,347.0" stroke="#000" stroke-width="1.6"/>
+<path d="M1294.0,340.0 L1280.0,348.0 M1294.0,340.0 L1280.0,332.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<text x="1286" y="322.0" font-family="Times New Roman, serif" font-size="13" font-weight="normal" text-anchor="start" dominant-baseline="middle">по code</text>
+<path d="M651.0,388.0 L651.0,402.0" stroke="#000" stroke-width="1.6"/>
+<path d="M614.0,600.0 L600.0,608.0 M614.0,600.0 L600.0,592.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M683.0,421.0 L697.0,421.0" stroke="#000" stroke-width="1.6"/>
+<path d="M614.0,810.0 L600.0,818.0 M614.0,810.0 L600.0,802.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M783.0,421.0 L797.0,421.0" stroke="#000" stroke-width="1.6"/>
+<path d="M790.0,546.0 L798.0,560.0 M790.0,546.0 L782.0,560.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M929.0,402.0 L929.0,388.0" stroke="#000" stroke-width="1.6"/>
+<path d="M996.0,646.0 L1010.0,638.0 M996.0,646.0 L1010.0,654.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<text x="952" y="540.0" font-family="Times New Roman, serif" font-size="13" font-weight="normal" text-anchor="end" dominant-baseline="middle">итоговый тип</text>
+<path d="M929.0,127.0 L929.0,113.0" stroke="#000" stroke-width="1.6"/>
+<path d="M996.0,625.0 L1010.0,617.0 M996.0,625.0 L1010.0,633.0" fill="none" stroke="#000" stroke-width="1.4"/>
+<path d="M1473.0,649.0 L1487.0,649.0" stroke="#000" stroke-width="1.6"/>
+<path d="M1324.0,667.0 L1310.0,675.0 M1324.0,667.0 L1310.0,659.0" fill="none" stroke="#000" stroke-width="1.4"/>
+</svg>

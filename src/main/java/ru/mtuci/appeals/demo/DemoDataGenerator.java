@@ -315,13 +315,18 @@ public class DemoDataGenerator {
             }
         }
 
-        // ответ по существу: обычно в срок, иногда с опозданием, для аналитики соблюдения сроков
+        // ответ по существу, как в отделе с налаженной работой: обычно в срок отдела, часть около
+        // него (опоздание по сроку отдела, но в сроке по закону), около 8 % с нарушением срока по
+        // закону, для аналитики соблюдения сроков (решения 33, 50)
         LocalDate deadline = appeal.getLegalDeadline();
         int span = Math.max(1, calendar.workingDaysAfter(registeredOn, deadline));
+        LocalDate departmentDay = LocalDate.ofInstant(appeal.getDeadlineAt(), zone);
+        int departmentSpan = Math.max(1, Math.min(span, calendar.workingDaysAfter(registeredOn, departmentDay)));
         double share = random.nextDouble();
-        double part = share < 0.68 ? 0.15 + random.nextDouble() * 0.5
-                : share < 0.92 ? 0.65 + random.nextDouble() * 0.33 : 1.05 + random.nextDouble() * 0.45;
-        LocalDate resolveDay = calendar.addWorkingDays(registeredOn, Math.max(1, (int) Math.round(span * part)));
+        int days = share < 0.72 ? (int) Math.round(departmentSpan * (0.2 + random.nextDouble() * 0.75))
+                : share < 0.92 ? (int) Math.round(Math.min(span * 0.98, departmentSpan * (0.95 + random.nextDouble() * 0.6)))
+                : (int) Math.round(span * (1.05 + random.nextDouble() * 0.45));
+        LocalDate resolveDay = calendar.addWorkingDays(registeredOn, Math.max(1, days));
         Instant resolveAt = workingTime(resolveDay, random);
         if (!time.until(resolveAt.isAfter(time.at) ? resolveAt : time.at.plus(Duration.ofHours(2)))) {
             return number;

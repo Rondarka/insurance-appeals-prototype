@@ -88,7 +88,7 @@ class SettingsTest extends IntegrationTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().message()).contains("не больше 312 ч").contains("15 раб. дн.");
         assertThat(rule(as(ADMIN).getForObject("/api/admin/routing-rules", RoutingSettingsResponse.class),
-                "TECHNICAL", "GENERAL").slaHours()).isEqualTo(12);
+                "TECHNICAL", "GENERAL").slaHours()).isEqualTo(72);
     }
 
     @Test

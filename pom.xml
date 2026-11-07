@@ -24,6 +24,7 @@
         <testcontainers.version>1.21.4</testcontainers.version>
         <resilience4j.version>2.2.0</resilience4j.version>
         <shedlock.version>6.6.0</shedlock.version>
+        <jacoco.version>0.8.12</jacoco.version>
     </properties>
 
     <dependencies>
@@ -118,6 +119,14 @@
             <artifactId>awaitility</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- агент JaCoCo для argLine тестов: зависимость гарантирует, что он скачан до их запуска -->
+        <dependency>
+            <groupId>org.jacoco</groupId>
+            <artifactId>org.jacoco.agent</artifactId>
+            <version>${jacoco.version}</version>
+            <classifier>runtime</classifier>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -125,6 +134,31 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- покрытие кода тестами (решение 51). Агент подключается к тестам напрямую, а не целью
+                 prepare-agent: она передаёт JVM абсолютный путь к файлу покрытия, а путь с кириллицей
+                 на Windows портится, и файл уходит в папку с испорченным именем. Здесь путь
+                 относительный, его разбирает уже сам агент. Отчёт в target/site/jacoco после mvn test -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <argLine>-javaagent:${settings.localRepository}/org/jacoco/org.jacoco.agent/${jacoco.version}/org.jacoco.agent-${jacoco.version}-runtime.jar=destfile=target/jacoco.exec</argLine>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>${jacoco.version}</version>
+                <executions>
+                    <execution>
+                        <id>report</id>
+                        <phase>test</phase>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

@@ -39,12 +39,12 @@ class AppealRoutingTest extends IntegrationTest {
 
         AppealDetailResponse routed = awaitRouted(created.id());
 
-        // правило CLAIM / GENERAL: урегулирование убытков, высокий приоритет, срок 8 часов
+        // правило CLAIM / GENERAL: урегулирование убытков, высокий приоритет, срок отдела 10 дней
         assertThat(routed.status()).isEqualTo(AppealStatus.ROUTED);
         assertThat(routed.department().code()).isEqualTo("CLAIMS");
         assertThat(routed.priority()).isEqualTo(AppealPriority.HIGH);
         assertThat(Duration.between(routed.createdAt(), routed.deadlineAt()))
-                .isCloseTo(Duration.ofHours(8), Duration.ofMinutes(1));
+                .isCloseTo(Duration.ofHours(240), Duration.ofMinutes(1));
 
         await().atMost(Duration.ofSeconds(10)).untilAsserted(() ->
                 assertThat(auditedEvents(created.id()))

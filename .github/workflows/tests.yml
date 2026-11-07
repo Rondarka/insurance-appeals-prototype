@@ -1,0 +1,44 @@
+# Непрерывная интеграция (решение 51): на каждый коммит в main все тесты прогоняются на
+# чистой машине GitHub. Testcontainers поднимает настоящие PostgreSQL, RabbitMQ и WireMock,
+# как на компьютере разработчика. Отчёт о покрытии сохраняется артефактом прогона, итог
+# по строкам и ветвлениям пишется в сводку прогона.
+name: Тесты
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Сборка и тесты
+        run: ./mvnw -B test
+
+      - name: Покрытие в сводку прогона
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            awk -F, 'NR > 1 { lm += $8; lc += $9; bm += $6; bc += $7 }
+              END { printf "### Покрытие тестами\n\nСтроки: %.1f %%\n\nВетвления: %.1f %%\n",
+                    100 * lc / (lm + lc), 100 * bc / (bm + bc) }' target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Отчёт о покрытии
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          if-no-files-found: ignore

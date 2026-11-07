@@ -26,6 +26,17 @@ jobs:
       - name: Сборка и тесты
         run: ./mvnw -B test
 
+      - name: Упавшие тесты в аннотации прогона
+        if: failure()
+        run: |
+          for f in target/surefire-reports/*.txt; do
+            [ -f "$f" ] || continue
+            if grep -q "<<< \(FAILURE\|ERROR\)" "$f"; then
+              message=$(grep -A4 "<<< \(FAILURE\|ERROR\)" "$f" | tr '\n' ' ' | cut -c1-1500)
+              echo "::error title=$(basename "$f" .txt)::$message"
+            fi
+          done
+
       - name: Покрытие в сводку прогона
         if: always()
         run: |

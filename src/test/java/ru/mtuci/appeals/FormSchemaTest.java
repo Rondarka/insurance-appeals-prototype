@@ -44,8 +44,11 @@ class FormSchemaTest extends IntegrationTest {
     void schemaWithoutProductListsAllTypes() {
         FormSchemaResponse schema = schema(null);
 
+        // база общая для всех тестов, и порядок классов зависит от файловой системы: на Linux
+        // ManualClassificationTest может пройти раньше и оставить свою категорию PARTNER
+        // (sort_order 90). Поэтому проверяем, что категории из миграций идут первыми и по порядку.
         assertThat(schema.categories()).extracting(FormCategory::code)
-                .containsExactly("MORTGAGE", "CLAIM", "POLICY", "PAYMENT", "COMPLAINT", "TECHNICAL", "OTHER");
+                .startsWith("MORTGAGE", "CLAIM", "POLICY", "PAYMENT", "COMPLAINT", "TECHNICAL", "OTHER");
         assertThat(category(schema, "CLAIM").types()).extracting(FormAppealType::code)
                 .containsExactly("AUTO", "PROPERTY", "HEALTH");
         assertThat(type(schema, "OTHER", "GENERAL").fields()).isEmpty();

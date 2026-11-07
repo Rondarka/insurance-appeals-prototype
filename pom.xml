@@ -143,6 +143,8 @@
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+                    <!-- один порядок классов на Windows и в CI на Linux: тесты делят одну базу -->
+                    <runOrder>alphabetical</runOrder>
                     <argLine>-javaagent:${settings.localRepository}/org/jacoco/org.jacoco.agent/${jacoco.version}/org.jacoco.agent-${jacoco.version}-runtime.jar=destfile=target/jacoco.exec</argLine>
                 </configuration>
             </plugin>
